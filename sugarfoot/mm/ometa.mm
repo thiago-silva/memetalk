@@ -26,18 +26,18 @@ instance_method space: fun() {
   return this._or([fun() {
     this._apply_with_args(:seq, [["/","*"]]);
     this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["*","/"]])});
+          this._apply_with_args(:seq, [["*","/"]]);});
         this._apply(:anything);
       }]);}, null);
     this._apply_with_args(:seq, [["*","/"]]);
   }, fun() {
     this._apply_with_args(:seq, [["/","/"]]);
     this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\n"]])});
+          this._apply_with_args(:seq, [["\n"]]);});
         this._apply(:anything);
       }]);}, null);
     this._apply_with_args(:seq, [["\n"]]);
@@ -50,7 +50,7 @@ instance_method keyword: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, [xs]);
     this._not(fun() {
-      this._apply(:identifier_rest)});
+      this._apply(:identifier_rest);});
     return xs;
   }]);
 }
@@ -60,15 +60,15 @@ instance_method char_sequence: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["'"]);
     cs = this._many1(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["'"]])});
+          this._apply_with_args(:seq, [["'"]]);});
         this._apply_with_args(:seq, [["\\"]]);
         c = this._apply(:char);
         return escaped(c);
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["'"]])});
+          this._apply_with_args(:seq, [["'"]]);});
         this._apply(:char);
       }]);});
     this._apply_with_args(:seq, [["'"]]);
@@ -81,15 +81,15 @@ instance_method token_string: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["\""]);
     cs = this._many1(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\""]])});
+          this._apply_with_args(:seq, [["\""]]);});
         this._apply_with_args(:seq, [["\\"]]);
         c = this._apply(:char);
         return escaped(c);
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\""]])});
+          this._apply_with_args(:seq, [["\""]]);});
         this._apply(:char);
       }]);});
     this._apply_with_args(:seq, [["\""]]);
@@ -102,15 +102,15 @@ instance_method keyword_string: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["``"]);
     cs = this._many1(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["`"]])});
+          this._apply_with_args(:seq, [["`"]]);});
         this._apply_with_args(:seq, [["\\"]]);
         c = this._apply(:char);
         return escaped(c);
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["`"]])});
+          this._apply_with_args(:seq, [["`"]]);});
         this._apply(:char);
       }]);});
     this._apply_with_args(:seq, [["`","`"]]);
@@ -123,15 +123,15 @@ instance_method string_object: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["`"]);
     cs = this._many1(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["`"]])});
+          this._apply_with_args(:seq, [["`"]]);});
         this._apply_with_args(:seq, [["\\"]]);
         c = this._apply(:char);
         return escaped(c);
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["`"]])});
+          this._apply_with_args(:seq, [["`"]]);});
         this._apply(:char);
       }]);});
     this._apply_with_args(:seq, [["`"]]);
@@ -170,9 +170,9 @@ instance_method prologue_code: fun() {
   var x = null;
   return this._or([fun() {
     x = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["<","o","m","e","t","a",">"]])});
+          this._apply_with_args(:seq, [["<","o","m","e","t","a",">"]]);});
         this._apply(:anything);
       }]);}, null);
     this._apply_with_args(:seq, [["<","o","m","e","t","a",">"]]);
@@ -185,7 +185,7 @@ instance_method epilogue_code: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["</ometa>"]);
     r = this._many(fun() {
-      this._apply(:anything)}, null);
+      this._apply(:anything);}, null);
     return r.join("");
   }]);
 }
@@ -216,7 +216,7 @@ instance_method inheritance: fun() {
 instance_method rules: fun() {
   return this._or([fun() {
     this._many1(fun() {
-      this._apply(:rule)});
+      this._apply(:rule);});
   }]);
 }
 instance_method rule: fun() {
@@ -244,12 +244,12 @@ instance_method rule_rest: fun() {
     return [:rule, name, c];
   }, fun() {
     args = this._many1(fun() {
-      this._apply(:binding)});
+      this._apply(:binding);});
     ac = this._apply(:action);
     return [:rule, name, [:args] + args, ac];
   }, fun() {
     args = this._many1(fun() {
-      this._apply(:binding)});
+      this._apply(:binding);});
     this._apply_with_args(:token, ["="]);
     c = this._apply(:choices);
     return [:rule, name, [:args] + args, c];
@@ -261,7 +261,7 @@ instance_method choices: fun() {
   return this._or([fun() {
     x = this._apply(:choice);
     xs = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._apply_with_args(:token, ["|"]);
         this._apply(:choice);
       }]);}, null);
@@ -273,12 +273,12 @@ instance_method choice: fun() {
   var ac = null;
   return this._or([fun() {
     x = this._many(fun() {
-      this._apply(:top_expression)}, null);
+      this._apply(:top_expression);}, null);
     ac = this._apply(:action);
     return [:and] + x + [ac];
   }, fun() {
     x = this._many(fun() {
-      this._apply(:top_expression)}, null);
+      this._apply(:top_expression);}, null);
     return [:and] + x;
   }]);
 }
@@ -346,9 +346,9 @@ instance_method element: fun() {
   }, fun() {
     this._apply_with_args(:token, ["?{"]);
     s = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["}"]])});
+          this._apply_with_args(:seq, [["}"]]);});
         this._apply(:anything);
       }]);}, null);
     this._apply_with_args(:seq, [["}"]]);
@@ -356,9 +356,9 @@ instance_method element: fun() {
   }, fun() {
     this._apply_with_args(:token, ["!{"]);
     s = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["}"]])});
+          this._apply_with_args(:seq, [["}"]]);});
         this._apply(:anything);
       }]);}, null);
     this._apply_with_args(:seq, [["}"]]);
@@ -391,15 +391,15 @@ instance_method host_str: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["\""]);
     cs = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\""]])});
+          this._apply_with_args(:seq, [["\""]]);});
         this._apply_with_args(:seq, [["\\"]]);
         c = this._apply(:char);
         return "\\" + c;
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\""]])});
+          this._apply_with_args(:seq, [["\""]]);});
         this._apply(:char);
       }]);}, null);
     this._apply_with_args(:seq, [["\""]]);
@@ -411,9 +411,9 @@ instance_method host_paren: fun() {
   return this._or([fun() {
     this._apply_with_args(:seq, [["("]]);
     e = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [[")"]])});
+          this._apply_with_args(:seq, [[")"]]);});
         this._apply(:host_element);
       }]);}, null);
     this._apply_with_args(:seq, [[")"]]);
@@ -425,9 +425,9 @@ instance_method host_sq_brk: fun() {
   return this._or([fun() {
     this._apply_with_args(:seq, [["["]]);
     e = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["]"]])});
+          this._apply_with_args(:seq, [["]"]]);});
         this._apply(:host_element);
       }]);}, null);
     this._apply_with_args(:seq, [["]"]]);
@@ -439,9 +439,9 @@ instance_method host_c_brk: fun() {
   return this._or([fun() {
     this._apply_with_args(:seq, [["{"]]);
     e = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["}"]])});
+          this._apply_with_args(:seq, [["}"]]);});
         this._apply(:host_element);
       }]);}, null);
     this._apply_with_args(:seq, [["}"]]);
@@ -465,9 +465,9 @@ instance_method host_expr: fun() {
   var x = null;
   return this._or([fun() {
     x = this._many1(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          return this._or([fun() {
+          this._or([fun() {
             this._apply_with_args(:seq, [[";"]]);
           }, fun() {
             this._apply_with_args(:seq, [["}"]]);
@@ -516,7 +516,7 @@ instance_method prod_args: fun() {
   return this._or([fun() {
     x = this._apply(:prod_arg);
     xs = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._apply_with_args(:token, [","]);
         this._apply(:prod_arg);
       }]);}, null);
