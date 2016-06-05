@@ -12,13 +12,15 @@ init new: fun(input) {
 <ometa>
 alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!';
 
-meme_keyword = ``fun`` | ``var``;
+meme_keyword = ``fun`` | ``var`` | ``class`` | ``fields``;
 
 id = identifier; //spaces ~meme_keyword {letter | '_'}:x {letterOrDigit|'_'}*:xs !{xs.insert(0, x)} => xs.join("");
 
 letter_or_digit_string = identifier;
 
 alpha_name = spaces ~meme_keyword {alpha | letter | '_'}:x {letterOrDigit|'_'|alpha}*:xs !{xs.insert(0, x)} => xs.join("");
+
+symbol_name = spaces {alpha | letter | '_'}:x {letterOrDigit|'_'|alpha}*:xs !{xs.insert(0, x)} => xs.join("");
 
 space =  _:c ?{c.onlySpaces} => c
       | comment;
@@ -71,13 +73,13 @@ obj_fun =  ``functions`` "{"
 object_slot = id:name  ":" { literal | id }:value ";" => [:slot, name, value];
 
 class_decl = ``class`` id:name { "<" id | "<" "null" | => "Object" }:parent
-                fields:f
+                fields_:f
                 constructors:c
                 instance_method_decl*:im
                 class_method_decl*:cm
               ``end`` => [:class, [name, parent], f, c, im, cm];
 
-fields = ``fields`` ":" idlist:xs ";" => [:fields, xs]
+fields_ = ``fields`` ":" idlist:xs ";" => [:fields, xs]
       | => [:fields, []];
 
 constructors = constructor*:c => [:ctors, c];
@@ -151,7 +153,7 @@ expr_decl =  ``var``
 
 expr_attr =  spaces  lhs:a "=" expr:b => [:=, a, b];
 
-lhs =  expr:r ?{len(r)>0 and r[0] == 'index'} => r
+lhs =  expr:r ?{len(r)>0 and r[0] == "index"} => r
     |  alpha_name:x => [:id, x]
     |  field_name:x => [:field, x];
 
@@ -163,7 +165,7 @@ expr_if = ``if`` "(" expr:e ")" "{"
            stmts:body
           "}"
           expr_elif*:elif_
-          expr_else?:else_ => [:if, e, body, elif_, else_ or []]);
+          expr_else?:else_ => [:if, e, body, elif_, else_ or []];
 
 expr_elif =  ``elif`` "(" expr:e ")" "{" stmts:body "}" => [:elif, e, body];
 
@@ -172,7 +174,7 @@ expr_else =  ``else`` "{" stmts:body "}" => body;
 
 expr_while =  ``while`` "(" expr:e ")" "{"
              stmts:xs
-             "}" => [:while e, xs];
+             "}" => [:while, e, xs];
 
 expr_try =  ``try`` "{"
              stmts:s_try
@@ -190,10 +192,10 @@ catch_type =  alpha_name:type => [:id, type];
 
 expr = spaces expr_or;
 
-expr_or =   expr_or:a ``or`` expr_and:b => [:or a, b]
+expr_or =   expr_or:a ``or`` expr_and:b => [:or, a, b]
         | expr_and;
 
-expr_and =   expr_and:a ``and`` expr_eq:b => [:and a, b]
+expr_and =   expr_and:a ``and`` expr_eq:b => [:and, a, b]
          | expr_eq;
 
 expr_eq =   expr_eq:a "==" expr_rel:b => [:==, a, b]
@@ -234,9 +236,9 @@ suffix_expr =  ``super`` "." alpha_name:sel args:p
 call_expr =   call_expr:r args:p
             => [:call, r, [:args, p]]
           |   ``super`` args:p
-            => [:super-send, [:args,p]]
+            => [:super-send, [:args, p]]
           |  spaces  id:r args:p
-            => [:send-or-local-call, r, [:args,p]]
+            => [:send-or-local-call, r, [:args, p]]
           | prim_expr;
 
 prim_expr = "(" expr:e ")" => e
@@ -257,13 +259,13 @@ expr_list = expr:x {"," expr}*:xs => [x]+xs
 literal = lit_number
         | lit_string
         | lit_symbol
-        | "[" expr_list:e "]"    => [:literal-array][e]
+        | "[" expr_list:e "]"    => [:literal-array]+[e]
         | "{" pair_list:e "}"    => [:literal-dict]+e
         | ``thisModule`` => [:literal, :module]
-        | ``thisContext`` => [:literal, :context])
-        | ``this``   => [:literal, :this])
+        | ``thisContext`` => [:literal, :context]
+        | ``this``   => [:literal, :this]
         | ``null``   => [:literal, :null]
-        | ``true``   => [:literal, :true])
+        | ``true``   => [:literal, :true]
         | ``false``  => [:literal, :false]
         | funliteral:x !{this.has_fun_literal(true)} => x;
 
@@ -284,7 +286,7 @@ rewrite_last_stmt = [:expression :x]:c => c.__setitem__(0, :return)
 
 cfunliteral_body = funliteral_body:x spaces ~_ => x;
 
-lit_symbol = ":" alpha_name:xs
+lit_symbol = ":" symbol_name:xs
            => [:literal-symbol, xs];
 
 lit_number = spaces  digit+:ds => [:literal-number, int(ds.join("").parseInt)];

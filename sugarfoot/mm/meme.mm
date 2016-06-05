@@ -12,40 +12,44 @@ init new: fun(input) {
 
 instance_method alpha: fun() {
   return this._or([fun() {
-    this._apply_with_args(:seq, [["+"]])
+    this._apply_with_args(:seq, [["+"]]);
   }, fun() {
-    this._apply_with_args(:seq, [["*"]])
+    this._apply_with_args(:seq, [["*"]]);
   }, fun() {
-    this._apply_with_args(:seq, [["-"]])
+    this._apply_with_args(:seq, [["-"]]);
   }, fun() {
-    this._apply_with_args(:seq, [["/"]])
+    this._apply_with_args(:seq, [["/"]]);
   }, fun() {
-    this._apply_with_args(:seq, [["="]])
+    this._apply_with_args(:seq, [["="]]);
   }, fun() {
-    this._apply_with_args(:seq, [["<"]])
+    this._apply_with_args(:seq, [["<"]]);
   }, fun() {
-    this._apply_with_args(:seq, [[">"]])
+    this._apply_with_args(:seq, [[">"]]);
   }, fun() {
-    this._apply_with_args(:seq, [["?"]])
+    this._apply_with_args(:seq, [["?"]]);
   }, fun() {
-    this._apply_with_args(:seq, [["!"]])
+    this._apply_with_args(:seq, [["!"]]);
   }]);
 }
 instance_method meme_keyword: fun() {
   return this._or([fun() {
-    this._apply_with_args(:keyword,["fun"])
+    this._apply_with_args(:keyword,["fun"]);
   }, fun() {
-    this._apply_with_args(:keyword,["var"])
+    this._apply_with_args(:keyword,["var"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["class"]);
+  }, fun() {
+    this._apply_with_args(:keyword,["fields"]);
   }]);
 }
 instance_method id: fun() {
   return this._or([fun() {
-    this._apply(:identifier)
+    this._apply(:identifier);
   }]);
 }
 instance_method letter_or_digit_string: fun() {
   return this._or([fun() {
-    this._apply(:identifier)
+    this._apply(:identifier);
   }]);
 }
 instance_method alpha_name: fun() {
@@ -54,24 +58,48 @@ instance_method alpha_name: fun() {
   return this._or([fun() {
     this._apply(:spaces);
     this._not(fun() {
-      this._apply(:meme_keyword)});
-    x = return this._or([fun() {
-      this._apply(:alpha)
+      this._apply(:meme_keyword);});
+    x = this._or([fun() {
+      this._apply(:alpha);
     }, fun() {
-      this._apply(:letter)
+      this._apply(:letter);
     }, fun() {
-      this._apply_with_args(:seq, [["_"]])
-    }]);;
+      this._apply_with_args(:seq, [["_"]]);
+    }]);
     xs = this._many(fun() {
-      return this._or([fun() {
-        this._apply(:letterOrDigit)
+      this._or([fun() {
+        this._apply(:letterOrDigit);
       }, fun() {
-        this._apply_with_args(:seq, [["_"]])
+        this._apply_with_args(:seq, [["_"]]);
       }, fun() {
-        this._apply(:alpha)
+        this._apply(:alpha);
       }]);}, null);
     xs.insert(0, x);
-    return xs.join("")
+    return xs.join("");
+  }]);
+}
+instance_method symbol_name: fun() {
+  var x = null;
+  var xs = null;
+  return this._or([fun() {
+    this._apply(:spaces);
+    x = this._or([fun() {
+      this._apply(:alpha);
+    }, fun() {
+      this._apply(:letter);
+    }, fun() {
+      this._apply_with_args(:seq, [["_"]]);
+    }]);
+    xs = this._many(fun() {
+      this._or([fun() {
+        this._apply(:letterOrDigit);
+      }, fun() {
+        this._apply_with_args(:seq, [["_"]]);
+      }, fun() {
+        this._apply(:alpha);
+      }]);}, null);
+    xs.insert(0, x);
+    return xs.join("");
   }]);
 }
 instance_method space: fun() {
@@ -79,30 +107,30 @@ instance_method space: fun() {
   return this._or([fun() {
     c = this._apply(:anything);
     this._pred(c.onlySpaces);
-    return c
+    return c;
   }, fun() {
-    this._apply(:comment)
+    this._apply(:comment);
   }]);
 }
 instance_method comment: fun() {
   return this._or([fun() {
     this._apply_with_args(:seq, [["/","*"]]);
     this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["*","/"]])});
-        this._apply(:anything)
+          this._apply_with_args(:seq, [["*","/"]]);});
+        this._apply(:anything);
       }]);}, null);
-    this._apply_with_args(:seq, [["*","/"]])
+    this._apply_with_args(:seq, [["*","/"]]);
   }, fun() {
     this._apply_with_args(:seq, [["/","/"]]);
     this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\n"]])});
-        this._apply(:anything)
+          this._apply_with_args(:seq, [["\n"]]);});
+        this._apply(:anything);
       }]);}, null);
-    this._apply_with_args(:seq, [["\n"]])
+    this._apply_with_args(:seq, [["\n"]]);
   }]);
 }
 instance_method license: fun() {
@@ -110,25 +138,25 @@ instance_method license: fun() {
   return this._or([fun() {
     this._apply_with_args(:keyword,[".license"]);
     x = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._not(fun() {
-          return this._or([fun() {
-            this._apply_with_args(:keyword,[".endlicense"])
+          this._or([fun() {
+            this._apply_with_args(:keyword,[".endlicense"]);
           }]);});
-        this._apply(:anything)
+        this._apply(:anything);
       }]);}, null);
     this._apply_with_args(:keyword,[".endlicense"]);
-    return [:license, x.join("")]
+    return [:license, x.join("")];
   }, fun() {
-    return [:license,""]
+    return [:license,""];
   }]);
 }
 instance_method meta_section: fun() {
   return this._or([fun() {
     this._apply_with_args(:keyword,[".meta"]);
-    return [:meta, null]
+    return [:meta, null];
   }, fun() {
-    return [:meta, null]
+    return [:meta, null];
   }]);
 }
 instance_method preamble_section: fun() {
@@ -139,10 +167,10 @@ instance_method preamble_section: fun() {
     this._apply_with_args(:keyword,[".preamble"]);
     params = this._apply(:module_params);
     entries = this._many(fun() {
-      this._apply(:preamble_entry)}, null);
+      this._apply(:preamble_entry);}, null);
     aliases = this._many(fun() {
-      this._apply(:module_alias)}, null);
-    return [:preamble, params, entries, aliases]
+      this._apply(:module_alias);}, null);
+    return [:preamble, params, entries, aliases];
   }]);
 }
 instance_method code_section: fun() {
@@ -150,9 +178,9 @@ instance_method code_section: fun() {
   return this._or([fun() {
     this._apply_with_args(:keyword,[".code"]);
     d = this._many(fun() {
-      this._apply(:module_decl)}, null);
+      this._apply(:module_decl);}, null);
     this._apply_with_args(:keyword,[".end"]);
-    return [:code, d]
+    return [:code, d];
   }]);
 }
 instance_method start: fun() {
@@ -165,14 +193,14 @@ instance_method start: fun() {
     meta = this._apply(:meta_section);
     pre = this._apply(:preamble_section);
     code = this._apply(:code_section);
-    return [:module, lic, meta, pre, code]
+    return [:module, lic, meta, pre, code];
   }]);
 }
 instance_method module_params: fun() {
   return this._or([fun() {
-    this._apply(:params)
+    this._apply(:params);
   }, fun() {
-    return []
+    return [];
   }]);
 }
 instance_method preamble_entry: fun() {
@@ -183,7 +211,7 @@ instance_method preamble_entry: fun() {
     this._apply_with_args(:token, [":"]);
     s = this._apply(:module_spec);
     this._apply_with_args(:token, [";"]);
-    return [:param, name, s]
+    return [:param, name, s];
   }]);
 }
 instance_method module_spec: fun() {
@@ -193,7 +221,7 @@ instance_method module_spec: fun() {
     ns = this._apply(:id);
     this._apply_with_args(:token, [":"]);
     mname = this._apply(:id);
-    return [:library, ns, mname]
+    return [:library, ns, mname];
   }]);
 }
 instance_method module_alias: fun() {
@@ -206,18 +234,18 @@ instance_method module_alias: fun() {
     this._apply_with_args(:token, ["<="]);
     x = this._apply(:id);
     this._apply_with_args(:token, [";"]);
-    return [:alias, x, lst]
+    return [:alias, x, lst];
   }]);
 }
 instance_method module_decl: fun() {
   return this._or([fun() {
-    this._apply(:obj_decl)
+    this._apply(:obj_decl);
   }, fun() {
-    this._apply(:class_decl)
+    this._apply(:class_decl);
   }, fun() {
-    this._apply(:top_level_fun)
+    this._apply(:top_level_fun);
   }, fun() {
-    this._apply(:top_level_fn)
+    this._apply(:top_level_fn);
   }]);
 }
 instance_method obj_decl: fun() {
@@ -228,10 +256,10 @@ instance_method obj_decl: fun() {
     this._apply_with_args(:keyword,["object"]);
     name = this._apply(:id);
     s = this._many1(fun() {
-      this._apply(:object_slot)});
+      this._apply(:object_slot);});
     f = this._apply(:obj_fun);
     this._apply_with_args(:keyword,["end"]);
-    return [:object, name, s, f]
+    return [:object, name, s, f];
   }]);
 }
 instance_method obj_fun: fun() {
@@ -240,15 +268,15 @@ instance_method obj_fun: fun() {
     this._apply_with_args(:keyword,["functions"]);
     this._apply_with_args(:token, ["{"]);
     f = this._many1(fun() {
-      return this._or([fun() {
-        this._apply(:constructor)
+      this._or([fun() {
+        this._apply(:constructor);
       }, fun() {
-        this._apply(:top_level_fun)
+        this._apply(:top_level_fun);
       }]);});
     this._apply_with_args(:token, ["}"]);
-    return f
+    return f;
   }, fun() {
-    return []
+    return [];
   }]);
 }
 instance_method object_slot: fun() {
@@ -257,13 +285,13 @@ instance_method object_slot: fun() {
   return this._or([fun() {
     name = this._apply(:id);
     this._apply_with_args(:token, [":"]);
-    value = return this._or([fun() {
-      this._apply(:literal)
+    value = this._or([fun() {
+      this._apply(:literal);
     }, fun() {
-      this._apply(:id)
-    }]);;
+      this._apply(:id);
+    }]);
     this._apply_with_args(:token, [";"]);
-    return [:slot, name, value]
+    return [:slot, name, value];
   }]);
 }
 instance_method class_decl: fun() {
@@ -276,43 +304,43 @@ instance_method class_decl: fun() {
   return this._or([fun() {
     this._apply_with_args(:keyword,["class"]);
     name = this._apply(:id);
-    parent = return this._or([fun() {
+    parent = this._or([fun() {
       this._apply_with_args(:token, ["<"]);
-      this._apply(:id)
+      this._apply(:id);
     }, fun() {
       this._apply_with_args(:token, ["<"]);
-      this._apply_with_args(:token, ["null"])
+      this._apply_with_args(:token, ["null"]);
     }, fun() {
-      return "Object"
-    }]);;
-    f = this._apply(:fields);
+      return "Object";
+    }]);
+    f = this._apply(:fields_);
     c = this._apply(:constructors);
     im = this._many(fun() {
-      this._apply(:instance_method_decl)}, null);
+      this._apply(:instance_method_decl);}, null);
     cm = this._many(fun() {
-      this._apply(:class_method_decl)}, null);
+      this._apply(:class_method_decl);}, null);
     this._apply_with_args(:keyword,["end"]);
-    return [:class, [name, parent], f, c, im, cm]
+    return [:class, [name, parent], f, c, im, cm];
   }]);
 }
-instance_method fields: fun() {
+instance_method fields_: fun() {
   var xs = null;
   return this._or([fun() {
     this._apply_with_args(:keyword,["fields"]);
     this._apply_with_args(:token, [":"]);
     xs = this._apply(:idlist);
     this._apply_with_args(:token, [";"]);
-    return [:fields, xs]
+    return [:fields, xs];
   }, fun() {
-    return [:fields, []]
+    return [:fields, []];
   }]);
 }
 instance_method constructors: fun() {
   var c = null;
   return this._or([fun() {
     c = this._many(fun() {
-      this._apply(:constructor)}, null);
-    return [:ctors, c]
+      this._apply(:constructor);}, null);
+    return [:ctors, c];
   }]);
 }
 instance_method constructor: fun() {
@@ -330,7 +358,7 @@ instance_method constructor: fun() {
     body = this._apply(:top_fun_body);
     this._apply_with_args(:token, ["}"]);
     return [:ctor, name, [:params, p], this.has_fun_literal(),
-                  [:body,  body + [[:end-body]]]]
+                  [:body,  body + [[:end-body]]]];
   }]);
 }
 instance_method top_level_fn: fun() {
@@ -342,7 +370,7 @@ instance_method top_level_fn: fun() {
     this._apply_with_args(:token, [":"]);
     e = this._apply(:expr);
     this._apply_with_args(:token, [";"]);
-    return [:fun, name, [:params, []], [:body,  [e]]]
+    return [:fun, name, [:params, []], [:body,  [e]]];
   }]);
 }
 instance_method top_level_fun: fun() {
@@ -353,7 +381,7 @@ instance_method top_level_fun: fun() {
     name = this._apply(:alpha_name);
     this._apply_with_args(:token, [":"]);
     this._apply(:spaces);
-    this._apply_with_args(:fun_rest, [name])
+    this._apply_with_args(:fun_rest, [name]);
   }]);
 }
 instance_method fun_rest: fun() {
@@ -367,7 +395,7 @@ instance_method fun_rest: fun() {
     body = this._apply(:top_fun_body);
     this._apply_with_args(:token, ["}"]);
     return [:fun, name, [:params, p], this.has_fun_literal(),
-                                              [:body,  body+ [[:end-body]]]]
+                                              [:body,  body+ [[:end-body]]]];
   }]);
 }
 instance_method instance_method_decl: fun() {
@@ -378,7 +406,7 @@ instance_method instance_method_decl: fun() {
     name = this._apply(:alpha_name);
     this._apply_with_args(:token, [":"]);
     this._apply(:spaces);
-    this._apply_with_args(:fun_rest, [name])
+    this._apply_with_args(:fun_rest, [name]);
   }]);
 }
 instance_method class_method_decl: fun() {
@@ -389,7 +417,7 @@ instance_method class_method_decl: fun() {
     name = this._apply(:alpha_name);
     this._apply_with_args(:token, [":"]);
     this._apply(:spaces);
-    this._apply_with_args(:fun_rest, [name])
+    this._apply_with_args(:fun_rest, [name]);
   }]);
 }
 instance_method params: fun() {
@@ -398,7 +426,7 @@ instance_method params: fun() {
     this._apply_with_args(:token, ["("]);
     xs = this._apply(:idlist);
     this._apply_with_args(:token, [")"]);
-    return xs
+    return xs;
   }]);
 }
 instance_method fparams: fun() {
@@ -408,34 +436,34 @@ instance_method fparams: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["("]);
     this._apply_with_args(:token, [")"]);
-    return []
+    return [];
   }, fun() {
     this._apply_with_args(:token, ["("]);
     this._apply_with_args(:token, ["*"]);
     x = this._apply(:id);
     this._apply_with_args(:token, [")"]);
-    return [[:var-arg, x]]
+    return [[:var-arg, x]];
   }, fun() {
     this._apply_with_args(:token, ["("]);
     x = this._apply(:id);
     xs = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._apply_with_args(:token, [","]);
-        this._apply(:id)
+        this._apply(:id);
       }]);}, null);
     this._apply_with_args(:token, [")"]);
-    return [x]+xs
+    return [x]+xs;
   }, fun() {
     this._apply_with_args(:token, ["("]);
     x = this._apply(:id);
     xs = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._apply_with_args(:token, [","]);
-        this._apply(:id)
+        this._apply(:id);
       }]);}, null);
     y = this._apply(:pvar);
     this._apply_with_args(:token, [")"]);
-    return [x]+xs+[y]
+    return [x]+xs+[y];
   }]);
 }
 instance_method pvar: fun() {
@@ -444,7 +472,7 @@ instance_method pvar: fun() {
     this._apply_with_args(:token, [","]);
     this._apply_with_args(:token, ["*"]);
     x = this._apply(:id);
-    return [:var-arg, x]
+    return [:var-arg, x];
   }]);
 }
 instance_method idlist: fun() {
@@ -453,20 +481,20 @@ instance_method idlist: fun() {
   return this._or([fun() {
     x = this._apply(:id);
     xs = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._apply_with_args(:token, [","]);
-        this._apply(:id)
+        this._apply(:id);
       }]);}, null);
-    return [x]+xs
+    return [x]+xs;
   }, fun() {
-    return []
+    return [];
   }]);
 }
 instance_method top_fun_body: fun() {
   return this._or([fun() {
-    this._apply(:primitive)
+    this._apply(:primitive);
   }, fun() {
-    this._apply(:stmts)
+    this._apply(:stmts);
   }]);
 }
 instance_method primitive: fun() {
@@ -476,40 +504,40 @@ instance_method primitive: fun() {
     this._apply_with_args(:keyword,["primiteive"]);
     s = this._apply(:lit_string);
     this._apply_with_args(:token, [">"]);
-    return [[:primitive, s]]
+    return [[:primitive, s]];
   }]);
 }
 instance_method stmts: fun() {
   var x = null;
   return this._or([fun() {
     x = this._many(fun() {
-      this._apply(:stmt)}, null);
-    return x
+      this._apply(:stmt);}, null);
+    return x;
   }]);
 }
 instance_method stmt: fun() {
   var e = null;
   return this._or([fun() {
-    this._apply(:control_expr)
+    this._apply(:control_expr);
   }, fun() {
     e = this._apply(:non_control_expr);
     this._apply_with_args(:token, [";"]);
-    return e
+    return e;
   }]);
 }
 instance_method non_control_expr: fun() {
   var e = null;
   return this._or([fun() {
-    this._apply(:expr_ret)
+    this._apply(:expr_ret);
   }, fun() {
-    this._apply(:expr_non_local_ret)
+    this._apply(:expr_non_local_ret);
   }, fun() {
-    this._apply(:expr_attr)
+    this._apply(:expr_attr);
   }, fun() {
     e = this._apply(:expr);
-    return [:expression, e]
+    return [:expression, e];
   }, fun() {
-    this._apply(:expr_decl)
+    this._apply(:expr_decl);
   }]);
 }
 instance_method expr_ret: fun() {
@@ -517,7 +545,7 @@ instance_method expr_ret: fun() {
   return this._or([fun() {
     this._apply_with_args(:keyword,["return"]);
     e = this._apply(:expr);
-    return [:return, e]
+    return [:return, e];
   }]);
 }
 instance_method expr_non_local_ret: fun() {
@@ -525,7 +553,7 @@ instance_method expr_non_local_ret: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["^"]);
     e = this._apply(:expr);
-    return [:non-local-return, e]
+    return [:non-local-return, e];
   }]);
 }
 instance_method expr_decl: fun() {
@@ -536,7 +564,7 @@ instance_method expr_decl: fun() {
     name = this._apply(:id);
     this._apply_with_args(:token, ["="]);
     e = this._apply(:expr);
-    return [:var-def, name, e]
+    return [:var-def, name, e];
   }]);
 }
 instance_method expr_attr: fun() {
@@ -547,7 +575,7 @@ instance_method expr_attr: fun() {
     a = this._apply(:lhs);
     this._apply_with_args(:token, ["="]);
     b = this._apply(:expr);
-    return [:=, a, b]
+    return [:=, a, b];
   }]);
 }
 instance_method lhs: fun() {
@@ -555,23 +583,23 @@ instance_method lhs: fun() {
   var x = null;
   return this._or([fun() {
     r = this._apply(:expr);
-    this._pred(len(r)>0 and r[0] == 'index');
-    return r
+    this._pred(len(r)>0 and r[0] == "index");
+    return r;
   }, fun() {
     x = this._apply(:alpha_name);
-    return [:id, x]
+    return [:id, x];
   }, fun() {
     x = this._apply(:field_name);
-    return [:field, x]
+    return [:field, x];
   }]);
 }
 instance_method control_expr: fun() {
   return this._or([fun() {
-    this._apply(:expr_if)
+    this._apply(:expr_if);
   }, fun() {
-    this._apply(:expr_while)
+    this._apply(:expr_while);
   }, fun() {
-    this._apply(:expr_try)
+    this._apply(:expr_try);
   }]);
 }
 instance_method expr_if: fun() {
@@ -588,10 +616,10 @@ instance_method expr_if: fun() {
     body = this._apply(:stmts);
     this._apply_with_args(:token, ["}"]);
     elif_ = this._many(fun() {
-      this._apply(:expr_elif)}, null);
+      this._apply(:expr_elif);}, null);
     else_ = this._opt(fun() {
-      this._apply(:expr_else)});
-    return [:if, e, body, elif_, else_ or []])
+      this._apply(:expr_else);});
+    return [:if, e, body, elif_, else_ or []];
   }]);
 }
 instance_method expr_elif: fun() {
@@ -605,7 +633,7 @@ instance_method expr_elif: fun() {
     this._apply_with_args(:token, ["{"]);
     body = this._apply(:stmts);
     this._apply_with_args(:token, ["}"]);
-    return [:elif, e, body]
+    return [:elif, e, body];
   }]);
 }
 instance_method expr_else: fun() {
@@ -615,7 +643,7 @@ instance_method expr_else: fun() {
     this._apply_with_args(:token, ["{"]);
     body = this._apply(:stmts);
     this._apply_with_args(:token, ["}"]);
-    return body
+    return body;
   }]);
 }
 instance_method expr_while: fun() {
@@ -629,7 +657,7 @@ instance_method expr_while: fun() {
     this._apply_with_args(:token, ["{"]);
     xs = this._apply(:stmts);
     this._apply_with_args(:token, ["}"]);
-    return [:while e, xs]
+    return [:while, e, xs];
   }]);
 }
 instance_method expr_try: fun() {
@@ -645,7 +673,7 @@ instance_method expr_try: fun() {
     this._apply_with_args(:token, ["{"]);
     s_catch = this._apply(:stmts);
     this._apply_with_args(:token, ["}"]);
-    return [:try, s_try, c, s_catch]
+    return [:try, s_try, c, s_catch];
   }]);
 }
 instance_method catch_part: fun() {
@@ -656,27 +684,27 @@ instance_method catch_part: fun() {
     this._apply_with_args(:token, ["("]);
     id = this._apply(:alpha_name);
     this._apply_with_args(:token, [")"]);
-    return [:catch, id]
+    return [:catch, id];
   }, fun() {
     this._apply_with_args(:keyword,["catch"]);
     this._apply_with_args(:token, ["("]);
     t = this._apply(:catch_type);
     id = this._apply(:alpha_name);
     this._apply_with_args(:token, [")"]);
-    return [:catch, t, id]
+    return [:catch, t, id];
   }]);
 }
 instance_method catch_type: fun() {
   var type = null;
   return this._or([fun() {
     type = this._apply(:alpha_name);
-    return [:id, type]
+    return [:id, type];
   }]);
 }
 instance_method expr: fun() {
   return this._or([fun() {
     this._apply(:spaces);
-    this._apply(:expr_or)
+    this._apply(:expr_or);
   }]);
 }
 instance_method expr_or: fun() {
@@ -686,9 +714,9 @@ instance_method expr_or: fun() {
     a = this._apply(:expr_or);
     this._apply_with_args(:keyword,["or"]);
     b = this._apply(:expr_and);
-    return [:or a, b]
+    return [:or, a, b];
   }, fun() {
-    this._apply(:expr_and)
+    this._apply(:expr_and);
   }]);
 }
 instance_method expr_and: fun() {
@@ -698,9 +726,9 @@ instance_method expr_and: fun() {
     a = this._apply(:expr_and);
     this._apply_with_args(:keyword,["and"]);
     b = this._apply(:expr_eq);
-    return [:and a, b]
+    return [:and, a, b];
   }, fun() {
-    this._apply(:expr_eq)
+    this._apply(:expr_eq);
   }]);
 }
 instance_method expr_eq: fun() {
@@ -710,14 +738,14 @@ instance_method expr_eq: fun() {
     a = this._apply(:expr_eq);
     this._apply_with_args(:token, ["=="]);
     b = this._apply(:expr_rel);
-    return [:==, a, b]
+    return [:==, a, b];
   }, fun() {
     a = this._apply(:expr_eq);
     this._apply_with_args(:token, ["!="]);
     b = this._apply(:expr_rel);
-    return [:!=, a, b]
+    return [:!=, a, b];
   }, fun() {
-    this._apply(:expr_rel)
+    this._apply(:expr_rel);
   }]);
 }
 instance_method expr_rel: fun() {
@@ -727,24 +755,24 @@ instance_method expr_rel: fun() {
     a = this._apply(:expr_rel);
     this._apply_with_args(:token, [">="]);
     b = this._apply(:expr_add);
-    return [:>=, a, b]
+    return [:>=, a, b];
   }, fun() {
     a = this._apply(:expr_rel);
     this._apply_with_args(:token, [">"]);
     b = this._apply(:expr_add);
-    return [:>, a, b]
+    return [:>, a, b];
   }, fun() {
     a = this._apply(:expr_rel);
     this._apply_with_args(:token, ["<="]);
     b = this._apply(:expr_add);
-    return [:<=, a, b]
+    return [:<=, a, b];
   }, fun() {
     a = this._apply(:expr_rel);
     this._apply_with_args(:token, ["<"]);
     b = this._apply(:expr_add);
-    return [:<, a, b]
+    return [:<, a, b];
   }, fun() {
-    this._apply(:expr_add)
+    this._apply(:expr_add);
   }]);
 }
 instance_method expr_add: fun() {
@@ -754,19 +782,19 @@ instance_method expr_add: fun() {
     a = this._apply(:expr_add);
     this._apply_with_args(:token, ["++"]);
     b = this._apply(:expr_mul);
-    return [:++, a, b]
+    return [:++, a, b];
   }, fun() {
     a = this._apply(:expr_add);
     this._apply_with_args(:token, ["+"]);
     b = this._apply(:expr_mul);
-    return [:+, a, b]
+    return [:+, a, b];
   }, fun() {
     a = this._apply(:expr_add);
     this._apply_with_args(:token, ["-"]);
     b = this._apply(:expr_mul);
-    return [:-, a, b]
+    return [:-, a, b];
   }, fun() {
-    this._apply(:expr_mul)
+    this._apply(:expr_mul);
   }]);
 }
 instance_method expr_mul: fun() {
@@ -776,14 +804,14 @@ instance_method expr_mul: fun() {
     a = this._apply(:expr_mul);
     this._apply_with_args(:token, ["*"]);
     b = this._apply(:expr_unary);
-    return [:*, a, b]
+    return [:*, a, b];
   }, fun() {
     a = this._apply(:expr_mul);
     this._apply_with_args(:token, ["/"]);
     b = this._apply(:expr_unary);
-    return [:/, a, b]
+    return [:/, a, b];
   }, fun() {
-    this._apply(:expr_unary)
+    this._apply(:expr_unary);
   }]);
 }
 instance_method expr_unary: fun() {
@@ -791,22 +819,22 @@ instance_method expr_unary: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["+"]);
     a = this._apply(:prim_expr);
-    return [:positive, a]
+    return [:positive, a];
   }, fun() {
     this._apply_with_args(:token, ["-"]);
     a = this._apply(:prim_expr);
-    return [:negative, a]
+    return [:negative, a];
   }, fun() {
     this._apply_with_args(:token, ["!"]);
     a = this._apply(:expr_unary);
-    return [:not, a]
+    return [:not, a];
   }, fun() {
     this._apply_with_args(:token, ["~"]);
     a = this._apply(:expr_unary);
-    return [:bit-neg, a]
+    return [:bit-neg, a];
   }, fun() {
     this._apply(:spaces);
-    this._apply(:suffix_expr)
+    this._apply(:suffix_expr);
   }]);
 }
 instance_method suffix_expr: fun() {
@@ -819,26 +847,26 @@ instance_method suffix_expr: fun() {
     this._apply_with_args(:token, ["."]);
     sel = this._apply(:alpha_name);
     p = this._apply(:args);
-    return [:super-ctor-send, sel, [:args, p]]
+    return [:super-ctor-send, sel, [:args, p]];
   }, fun() {
     r = this._apply(:suffix_expr);
     this._apply_with_args(:token, ["."]);
     sel = this._apply(:alpha_name);
     p = this._apply(:args);
-    return [:send, r, sel, [:args, p]]
+    return [:send, r, sel, [:args, p]];
   }, fun() {
     r = this._apply(:suffix_expr);
     this._apply_with_args(:token, ["."]);
     sel = this._apply(:alpha_name);
-    return [:send, r, sel, [:args, []]]
+    return [:send, r, sel, [:args, []]];
   }, fun() {
     r = this._apply(:suffix_expr);
     this._apply_with_args(:token, ["["]);
     i = this._apply(:expr);
     this._apply_with_args(:token, ["]"]);
-    return [:index, r, i]
+    return [:index, r, i];
   }, fun() {
-    this._apply(:call_expr)
+    this._apply(:call_expr);
   }]);
 }
 instance_method call_expr: fun() {
@@ -847,18 +875,18 @@ instance_method call_expr: fun() {
   return this._or([fun() {
     r = this._apply(:call_expr);
     p = this._apply(:args);
-    return [:call, r, [:args, p]]
+    return [:call, r, [:args, p]];
   }, fun() {
     this._apply_with_args(:keyword,["super"]);
     p = this._apply(:args);
-    return [:super-send, [:args,p]]
+    return [:super-send, [:args, p]];
   }, fun() {
     this._apply(:spaces);
     r = this._apply(:id);
     p = this._apply(:args);
-    return [:send-or-local-call, r, [:args,p]]
+    return [:send-or-local-call, r, [:args, p]];
   }, fun() {
-    this._apply(:prim_expr)
+    this._apply(:prim_expr);
   }]);
 }
 instance_method prim_expr: fun() {
@@ -868,17 +896,17 @@ instance_method prim_expr: fun() {
     this._apply_with_args(:token, ["("]);
     e = this._apply(:expr);
     this._apply_with_args(:token, [")"]);
-    return e
+    return e;
   }, fun() {
-    this._apply(:literal)
+    this._apply(:literal);
   }, fun() {
     this._apply(:spaces);
     x = this._apply(:field_name);
-    return [:field, x]
+    return [:field, x];
   }, fun() {
     this._apply(:spaces);
     x = this._apply(:alpha_name);
-    return [:id, x]
+    return [:id, x];
   }]);
 }
 instance_method pair_list: fun() {
@@ -887,13 +915,13 @@ instance_method pair_list: fun() {
   return this._or([fun() {
     x = this._apply(:pair);
     xs = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._apply_with_args(:token, [","]);
-        this._apply(:pair)
+        this._apply(:pair);
       }]);}, null);
-    return [x]+xs
+    return [x]+xs;
   }, fun() {
-    return []
+    return [];
   }]);
 }
 instance_method pair: fun() {
@@ -903,7 +931,7 @@ instance_method pair: fun() {
     key = this._apply(:expr);
     this._apply_with_args(:token, [":"]);
     val = this._apply(:expr);
-    return [:pair, key, val]
+    return [:pair, key, val];
   }]);
 }
 instance_method args: fun() {
@@ -912,7 +940,7 @@ instance_method args: fun() {
     this._apply_with_args(:token, ["("]);
     p = this._apply(:expr_list);
     this._apply_with_args(:token, [")"]);
-    return p
+    return p;
   }]);
 }
 instance_method expr_list: fun() {
@@ -921,56 +949,56 @@ instance_method expr_list: fun() {
   return this._or([fun() {
     x = this._apply(:expr);
     xs = this._many(fun() {
-      return this._or([fun() {
+      this._or([fun() {
         this._apply_with_args(:token, [","]);
-        this._apply(:expr)
+        this._apply(:expr);
       }]);}, null);
-    return [x]+xs
+    return [x]+xs;
   }, fun() {
-    return []
+    return [];
   }]);
 }
 instance_method literal: fun() {
   var e = null;
   var x = null;
   return this._or([fun() {
-    this._apply(:lit_number)
+    this._apply(:lit_number);
   }, fun() {
-    this._apply(:lit_string)
+    this._apply(:lit_string);
   }, fun() {
-    this._apply(:lit_symbol)
+    this._apply(:lit_symbol);
   }, fun() {
     this._apply_with_args(:token, ["["]);
     e = this._apply(:expr_list);
     this._apply_with_args(:token, ["]"]);
-    return [:literal-array][e]
+    return [:literal-array]+[e];
   }, fun() {
     this._apply_with_args(:token, ["{"]);
     e = this._apply(:pair_list);
     this._apply_with_args(:token, ["}"]);
-    return [:literal-dict]+e
+    return [:literal-dict]+e;
   }, fun() {
     this._apply_with_args(:keyword,["thisModule"]);
-    return [:literal, :module]
+    return [:literal, :module];
   }, fun() {
     this._apply_with_args(:keyword,["thisContext"]);
-    return [:literal, :context])
+    return [:literal, :context];
   }, fun() {
     this._apply_with_args(:keyword,["this"]);
-    return [:literal, :this])
+    return [:literal, :this];
   }, fun() {
     this._apply_with_args(:keyword,["null"]);
-    return [:literal, :null]
+    return [:literal, :null];
   }, fun() {
     this._apply_with_args(:keyword,["true"]);
-    return [:literal, :true])
+    return [:literal, :true];
   }, fun() {
     this._apply_with_args(:keyword,["false"]);
-    return [:literal, :false]
+    return [:literal, :false];
   }, fun() {
     x = this._apply(:funliteral);
     this.has_fun_literal(true);
-    return x
+    return x;
   }]);
 }
 instance_method funliteral: fun() {
@@ -982,7 +1010,7 @@ instance_method funliteral: fun() {
     this._apply_with_args(:token, ["{"]);
     body = this._apply(:funliteral_body);
     this._apply_with_args(:token, ["}"]);
-    return [:fun-literal, [:params, p], [:body, body]]
+    return [:fun-literal, [:params, p], [:body, body]];
   }]);
 }
 instance_method funliteral_body: fun() {
@@ -992,11 +1020,11 @@ instance_method funliteral_body: fun() {
   return this._or([fun() {
     body = this._apply(:stmts);
     no_semicol_expr = this._opt(fun() {
-      this._apply(:expr)});
+      this._apply(:expr);});
     !no_semicol_expr or body.append([:expression, no_semicol_expr]);
     last = body.get(-1, []);
     this._apply_with_args(:rewrite_last_stmt, [last]);
-    return body + [[:return-null]]
+    return body + [[:return-null]];
   }]);
 }
 instance_method rewrite_last_stmt: fun() {
@@ -1004,10 +1032,10 @@ instance_method rewrite_last_stmt: fun() {
   var c = null;
   return this._or([fun() {
     c = this._form(fun() {
-      x = this._apply_with_args(:exactly, [:expression])});
-    return c.__setitem__(0, :return)
+      x = this._apply_with_args(:exactly, [:expression]);});
+    return c.__setitem__(0, :return);
   }, fun() {
-    this._apply_with_args(:exactly, [:x])
+    this._apply_with_args(:exactly, [:x]);
   }]);
 }
 instance_method cfunliteral_body: fun() {
@@ -1016,16 +1044,16 @@ instance_method cfunliteral_body: fun() {
     x = this._apply(:funliteral_body);
     this._apply(:spaces);
     this._not(fun() {
-      this._apply(:anything)});
-    return x
+      this._apply(:anything);});
+    return x;
   }]);
 }
 instance_method lit_symbol: fun() {
   var xs = null;
   return this._or([fun() {
     this._apply_with_args(:token, [":"]);
-    xs = this._apply(:alpha_name);
-    return [:literal-symbol, xs]
+    xs = this._apply(:symbol_name);
+    return [:literal-symbol, xs];
   }]);
 }
 instance_method lit_number: fun() {
@@ -1033,8 +1061,8 @@ instance_method lit_number: fun() {
   return this._or([fun() {
     this._apply(:spaces);
     ds = this._many1(fun() {
-      this._apply(:digit)});
-    return [:literal-number, int(ds.join("").parseInt)]
+      this._apply(:digit);});
+    return [:literal-number, int(ds.join("").parseInt)];
   }]);
 }
 instance_method lit_string: fun() {
@@ -1043,23 +1071,23 @@ instance_method lit_string: fun() {
   return this._or([fun() {
     this._apply_with_args(:seq, [["\""]]);
     xs = this._many(fun() {
-      return this._or([fun() {
-        this._apply(:lit_escaped)
+      this._or([fun() {
+        this._apply(:lit_escaped);
       }, fun() {
         x = this._not(fun() {
-          this._apply_with_args(:seq, [["\""]])})
+          this._apply_with_args(:seq, [["\""]]);});
       }]);}, null);
     this._apply_with_args(:seq, [["\""]]);
-    return [:literal-string, xs.join("").decodeEscape]
+    return [:literal-string, xs.join("").decodeEscape];
   }]);
 }
 instance_method lit_escaped: fun() {
   var x = null;
   return this._or([fun() {
     this._not(fun() {
-      this._apply_with_args(:seq, [["\""]])});
+      this._apply_with_args(:seq, [["\""]]);});
     x = this._apply_with_args(:seq, [["\\"]]);
-    return "\\" + x
+    return "\\" + x;
   }]);
 }
 instance_method field_name: fun() {
@@ -1067,7 +1095,7 @@ instance_method field_name: fun() {
   return this._or([fun() {
     this._apply_with_args(:token, ["@"]);
     x = this._apply(:letter_or_digit_string);
-    return x
+    return x;
   }]);
 }
 instance_method single_top_level_fun: fun() {
@@ -1081,7 +1109,7 @@ instance_method single_top_level_fun: fun() {
     body = this._apply(:top_fun_body);
     this._apply_with_args(:token, ["}"]);
     return [:fun, name, [:params, p],
-                              [:body, body+ [:end-body]]]
+                              [:body, body+ [:end-body]]];
   }]);
 }
 

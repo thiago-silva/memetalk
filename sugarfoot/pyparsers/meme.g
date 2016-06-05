@@ -1,10 +1,12 @@
 alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!'
 
-keyword = (token("fun") | token("var")) ~letterOrDigit
+keyword = (token("fun") | token("var") | token("class") | token("fields")) ~letterOrDigit
 
 id = spaces ~keyword (letter | '_'):x (letterOrDigit|'_')*:xs !(xs.insert(0, x)) -> ''.join(xs)
 
 alpha_name = spaces ~keyword (alpha | letter | '_'):x (letterOrDigit|'_'|alpha)*:xs !(xs.insert(0, x)) -> ''.join(xs)
+
+symbol_name = spaces (alpha | letter | '_'):x (letterOrDigit|'_'|alpha)*:xs !(xs.insert(0, x)) -> ''.join(xs)
 
 letter_or_digit_string = (letter | '_'):x (letterOrDigit|'_')*:xs -> x + ''.join(xs)
 
@@ -59,13 +61,13 @@ obj_fun =  token("functions") token("{")
 object_slot = id:name  token(":") (literal|id):value token(";") -> ['slot', name, value]
 
 class_decl = token("class") id:name (token("<") id | token("<") token("null") | -> "Object"):parent
-                fields:f
+                fields_:f
                 constructors:c
                 instance_method_decl*:im
                 class_method_decl*:cm
               token("end") -> ['class', [name, parent], f, c, im, cm]
 
-fields = spaces token("fields") token(":") idlist:xs token(";") -> ['fields', xs]
+fields_ = spaces token("fields") token(":") idlist:xs token(";") -> ['fields', xs]
       | -> ["fields", []]
 
 constructors = constructor*:c -> ["ctors", c]
@@ -273,7 +275,7 @@ rewrite_last_stmt = ['expression' :x]:c -> c.__setitem__(0, 'return')
 
 cfunliteral_body = funliteral_body:x spaces ~anything -> x
 
-lit_symbol = spaces !(self.input.position):begin token(":") alpha_name:xs
+lit_symbol = spaces !(self.input.position):begin token(":") symbol_name:xs
            -> self.i.ast(begin, ["literal-symbol", xs])
 
 lit_number = spaces !(self.input.position):begin digit+:ds -> self.i.ast(begin, ["literal-number", int(''.join(ds))])
