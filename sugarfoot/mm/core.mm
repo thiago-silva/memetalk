@@ -88,6 +88,15 @@
        fullName: fun() {
          return "core:Object";
        }
+       or: fun(other) {
+         if (this) {
+           return this;
+         } elif (other) {
+           return other;
+         } else {
+           return false;
+         }
+      }
     }
   end
 
@@ -233,6 +242,14 @@
     }
     return false;
   }
+  instance_method or: fun(other) {
+    if (this) {
+       return this;
+    } elif (other) {
+       return other;
+    }
+    return false;
+  }
   end
 
   class String
@@ -262,6 +279,9 @@
   }
   instance_method find: fun(arg) {
     <primitive "string_find">
+  }
+  instance_method each: fun(fn) {
+    <primitive "string_each">
   }
   instance_method index: fun(arg) {
     <primitive "string_index">

@@ -410,6 +410,34 @@ static int prim_string_trim(Process* proc) {
   return 0;
 }
 
+static int prim_string_each(Process* proc) {
+  oop self =  proc->dp();
+  oop fun = proc->get_arg(0);
+
+  // DBG("prim_list_each: closure is: " << fun << endl);
+  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+
+  for (int i = 0; i < str.size(); i++) {
+    std::stringstream s;
+    s << str[i];
+    oop next = proc->mmobj()->mm_string_new(s.str().c_str());
+    DBG("string each[" << i << "] = " << next << endl);
+    proc->stack_push(tag_small_int(i));
+    proc->stack_push(next);
+    int exc;
+    //TODO: we are not checking arity!
+    oop val = proc->do_call(fun, &exc);
+    if (exc != 0) {
+      DBG("prim_string_each raised" << endl);
+      proc->stack_push(val);
+      return PRIM_RAISED;
+    }
+    DBG("string each[" << i << "] fun returned " << val << endl);
+  }
+  proc->stack_push(self);
+  return 0;
+}
+
 static int prim_string_b64decode(Process* proc) {
   oop self =  proc->dp();
   std::string str = proc->mmobj()->mm_string_cstr(proc, self);
@@ -798,7 +826,6 @@ static int prim_list_join(Process* proc) {
     s << str_sep << proc->mmobj()->mm_string_cstr(proc, next);
     str_sep = proc->mmobj()->mm_string_cstr(proc, sep);
   }
-
   oop res = proc->mmobj()->mm_string_new(s.str().c_str());
   proc->stack_push(res);
   return 0;
@@ -2096,6 +2123,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("string_split", prim_string_split);
   vm->register_primitive("string_to_symbol", prim_string_to_symbol);
   vm->register_primitive("string_trim", prim_string_trim);
+  vm->register_primitive("string_each", prim_string_each);
 
 
   vm->register_primitive("mirror_entries", prim_mirror_entries);

@@ -88,7 +88,7 @@ instance_method _local_vars: fun() {
              | [:apply_super string:s]
                => [@indent, "this._apply_super(:", s, ");"].join("")
              | [:seq string:s]
-               => [@indent, "this._apply_with_args(:seq, [[", s.split("").map(fun(x) { x.toSource }).join(",") , "]]);"].join("")
+               => [@indent, "this._apply_with_args(:seq, [", s.toSource, "]);"].join("")
              | [:token_string string:s]
                => [@indent, "this._apply_with_args(:token, [", s.toSource, "]);"].join("")
              | [:many !{this.incr_indent()} expr:b !{this.decr_indent()}]

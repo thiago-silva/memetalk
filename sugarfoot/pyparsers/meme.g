@@ -1,6 +1,6 @@
 alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!'
 
-keyword = (token("fun") | token("var") | token("class") | token("fields")) ~letterOrDigit
+keyword = (token("fun") | token("var")) ~letterOrDigit
 
 id = spaces ~keyword (letter | '_'):x (letterOrDigit|'_')*:xs !(xs.insert(0, x)) -> ''.join(xs)
 

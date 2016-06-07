@@ -5,8 +5,10 @@
 .code
 
 class MemeScriptParser < OMetaBase
+fields: has_fun_literal;
 init new: fun(input) {
   super.new(input);
+  @has_fun_literal = false;
 }
 
 <ometa>
@@ -14,13 +16,11 @@ alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!';
 
 meme_keyword = ``fun`` | ``var`` | ``class`` | ``fields``;
 
-id = identifier; //spaces ~meme_keyword {letter | '_'}:x {letterOrDigit|'_'}*:xs !{xs.insert(0, x)} => xs.join("");
+id = identifier:s ~meme_keyword(s) => s;
 
-letter_or_digit_string = identifier;
+alpha_name = spaces ~meme_keyword {alpha | letter | '_'}:x {identifier_rest|alpha}*:xs => ([x] + xs).join("");
 
-alpha_name = spaces ~meme_keyword {alpha | letter | '_'}:x {letterOrDigit|'_'|alpha}*:xs !{xs.insert(0, x)} => xs.join("");
-
-symbol_name = spaces {alpha | letter | '_'}:x {letterOrDigit|'_'|alpha}*:xs !{xs.insert(0, x)} => xs.join("");
+symbol_name = spaces {alpha | letter | '_'}:x {identifier_rest|'_'|alpha}*:xs !{xs.insert(0, x)} => xs.join("");
 
 space =  _:c ?{c.onlySpaces} => c
       | comment;
@@ -52,15 +52,15 @@ start = license:lic
 module_params = params
               | => [];
 
-preamble_entry = id:name ":" module_spec:s ";" => [:param, name, s];
+preamble_entry = identifier:name ":" module_spec:s ";" => [:param, name, s];
 
-module_spec = id:ns ":" id:mname => [:library, ns, mname];
+module_spec = identifier:ns ":" identifier:mname => [:library, ns, mname];
 
-module_alias = "[" idlist:lst "]" "<=" id:x ";" => [:alias, x, lst];
+module_alias = "[" idlist:lst "]" "<=" identifier:x ";" => [:alias, x, lst];
 
 module_decl = obj_decl | class_decl | top_level_fun | top_level_fn;
 
-obj_decl = ``object`` id:name
+obj_decl = ``object`` identifier:name
              object_slot+:s
              obj_fun:f
            ``end``  => [:object, name, s, f];
@@ -70,9 +70,9 @@ obj_fun =  ``functions`` "{"
            "}" => f
         | => [];
 
-object_slot = id:name  ":" { literal | id }:value ";" => [:slot, name, value];
+object_slot = identifier:name  ":" { literal | identifier }:value ";" => [:slot, name, value];
 
-class_decl = ``class`` id:name { "<" id | "<" "null" | => "Object" }:parent
+class_decl = ``class`` identifier:name { "<" identifier | "<" "null" | => "Object" }:parent
                 fields_:f
                 constructors:c
                 instance_method_decl*:im
@@ -84,18 +84,18 @@ fields_ = ``fields`` ":" idlist:xs ";" => [:fields, xs]
 
 constructors = constructor*:c => [:ctors, c];
 
-constructor = !{this.has_fun_literal(false)}
+constructor = !{@has_fun_literal = false}
               ``init`` alpha_name:name ":"
               ``fun`` fparams:p "{"
                   top_fun_body:body
                 "}"
-             => [:ctor, name, [:params, p], this.has_fun_literal(),
+             => [:ctor, name, [:params, p], @has_fun_literal,
                   [:body,  body + [[:end-body]]]];
 
 top_level_fn = spaces alpha_name:name ":"
                 expr:e ";" => [:fun, name, [:params, []], [:body,  [e]]];
 
-top_level_fun = spaces !{this.has_fun_literal(false)}
+top_level_fun = spaces !{@has_fun_literal = false}
                 alpha_name:name ":"
                 spaces fun_rest(name);
 
@@ -103,29 +103,29 @@ fun_rest :name =
                 ``fun``  fparams:p "{"
                   top_fun_body:body
                 "}"
-                  => [:fun, name, [:params, p], this.has_fun_literal(),
+                  => [:fun, name, [:params, p], @has_fun_literal,
                                               [:body,  body+ [[:end-body]]]];
 
 
-instance_method_decl = !{this.has_fun_literal(false)}
+instance_method_decl = !{@has_fun_literal = false}
                        ``instance_method`` alpha_name:name ":"
                        spaces fun_rest(name);
 
 
-class_method_decl = !{this.has_fun_literal(false)}
+class_method_decl = !{@has_fun_literal = false}
                     ``class_method`` alpha_name:name ":"
                     spaces fun_rest(name);
 
 params = "(" idlist:xs ")" => xs;
 
 fparams = "(" ")" => []
-        | "("  "*" id:x ")" => [[:var-arg, x]]
-        | "("  id:x {"," id}*:xs ")" => [x]+xs
-        | "("  id:x {"," id}*:xs pvar:y ")" => [x]+xs+[y];
+        | "("  "*" identifier:x ")" => [[:var-arg, x]]
+        | "("  identifier:x { "," identifier }*:xs ")" => [x]+xs
+        | "("  identifier:x { "," identifier }*:xs pvar:y ")" => [x]+xs+[y];
 
-pvar = "," "*" id:x => [:var-arg, x];
+pvar = "," "*" identifier:x => [:var-arg, x];
 
-idlist = id:x {"," id}*:xs => [x]+xs
+idlist = identifier:x {"," identifier}*:xs => [x]+xs
           | => [];
 
 top_fun_body = primitive
@@ -149,7 +149,7 @@ expr_ret =  ``return`` expr:e => [:return, e];
 expr_non_local_ret =  "^" expr:e => [:non-local-return, e];
 
 expr_decl =  ``var``
-              id:name "=" expr:e => [:var-def, name, e];
+              identifier:name "=" expr:e => [:var-def, name, e];
 
 expr_attr =  spaces  lhs:a "=" expr:b => [:=, a, b];
 
@@ -237,7 +237,7 @@ call_expr =   call_expr:r args:p
             => [:call, r, [:args, p]]
           |   ``super`` args:p
             => [:super-send, [:args, p]]
-          |  spaces  id:r args:p
+          |    identifier:r args:p
             => [:send-or-local-call, r, [:args, p]]
           | prim_expr;
 
@@ -267,7 +267,7 @@ literal = lit_number
         | ``null``   => [:literal, :null]
         | ``true``   => [:literal, :true]
         | ``false``  => [:literal, :false]
-        | funliteral:x !{this.has_fun_literal(true)} => x;
+        | funliteral:x !{@has_fun_literal = true} => x;
 
 funliteral = ``fun`` params:p "{"
                funliteral_body:body
@@ -296,7 +296,7 @@ lit_string  = '"' { lit_escaped | ~'"' :x}*:xs '"'
 
 lit_escaped = ~'"' '\\' :x => "\\" + x;
 
-field_name = "@" letter_or_digit_string:x => x;
+field_name = "@" identifier:x => x;
 
 
 single_top_level_fun :name = ``fun``

@@ -24,34 +24,25 @@ init new: fun(input) {
 
 instance_method space: fun() {
   return this._or([fun() {
-    this._apply_with_args(:seq, [["/","*"]]);
+    this._apply_with_args(:seq, ["/*"]);
     this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["*","/"]]);});
+          this._apply_with_args(:seq, ["*/"]);});
         this._apply(:anything);
       }]);}, null);
-    this._apply_with_args(:seq, [["*","/"]]);
+    this._apply_with_args(:seq, ["*/"]);
   }, fun() {
-    this._apply_with_args(:seq, [["/","/"]]);
+    this._apply_with_args(:seq, ["//"]);
     this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\n"]]);});
+          this._apply_with_args(:seq, ["\n"]);});
         this._apply(:anything);
       }]);}, null);
-    this._apply_with_args(:seq, [["\n"]]);
+    this._apply_with_args(:seq, ["\n"]);
   }, fun() {
     this._apply_super(:space);
-  }]);
-}
-instance_method keyword: fun() {
-  var xs = this._apply(:anything);
-  return this._or([fun() {
-    this._apply_with_args(:token, [xs]);
-    this._not(fun() {
-      this._apply(:identifier_rest);});
-    return xs;
   }]);
 }
 instance_method char_sequence: fun() {
@@ -62,16 +53,16 @@ instance_method char_sequence: fun() {
     cs = this._many1(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["'"]]);});
-        this._apply_with_args(:seq, [["\\"]]);
+          this._apply_with_args(:seq, ["'"]);});
+        this._apply_with_args(:seq, ["\\"]);
         c = this._apply(:char);
         return escaped(c);
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["'"]]);});
+          this._apply_with_args(:seq, ["'"]);});
         this._apply(:char);
       }]);});
-    this._apply_with_args(:seq, [["'"]]);
+    this._apply_with_args(:seq, ["'"]);
     return [:seq, cs.join("")];
   }]);
 }
@@ -83,16 +74,16 @@ instance_method token_string: fun() {
     cs = this._many1(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\""]]);});
-        this._apply_with_args(:seq, [["\\"]]);
+          this._apply_with_args(:seq, ["\""]);});
+        this._apply_with_args(:seq, ["\\"]);
         c = this._apply(:char);
         return escaped(c);
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\""]]);});
+          this._apply_with_args(:seq, ["\""]);});
         this._apply(:char);
       }]);});
-    this._apply_with_args(:seq, [["\""]]);
+    this._apply_with_args(:seq, ["\""]);
     return [:token_string, cs.join("")];
   }]);
 }
@@ -104,16 +95,16 @@ instance_method keyword_string: fun() {
     cs = this._many1(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["`"]]);});
-        this._apply_with_args(:seq, [["\\"]]);
+          this._apply_with_args(:seq, ["`"]);});
+        this._apply_with_args(:seq, ["\\"]);
         c = this._apply(:char);
         return escaped(c);
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["`"]]);});
+          this._apply_with_args(:seq, ["`"]);});
         this._apply(:char);
       }]);});
-    this._apply_with_args(:seq, [["`","`"]]);
+    this._apply_with_args(:seq, ["``"]);
     return [:keyword_string, cs.join("")];
   }]);
 }
@@ -125,16 +116,16 @@ instance_method string_object: fun() {
     cs = this._many1(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["`"]]);});
-        this._apply_with_args(:seq, [["\\"]]);
+          this._apply_with_args(:seq, ["`"]);});
+        this._apply_with_args(:seq, ["\\"]);
         c = this._apply(:char);
         return escaped(c);
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["`"]]);});
+          this._apply_with_args(:seq, ["`"]);});
         this._apply(:char);
       }]);});
-    this._apply_with_args(:seq, [["`"]]);
+    this._apply_with_args(:seq, ["`"]);
     return [:string_object, cs.join("")];
   }]);
 }
@@ -172,10 +163,10 @@ instance_method prologue_code: fun() {
     x = this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["<","o","m","e","t","a",">"]]);});
+          this._apply_with_args(:seq, ["<ometa>"]);});
         this._apply(:anything);
       }]);}, null);
-    this._apply_with_args(:seq, [["<","o","m","e","t","a",">"]]);
+    this._apply_with_args(:seq, ["<ometa>"]);
     this._apply(:spaces);
     return x.join("");
   }]);
@@ -302,15 +293,15 @@ instance_method repeated_expression: fun() {
   var e = null;
   return this._or([fun() {
     e = this._apply(:term);
-    this._apply_with_args(:seq, [["*"]]);
+    this._apply_with_args(:seq, ["*"]);
     return [:many, e];
   }, fun() {
     e = this._apply(:term);
-    this._apply_with_args(:seq, [["+"]]);
+    this._apply_with_args(:seq, ["+"]);
     return [:many1, e];
   }, fun() {
     e = this._apply(:term);
-    this._apply_with_args(:seq, [["?"]]);
+    this._apply_with_args(:seq, ["?"]);
     return [:optional, e];
   }, fun() {
     this._apply(:term);
@@ -348,20 +339,20 @@ instance_method element: fun() {
     s = this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["}"]]);});
+          this._apply_with_args(:seq, ["}"]);});
         this._apply(:anything);
       }]);}, null);
-    this._apply_with_args(:seq, [["}"]]);
+    this._apply_with_args(:seq, ["}"]);
     return [:sem_pred, s.join("")];
   }, fun() {
     this._apply_with_args(:token, ["!{"]);
     s = this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["}"]]);});
+          this._apply_with_args(:seq, ["}"]);});
         this._apply(:anything);
       }]);}, null);
-    this._apply_with_args(:seq, [["}"]]);
+    this._apply_with_args(:seq, ["}"]);
     return [:sem_action, s.join("")];
   }, fun() {
     this._apply_with_args(:token, ["{"]);
@@ -393,58 +384,58 @@ instance_method host_str: fun() {
     cs = this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\""]]);});
-        this._apply_with_args(:seq, [["\\"]]);
+          this._apply_with_args(:seq, ["\""]);});
+        this._apply_with_args(:seq, ["\\"]);
         c = this._apply(:char);
         return "\\" + c;
       }, fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["\""]]);});
+          this._apply_with_args(:seq, ["\""]);});
         this._apply(:char);
       }]);}, null);
-    this._apply_with_args(:seq, [["\""]]);
+    this._apply_with_args(:seq, ["\""]);
     return "\"" + cs.join("") +"\"";
   }]);
 }
 instance_method host_paren: fun() {
   var e = null;
   return this._or([fun() {
-    this._apply_with_args(:seq, [["("]]);
+    this._apply_with_args(:seq, ["("]);
     e = this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [[")"]]);});
+          this._apply_with_args(:seq, [")"]);});
         this._apply(:host_element);
       }]);}, null);
-    this._apply_with_args(:seq, [[")"]]);
+    this._apply_with_args(:seq, [")"]);
     return ["(", e.join(""),")"].join("");
   }]);
 }
 instance_method host_sq_brk: fun() {
   var e = null;
   return this._or([fun() {
-    this._apply_with_args(:seq, [["["]]);
+    this._apply_with_args(:seq, ["["]);
     e = this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["]"]]);});
+          this._apply_with_args(:seq, ["]"]);});
         this._apply(:host_element);
       }]);}, null);
-    this._apply_with_args(:seq, [["]"]]);
+    this._apply_with_args(:seq, ["]"]);
     return ["[", e.join(""),"]"].join("");
   }]);
 }
 instance_method host_c_brk: fun() {
   var e = null;
   return this._or([fun() {
-    this._apply_with_args(:seq, [["{"]]);
+    this._apply_with_args(:seq, ["{"]);
     e = this._many(fun() {
       this._or([fun() {
         this._not(fun() {
-          this._apply_with_args(:seq, [["}"]]);});
+          this._apply_with_args(:seq, ["}"]);});
         this._apply(:host_element);
       }]);}, null);
-    this._apply_with_args(:seq, [["}"]]);
+    this._apply_with_args(:seq, ["}"]);
     return ["{", e.join(""),"}"].join("");
   }]);
 }
@@ -468,11 +459,11 @@ instance_method host_expr: fun() {
       this._or([fun() {
         this._not(fun() {
           this._or([fun() {
-            this._apply_with_args(:seq, [[";"]]);
+            this._apply_with_args(:seq, [";"]);
           }, fun() {
-            this._apply_with_args(:seq, [["}"]]);
+            this._apply_with_args(:seq, ["}"]);
           }, fun() {
-            this._apply_with_args(:seq, [["|"]]);
+            this._apply_with_args(:seq, ["|"]);
           }]);});
         this._apply(:host_element);
       }]);});

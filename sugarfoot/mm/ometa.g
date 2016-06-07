@@ -27,8 +27,6 @@ init new: fun(input) {
         | ^
         ;
 
-  keyword :xs = token(xs) ~identifier_rest => xs;
-
   char_sequence = "'" {~'\'' '\\' char:c => escaped(c) | ~'\'' char}+:cs '\''
                   => [:seq, cs.join("")]
                 ;

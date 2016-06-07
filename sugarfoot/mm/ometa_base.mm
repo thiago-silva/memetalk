@@ -375,7 +375,7 @@ instance_method seq: fun() {
 instance_method token: fun() {
   var tk = this._apply(:anything);
   this._apply(:spaces);
-  return this._apply_with_args(:seq, [tk.split("")]);
+  return this._apply_with_args(:seq, [tk]);
 }
 
 instance_method identifier_first: fun() {
@@ -393,6 +393,18 @@ instance_method identifier: fun() {
   var ident = this._apply_with_args(:first_and_rest, [:identifier_first, :identifier_rest]);
   return ident.join("");
 }
+
+instance_method keyword: fun() {
+  var xs = this._apply(:anything);
+  return this._or([fun() {
+    this._apply_with_args(:token, [xs]);
+    this._not(fun() {
+      this._apply(:identifier_rest);});
+    return xs;
+  }]);
+}
+
+
 
 instance_method until: fun() {
   var brks = this._apply(:anything);

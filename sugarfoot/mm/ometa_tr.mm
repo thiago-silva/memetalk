@@ -215,7 +215,7 @@ instance_method expression: fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:seq]);
       s = this._apply(:string);});
-    return [@indent,"this._apply_with_args(:seq, [[", s.split("").map(fun(x) { x.toSource }).join(",") ,"]]);"].join("");
+    return [@indent,"this._apply_with_args(:seq, [", s.toSource,"]);"].join("");
   }, fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:token_string]);
