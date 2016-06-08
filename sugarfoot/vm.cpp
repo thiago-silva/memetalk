@@ -257,7 +257,7 @@ oop VM::compile_fun(Process* proc, const char* text, std::list<std::string> vars
     out << &pstream;
     std::string data = out.str();
 
-    char* c_data = (char*) calloc(sizeof(char), data.size());
+    char* c_data = (char*) calloc(sizeof(char), data.size()+1);
     data.copy(c_data, data.size());
     if (pclose(p) == 0) {
       MMCFunction* mmcf = new MMCFunction(this, _core_image, c_data, data.size());
