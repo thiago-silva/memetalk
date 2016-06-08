@@ -4,7 +4,7 @@
 #include "defs.hpp"
 #include "log.hpp"
 #include <vector>
-#include <map>
+#include <boost/unordered_map.hpp>
 #include <list>
 
 class CoreImage;
@@ -71,9 +71,9 @@ public:
   oop mm_dictionary_keys(Process*, oop dict, bool should_assert = false);
   oop mm_dictionary_values(Process*, oop dict, bool should_assert = false);
   oop mm_dictionary_get(Process*, oop dict, oop key, bool should_assert = false);
-  std::map<oop,oop>* mm_dictionary_frame(Process*, oop, bool should_assert = false);
-  std::map<oop,oop>::iterator mm_dictionary_begin(Process*, oop, bool should_assert = false);
-  std::map<oop,oop>::iterator mm_dictionary_end(Process*, oop, bool should_assert = false);
+  boost::unordered_map<oop,oop>* mm_dictionary_frame(Process*, oop, bool should_assert = false);
+  boost::unordered_map<oop,oop>::iterator mm_dictionary_begin(Process*, oop, bool should_assert = false);
+  boost::unordered_map<oop,oop>::iterator mm_dictionary_end(Process*, oop, bool should_assert = false);
 
   void mm_module_set_dictionary(Process*, oop imodule, oop imod_dict, bool should_assert = false);
   void mm_module_set_module_argument(oop imodule, oop arg, number idx);

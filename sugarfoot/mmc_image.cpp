@@ -128,8 +128,8 @@ void MMCImage::load_default_dependencies_and_assign_module_arguments(oop imodule
   oop default_params_dict = _mmobj->mm_compiled_module_default_params(_proc, _compiled_module);
   // number dict_size = _mmobj->mm_dictionary_size(default_params_dict);
   // for (int i = 0; i < dict_size; i++) {
-  std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, default_params_dict);
-  std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, default_params_dict);
+  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, default_params_dict);
+  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, default_params_dict);
   for ( ; it != end; it++) {
     oop lhs_name = it->first; //_mmobj->mm_dictionary_entry_key(default_params_dict, i);
     oop mod_name = it->second; //_mmobj->mm_dictionary_entry_value(default_params_dict, i);
@@ -150,8 +150,8 @@ void MMCImage::load_aliases(oop imodule, oop aliases_dict, number num_params) {
   oop cmod_params_list =   _mmobj->mm_compiled_module_params(_proc, _compiled_module);
   DBG(num_aliases << endl);
 
-  std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, aliases_dict);
-  std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, aliases_dict);
+  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, aliases_dict);
+  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, aliases_dict);
   for (int i = 0 ; it != end; it++, i++) {
     oop alias_name = it->first; //_mmobj->mm_dictionary_entry_key(aliases_dict, i);
     oop module_param_name = it->second; //_mmobj->mm_dictionary_entry_value(aliases_dict, i);
@@ -178,8 +178,8 @@ void MMCImage::create_alias_getters(oop imodule, oop imod_dict,
                                     oop aliases_dict, number num_params) {
   DBG("Creating aliases: " << _mmobj->mm_dictionary_size(_proc, aliases_dict) << endl);
 
-  std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, aliases_dict);
-  std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, aliases_dict);
+  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, aliases_dict);
+  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, aliases_dict);
   for (int i = 0 ; it != end; it++, i++) {
     oop name = it->first; //_mmobj->mm_dictionary_entry_key(aliases_dict, i);
     // oop module_param_name = _mmobj->mm_dictionary_entry_value(aliases_dict, i);
@@ -279,8 +279,8 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
   // // mod[dict] += Function
   // // mod[i] = Function
 
-  std::map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, fun_dict);
-  std::map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, fun_dict);
+  boost::unordered_map<oop, oop>::iterator it = _mmobj->mm_dictionary_begin(_proc, fun_dict);
+  boost::unordered_map<oop, oop>::iterator end = _mmobj->mm_dictionary_end(_proc, fun_dict);
   for ( ; it != end; it++) {
     oop sym_name = it->first; //_mmobj->mm_dictionary_entry_key(fun_dict, i);
     char* str = _mmobj->mm_symbol_cstr(_proc, sym_name);

@@ -12,6 +12,7 @@
 #include <limits.h>
 
 
+
 #ifdef MM_NO_DEBUG
   #define DBG(...)
   #define WARNING()
@@ -297,47 +298,47 @@ oop MMObj::mm_dictionary_new() {
   ((word**) obj)[0] = _core_image->get_prime("Dictionary");
   ((word**) obj)[1] = mm_object_new();
   ((word*) obj)[2] = -1;
-  ((std::map<oop, oop>**) obj)[3] = new std::map<oop, oop>;
+  ((boost::unordered_map<oop, oop>**) obj)[3] = new boost::unordered_map<oop, oop>;
   return obj;
 }
 
-std::map<oop, oop>* MMObj::mm_dictionary_frame(Process* p, oop dict, bool should_assert) {
+boost::unordered_map<oop, oop>* MMObj::mm_dictionary_frame(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
   number size = (number) ((oop*)dict)[2];
   if (size == -1) {
-    return (std::map<oop, oop>*) ((oop*)dict)[3];
+    return (boost::unordered_map<oop, oop>*) ((oop*)dict)[3];
   } else {
     ((word*)dict)[2] = -1;
-    std::map<oop, oop>* elements = new std::map<oop, oop>;
+    boost::unordered_map<oop, oop>* elements = new boost::unordered_map<oop, oop>;
     oop frame = ((oop*)dict)[3];
     for (int i = 0, j = 0; i < size; i++, j += 2) {
       (*elements)[((oop*)frame)[j]] = ((oop*)frame)[j+1];
     }
-    ((std::map<oop, oop>**) dict)[3] = elements;
+    ((boost::unordered_map<oop, oop>**) dict)[3] = elements;
     return elements;
   }
 }
 
-std::map<oop,oop>::iterator MMObj::mm_dictionary_begin(Process* p, oop dict, bool should_assert) {
+boost::unordered_map<oop,oop>::iterator MMObj::mm_dictionary_begin(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
-    std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
   return elements->begin();
 }
 
-std::map<oop,oop>::iterator MMObj::mm_dictionary_end(Process* p, oop dict, bool should_assert) {
+boost::unordered_map<oop,oop>::iterator MMObj::mm_dictionary_end(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
-    std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
   return elements->end();
 }
 
 number MMObj::mm_dictionary_size(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
-    std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
   return elements->size();
 }
 
@@ -345,9 +346,9 @@ bool MMObj::mm_dictionary_has_key(Process* p, oop dict, oop key, bool should_ass
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
-    std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
   // DBG(dict << "(" << elements->size() << ") has key " << key << " ?" << endl);
-  for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+  for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     if (it->first == key) {
       return true;
     } else if (mm_is_string(key) && mm_is_string(it->first)) {
@@ -365,8 +366,8 @@ oop MMObj::mm_dictionary_keys(Process* p, oop dict, bool should_assert) {
              "TypeError","Expected Dictionary")
 
   oop lst = mm_list_new();
-  std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
-  for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+  boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+  for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     mm_list_append(p, lst, it->first, should_assert);
   }
   return lst;
@@ -376,8 +377,8 @@ oop MMObj::mm_dictionary_values(Process* p, oop dict, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
   oop lst = mm_list_new();
-  std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
-  for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+  boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+  for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     mm_list_append(p, lst, it->second, should_assert);
   }
   return lst;
@@ -388,10 +389,10 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) 
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
-    std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
 
   DBG(dict << "(" << elements->size() << ") get " << key << endl);
-  for (std::map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
+  for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     // DBG(dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl);
     if (it->first == key) {
       return it->second;
@@ -413,7 +414,7 @@ void MMObj::mm_dictionary_set(Process* p, oop dict, oop key, oop value, bool sho
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
              "TypeError","Expected Dictionary")
 
-    std::map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
+    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
   (*elements)[key] = value;
 }
 
@@ -917,8 +918,8 @@ bytecode* MMObj::mm_compiled_function_next_expr(Process* p, oop cfun, bytecode* 
   word idx = ip - base_ip;
 
   oop mapping = mm_compiled_function_get_loc_mapping(p, cfun, should_assert);
-  std::map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
-  std::map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
   word next_offset = INT_MAX;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
@@ -942,8 +943,8 @@ bytecode* MMObj::mm_compiled_function_next_line_expr(Process* p, oop cfun, bytec
   word idx = ip - base_ip;
 
   oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
-  std::map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
-  std::map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
   word current_line = 0;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
@@ -985,8 +986,8 @@ number MMObj::mm_compiled_function_get_line_for_instruction(Process* p, oop cfun
   word idx = ip - base_ip;
 
   oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
-  std::map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
-  std::map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
   word current_line = 0;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
@@ -1007,8 +1008,8 @@ bytecode* MMObj::mm_compiled_function_get_instruction_for_line(Process* p, oop c
   bytecode* base_ip = mm_compiled_function_get_code(p, cfun, should_assert);
 
   oop mapping = mm_compiled_function_get_line_mapping(p, cfun, should_assert);
-  std::map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
-  std::map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
+  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, mapping, should_assert);
+  boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(p, mapping, should_assert);
   for ( ; it != end; it++) {
     word line = untag_small_int(it->second);
     DBG("line: " << line << "=" << lineno << endl);
@@ -1031,8 +1032,8 @@ bytecode* MMObj::mm_compiled_function_get_instruction_for_line(Process* p, oop c
 //   // DBG("MMOBJ IDX : " << idx << endl);
 
 //   oop mapping = mm_compiled_function_get_loc_mapping(cfun);
-//   std::map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
-//   std::map<oop, oop>::iterator end = mm_dictionary_end(mapping);
+//   boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(mapping);
+//   boost::unordered_map<oop, oop>::iterator end = mm_dictionary_end(mapping);
 //   for ( ; it != end; it++) {
 //     word b_offset = untag_small_int(it->first);
 //     // DBG("LOC_MATCHES_IP? -- " << b_offset << " " <<  idx << std::endl);
@@ -1100,7 +1101,7 @@ oop MMObj::mm_cfuns_to_funs_dict(Process* p, oop cfuns_dict, oop imod, bool shou
   // number size = mm_dictionary_size(cfuns_dict);
   oop funs_dict = mm_dictionary_new();
 
-  std::map<oop, oop>::iterator it = mm_dictionary_begin(p, cfuns_dict, should_assert);
+  boost::unordered_map<oop, oop>::iterator it = mm_dictionary_begin(p, cfuns_dict, should_assert);
   for ( ; it != mm_dictionary_end(p, cfuns_dict, should_assert); it++) {
     oop sym_name = it->first;
     oop cfun = it->second;

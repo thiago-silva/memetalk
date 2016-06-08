@@ -984,8 +984,8 @@ static int prim_dictionary_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
   s << "{";
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
+  boost::unordered_map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  boost::unordered_map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
   std::string comma = "";
   for ( ; it != end; it++) {
     int exc;
@@ -1016,8 +1016,8 @@ static int prim_dictionary_to_source(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
   s << "{";
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
+  boost::unordered_map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  boost::unordered_map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
   std::string comma = "";
   for ( ; it != end; it++) {
     int exc;
@@ -1050,8 +1050,8 @@ static int prim_dictionary_plus(Process* proc) {
 
   oop d = proc->mmobj()->mm_dictionary_new();
 
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
+  boost::unordered_map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, self);
+  boost::unordered_map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, self);
   for ( ; it != end; it++) {
     proc->mmobj()->mm_dictionary_set(proc, d, it->first, it->second);
   }
@@ -1114,8 +1114,8 @@ static int prim_mirror_entries(Process* proc) {
   } else if (proc->mmobj()->mm_is_dictionary(mirrored)) {
       oop lst = proc->mmobj()->mm_list_new();
 
-      std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, mirrored);
-      std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, mirrored);
+      boost::unordered_map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, mirrored);
+      boost::unordered_map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, mirrored);
       for ( ; it != end; it++) {
         proc->mmobj()->mm_list_append(proc, lst, it->first);
       }
@@ -1416,8 +1416,8 @@ static int prim_compiled_function_as_context_with_vars(Process* proc) {
 
   if (vars != MM_NULL) {
     oop env_table = proc->mmobj()->mm_compiled_function_env_table(proc, self);
-    std::map<oop,oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, vars);
-    std::map<oop,oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, vars);
+    boost::unordered_map<oop,oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, vars);
+    boost::unordered_map<oop,oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, vars);
     for ( ; it != end; it++) {
       std::string name = proc->mmobj()->mm_symbol_cstr(proc, it->first);
       if (name == "this") {
@@ -1487,8 +1487,8 @@ static int prim_compiled_function_loc_for(Process* proc) {
   DBG("loc_for_ip base: " << base_ip << " ip: " << ip << " idx: " << idx << endl);
 
   oop mapping = proc->mmobj()->mm_compiled_function_get_loc_mapping(proc, self);
-  std::map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, mapping);
-  std::map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, mapping);
+  boost::unordered_map<oop, oop>::iterator it = proc->mmobj()->mm_dictionary_begin(proc, mapping);
+  boost::unordered_map<oop, oop>::iterator end = proc->mmobj()->mm_dictionary_end(proc, mapping);
   oop the_lst = MM_NULL;
   for ( ; it != end; it++) {
     word b_offset = untag_small_int(it->first);
