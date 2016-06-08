@@ -3,7 +3,7 @@
 
 #include <list>
 #include <string>
-#include <map>
+#include <boost/unordered_map.hpp>
 #include "defs.hpp"
 #include "log.hpp"
 
@@ -20,7 +20,7 @@ public:
   inline oop get_prime(const char* name) { return _primes.at(name); }
   bool has_class(const char*);
   oop get_module_instance();
-  std::map<std::string, oop>& get_primes() { return _primes; }
+  boost::unordered_map<std::string,oop>& get_primes() { return _primes; }
 private:
   void load_header();
   void load_prime_objects_table();
@@ -41,7 +41,7 @@ private:
 
   oop _core_imod;
 
-  std::map<std::string, oop> _primes;
+  boost::unordered_map<std::string, oop> _primes;
 };
 
 #endif

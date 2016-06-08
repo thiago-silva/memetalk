@@ -567,7 +567,7 @@ class CompiledFunction(Entry):
         oop_delegate = vmem.append_object_instance()
         oop_name = vmem.append_string_instance(self.name)
         oop_params = vmem.append_list_of_strings(self.params)
-        oop_prim_name = vmem.append_string_instance(self.prim_name)
+        oop_prim_name = vmem.append_symbol_instance(self.prim_name)
         oop_text = vmem.append_string_instance(self.text)
         oop_line_mappings = vmem.append_int_to_int_dict(self.line_mapping)
         oop_loc_mappings = vmem.append_int_to_int_list(self.location_mapping)

@@ -4,9 +4,12 @@
 #include "defs.hpp"
 #include "log.hpp"
 #include <map>
+#include <boost/unordered_map.hpp>
 #include <string>
 #include <list>
-
+#include "process.hpp"
+#include "mmobj.hpp"
+#include "core_image.hpp"
 
 class CoreImage;
 class MMCImage;
@@ -21,22 +24,29 @@ public:
   int& argc() { return _argc; };
   char** argv() { return _argv; };
 
-  bool running_online() { return _online; };
+  inline bool running_online() { return _online; };
 
-  MMObj* mmobj();
+  inline MMObj* mmobj() { return _mmobj; };
 
 
   int start();
+
   oop new_symbol(const char*);
   oop new_symbol(Process*, oop);
 
   void register_primitive(std::string, prim_function_t);
 
-  prim_function_t get_primitive(Process*, std::string);
+  // prim_function_t get_primitive(Process*, oop);
+  inline prim_function_t get_primitive(Process* proc, oop name) {
+    return _primitives.at(name);
+  }
 
   oop instantiate_module(Process*, const char* name, oop module_args_list);
 
-  oop get_prime(const char* name);
+//  oop get_prime(const char* name);
+  inline oop get_prime(const char* name) {
+    return _core_image->get_prime(name);
+  }
 
   CoreImage* core() { return _core_image; };
 
@@ -68,9 +78,9 @@ private:
   MMObj* _mmobj;
 //  std::list<Process*> _processes;
 
-  std::map<std::string, oop> _symbols;
+  boost::unordered_map<std::string, oop> _symbols;
 
-  std::map<std::string, prim_function_t> _primitives;
+  boost::unordered_map<oop, prim_function_t> _primitives;
   std::map<std::string, MMCImage*> _modules;
 };
 

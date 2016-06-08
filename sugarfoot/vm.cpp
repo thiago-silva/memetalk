@@ -21,9 +21,9 @@ VM::VM(int argc, char** argv, bool online, const char* core_img_filepath)
     _core_image(new CoreImage(this, core_img_filepath)), _mmobj(new MMObj(_core_image)) {
 }
 
-MMObj* VM::mmobj() {
-  return _mmobj;
-}
+// MMObj* VM::mmobj() {
+//   return _mmobj;
+// }
 
 // void VM::dictionary_dump(oop dict) {
 //   number size = _mmobj->mm_dictionary_size(dict);
@@ -129,13 +129,14 @@ std::pair<Process*, oop> VM::start_debugger(Process* target) {
 
 oop VM::new_symbol(const char* cstr) {
   std::string s = cstr;
-  if (_symbols.find(s) == _symbols.end()) {
-    _symbols[s] = _mmobj->mm_symbol_new(cstr);
-    // DBG("Creating new symbol " << cstr << " = " << _symbols[s] << endl)
+  boost::unordered_map<std::string, oop>::iterator it = _symbols.find(s);
+  if (it == _symbols.end()) {
+    oop sym = _mmobj->mm_symbol_new(cstr);
+    _symbols[s] = sym;
+    return sym;
   } else {
-    // DBG("returning existing symbol " << cstr << " = " << _symbols[s] << endl);
+    return _symbols[s];
   }
-  return _symbols[s];
 }
 
 oop VM::new_symbol(Process* p, oop str) {
@@ -147,17 +148,19 @@ oop VM::new_symbol(Process* p, oop str) {
 }
 
 void VM::register_primitive(std::string name, prim_function_t fun) {
-  _primitives[name] = fun;
+  _primitives[new_symbol(name.c_str())] = fun;
 }
 
-prim_function_t VM::get_primitive(Process* proc, std::string name) {
-  // DBG("VM::get_primitive " << name << endl)
-  if (!(_primitives.find(name) != _primitives.end())) {
-    ERROR() << "did not find primitive with name:" << name << endl;
-    proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());
-  }
-  return _primitives[name];
-}
+// prim_function_t VM::get_primitive(Process* proc, oop name) {
+//   // DBG("VM::get_primitive " << name << endl)
+//   // boost::unordered_map<std::string, prim_function_t>::iterator it = _primitives.find(name);
+//   // if (it == _primitives.end()) {
+//   //   ERROR() << "did not find primitive with name:" << name << endl;
+//   //   proc->raise("InternalError", (std::string("primitive not found: ") + name).c_str());
+//   // }
+//   // return it->second;;
+//   return _primitives.at(name);
+// }
 
 oop VM::instantiate_module(Process* proc, const char* name_or_path, oop module_args_list) {
   DBG( "instantiating module " << name_or_path << endl);
@@ -175,9 +178,9 @@ oop VM::instantiate_module(Process* proc, const char* name_or_path, oop module_a
   return mmc->instantiate_module(module_args_list);
 }
 
-oop VM::get_prime(const char* name) {
-  return _core_image->get_prime(name);
-}
+// oop VM::get_prime(const char* name) {
+//   return _core_image->get_prime(name);
+// }
 
 #include <iostream>
 #include <cstdio>

@@ -45,16 +45,20 @@ int CoreImage::TOTAL_PRIMES = 27;
 
 CoreImage::CoreImage(VM* vm, const char* filepath)
   : _log(LOG_CORE),_vm(vm), _filepath(filepath) {
+  for (int i = 0; i < TOTAL_PRIMES; i++) {
+    _primes[PRIMES_NAMES[i]] = MM_NULL;
+  }
 }
 
 
 bool CoreImage::is_prime(const char* name) {
-  for (int i = 0; i < TOTAL_PRIMES; i++) {
-    if (strcmp(name, PRIMES_NAMES[i]) == 0) {
-      return true;
-    }
-  }
-  return false;
+  return _primes.find(name) != _primes.end();
+  // for (int i = 0; i < TOTAL_PRIMES; i++) {
+  //   if (strcmp(name, PRIMES_NAMES[i]) == 0) {
+  //     return true;
+  //   }
+  // }
+  // return false;
 }
 
 //temporary workaround used on mmc_loader to get superclass

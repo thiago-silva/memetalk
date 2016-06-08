@@ -3,9 +3,11 @@
 
 #include "defs.hpp"
 #include "log.hpp"
+#include "utils.hpp"
 #include <vector>
 #include <boost/unordered_map.hpp>
 #include <list>
+#include "core_image.hpp"
 
 class CoreImage;
 class VM;
@@ -34,8 +36,16 @@ public:
   oop mm_object_new();
   oop mm_object_vt(oop);
   oop mm_object_delegate(oop);
+//   inline oop mm_object_delegate(oop obj) {
+//   if (is_small_int(obj) || (obj == MM_TRUE) || (obj == MM_FALSE) || (obj == MM_NULL)) {
+//     return obj; //mm_object_new(); //TODO: this should probably be a dummy static object
+//   } else {
+//     return ((oop*) obj)[1];
+//   }
+// }
 
-  oop mm_behavior_get_dict(oop);
+  inline oop mm_behavior_get_dict(oop b) { return (oop) ((oop*)b)[2]; }
+
   number mm_behavior_size(Process*, oop, bool should_assert = false);
 
   bool delegates_to(oop, oop);
@@ -70,7 +80,10 @@ public:
   bool mm_dictionary_has_key(Process*, oop dict, oop key, bool should_assert = false);
   oop mm_dictionary_keys(Process*, oop dict, bool should_assert = false);
   oop mm_dictionary_values(Process*, oop dict, bool should_assert = false);
-  oop mm_dictionary_get(Process*, oop dict, oop key, bool should_assert = false);
+
+ oop mm_dictionary_get(Process*, oop dict, oop key, bool should_assert = false);
+ oop mm_dictionary_fast_get(Process*, oop dict, oop key);
+
   boost::unordered_map<oop,oop>* mm_dictionary_frame(Process*, oop, bool should_assert = false);
   boost::unordered_map<oop,oop>::iterator mm_dictionary_begin(Process*, oop, bool should_assert = false);
   boost::unordered_map<oop,oop>::iterator mm_dictionary_end(Process*, oop, bool should_assert = false);
@@ -110,7 +123,10 @@ public:
   char* mm_symbol_cstr(Process*, oop, bool should_assert = false);
   oop mm_symbol_to_string(Process*, oop, bool should_assert = false);
 
-  bool mm_is_function(oop);
+  inline bool mm_is_function(oop obj) {
+    static oop fun_prime = _core_image->get_prime("Function");
+    return *(oop*) obj == fun_prime;
+  }
 
   inline bool mm_is_context(oop obj) {
     return *(oop*) obj == _cached_context;
@@ -127,13 +143,25 @@ public:
 
   oop mm_function_get_module(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_prim_name(Process*, oop fun, bool should_assert = false);
-  oop mm_function_get_cfun(Process*, oop fun, bool should_assert = false);
+  //oop mm_function_get_cfun(Process*, oop fun, bool should_assert = false);
+  inline oop mm_function_get_cfun(Process* p, oop fun, bool should_assert = false) {
+    return (oop) ((oop*)fun)[2];
+  }
+
   bytecode* mm_function_get_code(Process*, oop fun, bool should_assert = false);
   number mm_function_get_code_size(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_literal_by_index(Process*, oop fun, int idx, bool should_assert = false);
   number mm_function_get_num_locals_or_env(Process*, oop fun, bool should_assert = false);
   number mm_function_get_env_offset(Process*, oop fun, bool should_assert = false);
-  number mm_function_get_num_params(Process*, oop fun, bool should_assert = false);
+//  number mm_function_get_num_params(Process*, oop fun, bool should_assert = false);
+  inline number mm_function_get_num_params(Process* p, oop fun, bool should_assert = false) {
+  // TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+  //               mm_object_vt(fun) == _core_image->get_prime("Context")),
+  //            "TypeError","Expected Function or Context")
+  oop cfun = mm_function_get_cfun(p, fun, should_assert);
+  return mm_compiled_function_get_num_params(p, cfun, should_assert);
+}
+
   bool mm_function_is_ctor(Process*, oop fun, bool should_assert = false);
   bool mm_function_is_getter(Process*, oop fun, bool should_assert = false);
   bool mm_function_uses_env(Process*, oop fun, bool should_assert = false);
@@ -158,7 +186,11 @@ public:
   number mm_compiled_function_get_code_size(Process*, oop cfun, bool should_assert = false);
   number mm_compiled_function_get_num_locals_or_env(Process*, oop cfun, bool should_assert = false);
   number mm_compiled_function_get_env_offset(Process*, oop cfun, bool should_assert = false);
-  number mm_compiled_function_get_num_params(Process*, oop cfun, bool should_assert = false);
+//  number mm_compiled_function_get_num_params(Process*, oop cfun, bool should_assert = false);
+  inline number mm_compiled_function_get_num_params(Process* p, oop cfun, bool should_assert = false) {
+    return (number) ((oop*)cfun)[10];
+  }
+
   bool mm_compiled_function_is_getter(Process*, oop cfun, bool should_assert = false);
   number mm_compiled_function_access_field(Process*, oop cfun, bool should_assert = false);
   bool mm_compiled_function_is_ctor(Process*, oop cfun, bool should_assert = false);

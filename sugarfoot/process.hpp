@@ -50,21 +50,21 @@ public:
 
   void fail(oop e);
 
-  VM* vm() { return _vm; }
-  oop sp() { return _sp; }
-  oop fp() { return _fp; }
-  oop cp() { return _cp; }
-  oop mp() { return _mp; }
-  oop bp() { return _bp; }
-  bytecode* ip() { return _ip; }
+  inline VM* vm() { return _vm; }
+  inline oop sp() { return _sp; }
+  inline oop fp() { return _fp; }
+  inline oop cp() { return _cp; }
+  inline oop mp() { return _mp; }
+  inline oop bp() { return _bp; }
+  inline bytecode* ip() { return _ip; }
 
-  oop rp();
-  oop dp();
+  inline oop rp() { return * (oop*) (_fp + _ss ); }
+  inline oop dp() { return * (oop*) (_fp + _ss + 1); }
 
   oop set_rp(oop);
   oop set_dp(oop);
 
-  oop get_arg(number idx);
+  inline oop get_arg(number idx) { return * ((oop*)_fp + idx); }
   oop cp_from_base(oop bp);
   oop fp_from_base(oop bp);
   bytecode* ip_from_base(oop bp);
@@ -73,11 +73,20 @@ public:
   // oop get_rp() { return _rp; };
   // oop get_dp() { return _dp; };
 
-  MMObj* mmobj() { return _mmobj; }
+  inline MMObj* mmobj() { return _mmobj; }
 
-  void stack_push(oop);
-  void stack_push(word);
-  void stack_push(bytecode*);
+  inline void stack_push(oop data) {
+      _sp++;
+    * (word*) _sp = (word) data;
+  }
+  inline void stack_push(word data) {
+  _sp++;
+  * (word*) _sp = data;
+  }
+  inline void stack_push(bytecode* data) {
+    _sp++;
+  * (word*) _sp = (word) data;
+  }
 
   oop current_exception() { return _current_exception; }
 
@@ -143,7 +152,7 @@ private:
 
 
   oop stack_pop();
-  int execute_primitive(std::string);
+  int execute_primitive(oop);
   void fetch_cycle(void*);
 
   void push_frame(oop,oop,number, number);

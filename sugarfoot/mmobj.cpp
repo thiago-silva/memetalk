@@ -384,6 +384,15 @@ oop MMObj::mm_dictionary_values(Process* p, oop dict, bool should_assert) {
   return lst;
 }
 
+oop MMObj::mm_dictionary_fast_get(Process* p, oop dict, oop key) {
+    boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, true);
+  boost::unordered_map<oop, oop>::iterator it = elements->find(key);
+  if (it != elements->end()) {
+    return it->second;
+  } else {
+    return MM_NULL;
+  }
+}
 
 oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(dict) == _core_image->get_prime("Dictionary")),
@@ -391,6 +400,10 @@ oop MMObj::mm_dictionary_get(Process* p, oop dict, oop key, bool should_assert) 
 
     boost::unordered_map<oop, oop>* elements = mm_dictionary_frame(p, dict, should_assert);
 
+  boost::unordered_map<oop, oop>::iterator it = elements->find(key);
+  if (it != elements->end()) {
+    return it->second;
+  }
   DBG(dict << "(" << elements->size() << ") get " << key << endl);
   for (boost::unordered_map<oop, oop>::iterator it = elements->begin(); it != elements->end(); it++) {
     // DBG(dict << "(" << elements->size() << ") get direct? " << (it->first == key) << endl);
@@ -460,9 +473,9 @@ oop MMObj::mm_string_new(const char* str) {
 }
 
 
-bool MMObj::mm_is_function(oop obj) {
-  return *(oop*) obj == _core_image->get_prime("Function");
-}
+// bool MMObj::mm_is_function(oop obj) {
+//   return *(oop*) obj == _core_image->get_prime("Function");
+// }
 
 void MMObj::mm_context_set_cfun(Process* p, oop ctx, oop cfun, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(ctx) == _core_image->get_prime("Context")),
@@ -518,12 +531,12 @@ oop MMObj::mm_function_get_module(Process* p, oop fun, bool should_assert) {
   return (oop) ((oop*)fun)[3];
 }
 
-oop MMObj::mm_function_get_cfun(Process* p, oop fun, bool should_assert) {
-  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-                mm_object_vt(fun) == _core_image->get_prime("Context")),
-             "TypeError","Expected Function or Context")
-  return (oop) ((oop*)fun)[2];
-}
+// oop MMObj::mm_function_get_cfun(Process* p, oop fun, bool should_assert) {
+//   TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+//                 mm_object_vt(fun) == _core_image->get_prime("Context")),
+//              "TypeError","Expected Function or Context")
+//   return (oop) ((oop*)fun)[2];
+// }
 
 bool MMObj::mm_function_is_prim(Process* p, oop fun, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
@@ -574,13 +587,13 @@ oop MMObj::mm_function_get_literal_by_index(Process* p, oop fun, int idx, bool s
   return mm_compiled_function_get_literal_by_index(p, cfun, idx, should_assert);
 }
 
-number MMObj::mm_function_get_num_params(Process* p, oop fun, bool should_assert) {
-  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
-                mm_object_vt(fun) == _core_image->get_prime("Context")),
-             "TypeError","Expected Function or Context")
-  oop cfun = mm_function_get_cfun(p, fun, should_assert);
-  return mm_compiled_function_get_num_params(p, cfun, should_assert);
-}
+// number MMObj::mm_function_get_num_params(Process* p, oop fun, bool should_assert) {
+//   TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+//                 mm_object_vt(fun) == _core_image->get_prime("Context")),
+//              "TypeError","Expected Function or Context")
+//   oop cfun = mm_function_get_cfun(p, fun, should_assert);
+//   return mm_compiled_function_get_num_params(p, cfun, should_assert);
+// }
 
 number MMObj::mm_function_get_num_locals_or_env(Process* p, oop fun, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
@@ -791,11 +804,11 @@ void MMObj::mm_compiled_function_set_owner(Process* p, oop cfun, oop owner, bool
   ((oop*)cfun)[9] = owner;
 }
 
-number MMObj::mm_compiled_function_get_num_params(Process* p, oop cfun, bool should_assert) {
-  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
-             "TypeError","Expected CompiledFunction")
-  return (number) ((oop*)cfun)[10];
-}
+// number MMObj::mm_compiled_function_get_num_params(Process* p, oop cfun, bool should_assert) {
+//   TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+//              "TypeError","Expected CompiledFunction")
+//   return (number) ((oop*)cfun)[10];
+// }
 
 bool MMObj::mm_compiled_function_uses_env(Process* p, oop cfun, bool should_assert) {
   TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
@@ -1209,12 +1222,12 @@ oop MMObj::mm_symbol_to_string(Process* p, oop sym, bool should_assert) {
 }
 
 
-oop MMObj::mm_behavior_get_dict(oop behavior) {
-  //if (!( *(oop*) behavior == _core_image->get_prime("Behavior")); -- this can also be an imodul) {
-//  p->raise("TypeError", "Expected Behavior");
+// oop MMObj::mm_behavior_get_dict(oop behavior) {
+//   //if (!( *(oop*) behavior == _core_image->get_prime("Behavior")); -- this can also be an imodul) {
+// //  p->raise("TypeError", "Expected Behavior");
+// // }
+//   return (oop) ((oop*)behavior)[2];
 // }
-  return (oop) ((oop*)behavior)[2];
-}
 
 number MMObj::mm_behavior_size(Process* p, oop behavior, bool should_assert) {
   TYPE_CHECK(!( **(oop**) behavior == _core_image->get_prime("Behavior")),

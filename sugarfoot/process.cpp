@@ -68,8 +68,8 @@
     }                                                                   \
     oop dict = _mmobj->mm_behavior_get_dict(vt);                        \
                                                                         \
-    if (_mmobj->mm_dictionary_has_key(this, dict, selector, true)) {    \
-      fun = _mmobj->mm_dictionary_get(this, dict, selector, true);      \
+    fun = _mmobj->mm_dictionary_fast_get(this, dict, selector);         \
+    if (fun) {                                                          \
       break;                                                            \
     } else {                                                            \
       vt = _mmobj->mm_object_delegate(vt);                              \
@@ -221,9 +221,9 @@ void Process::init() {
   _ss = 0; //local storage
 }
 
-oop Process::get_arg(number idx) {
-  return * ((oop*)_fp + idx);
-};
+// oop Process::get_arg(number idx) {
+//   return * ((oop*)_fp + idx);
+// };
 
 oop Process::set_rp(oop rp) {
   return * (oop*) (_fp + _ss) = rp;
@@ -233,13 +233,13 @@ oop Process::set_dp(oop dp) {
   return * (oop*) (_fp + _ss + 1) = dp;
 }
 
-oop Process::rp() {
-  return * (oop*) (_fp + _ss );
-}
+// oop Process::rp() {
+//   return * (oop*) (_fp + _ss );
+// }
 
-oop Process::dp() {
-  return * (oop*) (_fp + _ss + 1);
-}
+// oop Process::dp() {
+//   return * (oop*) (_fp + _ss + 1);
+// }
 
 oop Process::cp_from_base(oop bp) {
   return * ((oop*)bp - 3);
@@ -267,10 +267,10 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
 
   DBG("before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl);
 
-  for (int i = 0; i < storage_size - arity; i++) {
-    stack_push(MM_NULL);
-  }
-
+  // for (int i = 0; i < storage_size - arity; i++) {
+  //   stack_push(MM_NULL);
+  // }
+  _sp += (storage_size - arity);
 
   stack_push(recv);
   stack_push(drecv);
@@ -446,8 +446,8 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
 
   if (_mmobj->mm_function_is_prim(this, fun, true)) {
     oop prim_name = _mmobj->mm_function_get_prim_name(this, fun, true);
-    std::string str_prim_name = _mmobj->mm_string_cstr(this, prim_name, true);
-    int ret = execute_primitive(str_prim_name);
+    //std::string str_prim_name = _mmobj->mm_string_cstr(this, prim_name, true);
+    int ret = execute_primitive(prim_name);
     if (ret == 0) {
       oop value = stack_pop(); //shit
       unload_fun_and_return(value);
@@ -684,7 +684,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
     //Because debugger may interfere with _ip,
     //we must take the code from _ip, decode and dispatch
     //*after* the tick()
-    tick();
+    if (_vm->running_online()) tick();
 
     bytecode code = *_ip;
 
@@ -700,7 +700,103 @@ void Process::fetch_cycle(void* stop_at_bp) {
     //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
     //   DBG(" [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl);
     // }
-    dispatch(opcode, arg);
+    //dispatch(opcode, arg);
+    oop val;
+    switch(opcode) {
+      case PUSH_LOCAL:
+        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
+        stack_push(*(_fp + arg));
+        break;
+      case PUSH_LITERAL:
+        DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
+        stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
+        break;
+      case PUSH_MODULE:
+        DBG("PUSH_MODULE " << arg << " " << _mp << endl);
+        stack_push(_mp);
+        break;
+      case PUSH_FIELD:
+        DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
+        stack_push(*(dp() + arg + 2));
+        break;
+      case PUSH_THIS:
+        DBG("PUSH_THIS " << rp() << endl);
+        stack_push(rp());
+        break;
+      case PUSH_FP:
+        DBG("PUSH_FP " << arg << " -- " << _fp << endl);
+        stack_push(_fp);
+        break;
+
+      case PUSH_CONTEXT:
+        DBG("PUSH_CONTEXT " << arg << endl);
+        stack_push(_cp);
+        break;
+      case PUSH_BIN:
+        DBG("PUSH_BIN " << arg << endl);
+        stack_push(arg);
+        break;
+      case RETURN_TOP:
+        val = stack_pop();
+        DBG("RETURN_TOP " << arg << " " << val << endl);
+        handle_return(val);
+        break;
+      case RETURN_THIS:
+        DBG("RETURN_THIS " << rp() << endl);
+        handle_return(rp());
+        break;
+      case POP:
+        val =stack_pop();
+        DBG("POP " << arg << " = " << val << endl);
+        break;
+      case POP_LOCAL:
+        val = stack_pop();
+        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+            << (oop) *(_fp + arg) << " = " << val << endl);
+        *(_fp + arg) = (word) val;
+        break;
+      case POP_FIELD:
+        val = stack_pop();
+        DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+            << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
+        *(dp() + arg + 2) = (word) val;
+        break;
+      case SEND:
+        DBG("SEND " << arg << endl);
+        handle_send(arg);
+        break;
+      case SUPER_CTOR_SEND:
+        handle_super_ctor_send(arg);
+        break;
+      case CALL:
+        DBG("CALL " << arg << endl);
+        handle_call(arg);
+        break;
+      case JMP:
+        DBG("JMP " << arg << " " << endl);
+        _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        break;
+      case JMPB:
+        DBG("JMPB " << arg << " " << endl);
+        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+        break;
+
+      case JZ:
+        val = stack_pop();
+        DBG("JZ " << arg << " " << val << endl);
+        if ((val == MM_FALSE) || (val == MM_NULL)) {
+          _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        }
+        break;
+      case SUPER_SEND:
+        handle_super_send(arg);
+        break;
+      // case RETURN_THIS:
+      //   break;
+      default:
+        ERROR() << "Unknown opcode " << opcode << endl;
+        _vm->bail("opcode not implemented");
+    }
     // DBG(" [end of dispatch] " << opcode << endl);
   }
   DBG("end" << endl);
@@ -1023,105 +1119,105 @@ void Process::handle_return(oop val) {
   maybe_break_on_return();
 }
 
-void Process::dispatch(int opcode, int arg) {
-    // DBG(" executing " << opcode << " " << arg << endl);
-    oop val;
-    switch(opcode) {
-      case PUSH_LOCAL:
-        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
-        stack_push(*(_fp + arg));
-        break;
-      case PUSH_LITERAL:
-        DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
-        stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
-        break;
-      case PUSH_MODULE:
-        DBG("PUSH_MODULE " << arg << " " << _mp << endl);
-        stack_push(_mp);
-        break;
-      case PUSH_FIELD:
-        DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
-        stack_push(*(dp() + arg + 2));
-        break;
-      case PUSH_THIS:
-        DBG("PUSH_THIS " << rp() << endl);
-        stack_push(rp());
-        break;
-      case PUSH_FP:
-        DBG("PUSH_FP " << arg << " -- " << _fp << endl);
-        stack_push(_fp);
-        break;
+// void Process::dispatch(int opcode, int arg) {
+//     // DBG(" executing " << opcode << " " << arg << endl);
+//     oop val;
+//     switch(opcode) {
+//       case PUSH_LOCAL:
+//         DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
+//         stack_push(*(_fp + arg));
+//         break;
+//       case PUSH_LITERAL:
+//         DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
+//         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
+//         break;
+//       case PUSH_MODULE:
+//         DBG("PUSH_MODULE " << arg << " " << _mp << endl);
+//         stack_push(_mp);
+//         break;
+//       case PUSH_FIELD:
+//         DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
+//         stack_push(*(dp() + arg + 2));
+//         break;
+//       case PUSH_THIS:
+//         DBG("PUSH_THIS " << rp() << endl);
+//         stack_push(rp());
+//         break;
+//       case PUSH_FP:
+//         DBG("PUSH_FP " << arg << " -- " << _fp << endl);
+//         stack_push(_fp);
+//         break;
 
-      case PUSH_CONTEXT:
-        DBG("PUSH_CONTEXT " << arg << endl);
-        stack_push(_cp);
-        break;
-      case PUSH_BIN:
-        DBG("PUSH_BIN " << arg << endl);
-        stack_push(arg);
-        break;
-      case RETURN_TOP:
-        val = stack_pop();
-        DBG("RETURN_TOP " << arg << " " << val << endl);
-        handle_return(val);
-        break;
-      case RETURN_THIS:
-        DBG("RETURN_THIS " << rp() << endl);
-        handle_return(rp());
-        break;
-      case POP:
-        val =stack_pop();
-        DBG("POP " << arg << " = " << val << endl);
-        break;
-      case POP_LOCAL:
-        val = stack_pop();
-        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
-            << (oop) *(_fp + arg) << " = " << val << endl);
-        *(_fp + arg) = (word) val;
-        break;
-      case POP_FIELD:
-        val = stack_pop();
-        DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
-            << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
-        *(dp() + arg + 2) = (word) val;
-        break;
-      case SEND:
-        DBG("SEND " << arg << endl);
-        handle_send(arg);
-        break;
-      case SUPER_CTOR_SEND:
-        handle_super_ctor_send(arg);
-        break;
-      case CALL:
-        DBG("CALL " << arg << endl);
-        handle_call(arg);
-        break;
-      case JMP:
-        DBG("JMP " << arg << " " << endl);
-        _ip += (arg -1); //_ip already suffered a ++ in dispatch
-        break;
-      case JMPB:
-        DBG("JMPB " << arg << " " << endl);
-        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
-        break;
+//       case PUSH_CONTEXT:
+//         DBG("PUSH_CONTEXT " << arg << endl);
+//         stack_push(_cp);
+//         break;
+//       case PUSH_BIN:
+//         DBG("PUSH_BIN " << arg << endl);
+//         stack_push(arg);
+//         break;
+//       case RETURN_TOP:
+//         val = stack_pop();
+//         DBG("RETURN_TOP " << arg << " " << val << endl);
+//         handle_return(val);
+//         break;
+//       case RETURN_THIS:
+//         DBG("RETURN_THIS " << rp() << endl);
+//         handle_return(rp());
+//         break;
+//       case POP:
+//         val =stack_pop();
+//         DBG("POP " << arg << " = " << val << endl);
+//         break;
+//       case POP_LOCAL:
+//         val = stack_pop();
+//         DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+//             << (oop) *(_fp + arg) << " = " << val << endl);
+//         *(_fp + arg) = (word) val;
+//         break;
+//       case POP_FIELD:
+//         val = stack_pop();
+//         DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+//             << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
+//         *(dp() + arg + 2) = (word) val;
+//         break;
+//       case SEND:
+//         DBG("SEND " << arg << endl);
+//         handle_send(arg);
+//         break;
+//       case SUPER_CTOR_SEND:
+//         handle_super_ctor_send(arg);
+//         break;
+//       case CALL:
+//         DBG("CALL " << arg << endl);
+//         handle_call(arg);
+//         break;
+//       case JMP:
+//         DBG("JMP " << arg << " " << endl);
+//         _ip += (arg -1); //_ip already suffered a ++ in dispatch
+//         break;
+//       case JMPB:
+//         DBG("JMPB " << arg << " " << endl);
+//         _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+//         break;
 
-      case JZ:
-        val = stack_pop();
-        DBG("JZ " << arg << " " << val << endl);
-        if ((val == MM_FALSE) || (val == MM_NULL)) {
-          _ip += (arg -1); //_ip already suffered a ++ in dispatch
-        }
-        break;
-      case SUPER_SEND:
-        handle_super_send(arg);
-        break;
-      // case RETURN_THIS:
-      //   break;
-      default:
-        ERROR() << "Unknown opcode " << opcode << endl;
-        _vm->bail("opcode not implemented");
-    }
-}
+//       case JZ:
+//         val = stack_pop();
+//         DBG("JZ " << arg << " " << val << endl);
+//         if ((val == MM_FALSE) || (val == MM_NULL)) {
+//           _ip += (arg -1); //_ip already suffered a ++ in dispatch
+//         }
+//         break;
+//       case SUPER_SEND:
+//         handle_super_send(arg);
+//         break;
+//       // case RETURN_THIS:
+//       //   break;
+//       default:
+//         ERROR() << "Unknown opcode " << opcode << endl;
+//         _vm->bail("opcode not implemented");
+//     }
+// }
 
 std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
   // assert( *(oop*) selector == _core_image->get_prime("Symbol"));
@@ -1156,32 +1252,32 @@ oop Process::stack_pop() {
   return val;
 }
 
-void Process::stack_push(oop data) {
-  _sp++;
-  DBG("PUSH " << data << " -> " << _sp << endl);
-  * (word*) _sp = (word) data;
-}
+// void Process::stack_push(oop data) {
+//   _sp++;
+//   DBG("PUSH " << data << " -> " << _sp << endl);
+//   * (word*) _sp = (word) data;
+// }
 
-void Process::stack_push(word data) {
-  _sp++;
-  DBG("PUSH " << (oop) data << " -> " << _sp << endl);
-  * (word*) _sp = data;
-}
+// void Process::stack_push(word data) {
+//   _sp++;
+//   DBG("PUSH " << (oop) data << " -> " << _sp << endl);
+//   * (word*) _sp = data;
+// }
 
-void Process::stack_push(bytecode* data) {
-  _sp++;
-  DBG("PUSH " << data << " -> " << _sp << endl);
-  * (word*) _sp = (word) data;
-}
+// void Process::stack_push(bytecode* data) {
+//   _sp++;
+//   DBG("PUSH " << data << " -> " << _sp << endl);
+//   * (word*) _sp = (word) data;
+// }
 
 
-int Process::execute_primitive(std::string name) {
+int Process::execute_primitive(oop name) {
   try {
     int val = _vm->get_primitive(this, name)(this);
-    DBG("primitive " << name << " returned " << val << endl);
+    DBG("primitive " << SYM_TO_STR(name) << " returned " << val << endl);
     return val;
   } catch(mm_exception_rewind e) {
-    DBG("primitive " << name << " raised " << e.mm_exception << endl);
+    DBG("primitive " << SYM_TO_STR(name) << " raised " << e.mm_exception << endl);
     stack_push(e.mm_exception);
     return PRIM_RAISED;
   }
@@ -1421,11 +1517,12 @@ void Process::halt_and_debug() {
 }
 
 void Process::maybe_debug_on_raise(oop ex_oop) {
+  if (!_vm->running_online()) return;
+
   if (has_debugger_attached() && !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
     DBG("we have a debugger and this exception does not have handler. state=halt" << endl);
     _state = HALT_STATE;
-  } else if (_vm->running_online() &&
-             !exception_has_handler(ex_oop, _cp, _ip, _bp)) {
+  } else if (!exception_has_handler(ex_oop, _cp, _ip, _bp)) {
 
     DBG("running online and there's no handler for exception "
         << ex_oop << "; calling halt_and_debug()" << endl);
