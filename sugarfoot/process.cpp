@@ -56,6 +56,29 @@
 #define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
 #define TO_C_STR(str) _mmobj->mm_string_cstr(this, str, true)
 
+//#include <boost/unordered_map.hpp>
+//typedef boost::unordered_map<unsigned long, entry_t> cache_t;
+
+#define inline_lookup(drecv, vt, selector)                              \
+  while (true) {                                                        \
+    if (vt == NULL) {                                                   \
+      drecv = MM_NULL;                                                  \
+      fun = MM_NULL;                                                     \
+      break;                                                            \
+    }                                                                   \
+    oop dict = _mmobj->mm_behavior_get_dict(vt);                        \
+                                                                        \
+    if (_mmobj->mm_dictionary_has_key(this, dict, selector, true)) {    \
+      fun = _mmobj->mm_dictionary_get(this, dict, selector, true);      \
+      break;                                                            \
+    } else {                                                            \
+      vt = _mmobj->mm_object_delegate(vt);                              \
+      drecv = _mmobj->mm_object_delegate(drecv);                        \
+    }                                                                   \
+  }                                                                     \
+
+
+
 Process::Process(VM* vm, int debugger_id)
   : _log(debugger_id > 0?LOG_DBG_PROC:LOG_TARGET_PROC),
  _log_registers(debugger_id > 0?LOG_TARGET_PROC_REG:LOG_TARGET_PROC_REG),
@@ -499,11 +522,11 @@ oop Process::super_send(oop recv, oop selector, oop args, int* exc) {
       << ", selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << " #args: " << num_args << endl);
 
   *exc = 0;
-  std::pair<oop, oop> res = lookup(_mmobj->mm_object_delegate(recv),
-                                   _mmobj->mm_object_delegate(_mmobj->mm_object_vt(recv)), selector);
+  oop fun;
+  oop vt = _mmobj->mm_object_delegate(_mmobj->mm_object_vt(recv));
+  oop drecv = _mmobj->mm_object_delegate(recv);
+  inline_lookup(drecv, vt, selector);
 
-  oop drecv = res.first;
-  oop fun = res.second;
   if (!fun) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
@@ -535,10 +558,11 @@ oop Process::do_send(oop recv, oop selector, int num_args, int *exc) {
       << ", selector: " << _mmobj->mm_symbol_cstr(this, selector, true) << " #args: " << num_args << endl);
 
   *exc = 0;
-  std::pair<oop, oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
+  oop fun;
+  oop vt = _mmobj->mm_object_vt(recv);
+  oop drecv = recv;
+  inline_lookup(drecv, vt, selector);
 
-  oop drecv = res.first;
-  oop fun = res.second;
   if (!fun) {
     std::stringstream s;
     s << _mmobj->mm_symbol_cstr(this, selector, true) << " not found in object " << recv;
@@ -837,19 +861,17 @@ void Process::handle_super_send(number num_args) {
   oop recv = rp();
   oop selector = _vm->new_symbol(this, _mmobj->mm_function_get_name(this, _cp));
 
+
+  oop fun;
   oop vt = _mmobj->mm_object_vt(recv);
-
-  oop pklass = _mmobj->mm_object_delegate(vt);
-  oop delegate = _mmobj->mm_object_delegate(dp());
-
-  std::pair<oop,oop> res = lookup(delegate, pklass, selector);
-  oop drecv = res.first;
-  oop fun = res.second;
+  vt = _mmobj->mm_object_delegate(vt);
+  oop drecv = _mmobj->mm_object_delegate(dp());
+  inline_lookup(drecv, vt, selector);
   DBG("super lookup FOUND " << fun << endl);
 
   if (!fun) {
     std::stringstream s;
-    s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << delegate;
+    s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << drecv;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());
@@ -887,9 +909,10 @@ void Process::handle_send(number num_args) {
   DBG(" SEND " << selector << " name: " << _mmobj->mm_symbol_cstr(this, selector)
       << " " << "recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
 
-  std::pair<oop,oop> res = lookup(recv, _mmobj->mm_object_vt(recv), selector);
-  oop drecv = res.first;
-  oop fun = res.second;
+  oop fun;
+  oop vt = _mmobj->mm_object_vt(recv);
+  oop drecv = recv;
+  inline_lookup(drecv, vt, selector);
   DBG("Lookup FOUND " << fun << endl);
 
   if (!fun) {
@@ -931,14 +954,10 @@ void Process::handle_super_ctor_send(number num_args) {
 
   // lookup starts at the parent of rp's class
   oop instance = dp();
-  oop klass = _mmobj->mm_object_vt(instance);
-  oop pklass = _mmobj->mm_object_delegate(klass);
-  oop receiver = _mmobj->mm_object_delegate(instance);
-
-  std::pair<oop, oop> res = lookup(receiver, _mmobj->mm_object_vt(pklass), selector);
-  oop drecv = res.first;
-  oop fun = res.second;
-
+  oop fun;
+  oop drecv = _mmobj->mm_object_delegate(instance);
+  oop vt = _mmobj->mm_object_vt(_mmobj->mm_object_delegate(_mmobj->mm_object_vt(instance)));
+  inline_lookup(drecv, vt, selector);
   if (!fun) {
     DBG("super Lookup failed");
     std::stringstream s;
