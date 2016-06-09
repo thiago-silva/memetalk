@@ -177,6 +177,8 @@ private:
 
   bool load_fun(oop, oop, oop, bool, number = -1);
 
+  void** create_threaded_code(void** table, bytecode* ip, number size);
+
 
   oop stack_pop();
   int execute_primitive(oop);
@@ -196,7 +198,7 @@ private:
   void handle_super_send(number num_arg);
   void handle_super_ctor_send(number);
   void handle_call(number);
-  void handle_return(oop);
+  void** handle_return(oop, void*);
   void basic_new_and_load(oop);
 
   void handle_ex_equal(number num_args);
@@ -239,6 +241,7 @@ private:
   oop _fp;
   oop _cp;
   bytecode* _ip;
+  void** _tcode;
   number _ss;
   oop _bp;
   //
@@ -246,7 +249,6 @@ private:
   word* _sp;
 
   word* _stack;
-  number _code_size;
   std::list<bytecode_range_t> _volatile_breakpoints;
   std::list<bytecode*> _breakpoints;
   oop _break_only_on_this_module;
@@ -281,6 +283,7 @@ private:
   long _JZ;
   long _SUPER_SEND;
 
+  void ** _dispatch_table;
 };
 
 #endif

@@ -652,6 +652,7 @@ class CompiledFunction(Entry):
         vmem.append_pointer_to(oop_loc_mappings)
         vmem.append_pointer_to(oop_closures)
         vmem.append_int(self.var_arg)
+        vmem.append_null() # thread_code
 
         # vmem.append_label_ref(self.cmod.label())
         self.oop = oop

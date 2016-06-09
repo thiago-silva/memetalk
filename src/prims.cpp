@@ -157,7 +157,7 @@ static int prim_io_close(Process* proc) {
 
 
 static int prim_string_concat(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_STRING_CONCAT, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_STRING_CONCAT, EX_SEND_LIMIT);
 
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -714,7 +714,7 @@ static inline bool is_numeric(Process* proc, oop o) {
 
 
 static int prim_numeric_sum(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_NUMERIC_SUM, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_NUMERIC_SUM, EX_SEND_LIMIT);
 
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -750,7 +750,7 @@ static int prim_numeric_sub(Process* proc) {
 }
 
 static int prim_numeric_mul(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_NUMERIC_MUL, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_NUMERIC_MUL, EX_SEND_LIMIT);
 
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -910,7 +910,7 @@ static int prim_numeric_to_string(Process* proc) {
 }
 
 static int prim_numeric_as_char(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_NUMERIC_AS_CHAR, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_NUMERIC_AS_CHAR, EX_SEND_LIMIT);
 
   oop self =  proc->rp();
 
@@ -1049,7 +1049,7 @@ static int prim_list_pos(Process* proc) {
 }
 
 static int prim_list_each(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_LIST_EACH, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_LIST_EACH, EX_SEND_LIMIT);
 
   oop self =  proc->dp();
   oop fun = proc->get_arg(0);
@@ -1562,7 +1562,7 @@ static int prim_dictionary_new(Process* proc) {
 
 static int prim_dictionary_set(Process* proc) {
   // std::cerr << "prim_dictionary_set: rp: " << proc->rp() << " dp: " << proc->dp() << " code:" << decode_opcode(*(proc->ip()-1)) << endl;
-  SPECIALIZE_BYTECODE(EX_DICTIONARY_SET, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_DICTIONARY_SET, EX_SEND_LIMIT);
 
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
@@ -1574,7 +1574,7 @@ static int prim_dictionary_set(Process* proc) {
 }
 
 static int prim_dictionary_index(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_DICTIONARY_INDEX, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_DICTIONARY_INDEX, EX_SEND_LIMIT);
 
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
@@ -1669,7 +1669,7 @@ static int prim_dictionary_plus(Process* proc) {
 }
 
 static int prim_dictionary_has(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_DICTIONARY_HAS, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_DICTIONARY_HAS, EX_SEND_LIMIT);
 
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
@@ -1981,7 +1981,7 @@ static int prim_object_to_source(Process* proc) {
 }
 
 static int prim_object_send(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_OBJECT_SEND, EX_SEND_LIMIT);
+  //SPECIALIZE_BYTECODE(EX_OBJECT_SEND, EX_SEND_LIMIT);
 
   oop self =  proc->rp();
   oop name = proc->get_arg(0);

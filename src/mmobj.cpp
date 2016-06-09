@@ -627,6 +627,23 @@ bytecode* MMObj::mm_function_get_code(Process* p, oop fun, bool should_assert) {
   return mm_compiled_function_get_code(p, cfun, should_assert);
 }
 
+void** MMObj::mm_function_get_thread_code(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
+  oop cfun = mm_function_get_cfun(p, fun, should_assert);
+  return mm_compiled_function_get_thread_code(p, cfun, should_assert);
+}
+
+void MMObj::mm_function_set_thread_code(Process* p, oop fun, void* tc, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
+                mm_object_vt(fun) == _core_image->get_prime("Context")),
+             "TypeError","Expected Function or Context")
+
+  oop cfun = mm_function_get_cfun(p, fun, should_assert);
+  return mm_compiled_function_set_thread_code(p, cfun, tc, should_assert);
+}
+
 number MMObj::mm_function_get_code_size(Process* p, oop fun, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
                 mm_object_vt(fun) == _core_image->get_prime("Context")),
@@ -932,6 +949,18 @@ bytecode* MMObj::mm_compiled_function_get_code(Process* p, oop cfun, bool should
   TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
              "TypeError","Expected CompiledFunction")
   return (bytecode*) ((oop*)cfun)[19];
+}
+
+void MMObj::mm_compiled_function_set_thread_code(Process* p, oop cfun, void* tc, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
+    ((oop*)cfun)[27] = (oop) tc;
+}
+
+void** MMObj::mm_compiled_function_get_thread_code(Process*p , oop cfun, bool should_assert) {
+  TYPE_CHECK(!( *(oop*) cfun == _core_image->get_prime("CompiledFunction")),
+             "TypeError","Expected CompiledFunction")
+    return (void**) ((oop*)cfun)[27];
 }
 
 number MMObj::mm_compiled_function_exception_frames_count(Process* p, oop cfun, bool should_assert) {

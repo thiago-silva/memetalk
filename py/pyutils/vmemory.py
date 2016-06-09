@@ -182,7 +182,7 @@ class VirtualMemory(object):
                     res.append(v)
             return res
 
-        if self.total_size < 100000:
+        if True: #self.total_size < 100000:
             # res = reduce(lambda x,y: x+y, [e() for e in self.cells])
             res = [None] * self.total_size
             i = 0
