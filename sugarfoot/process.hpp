@@ -171,7 +171,7 @@ private:
   void handle_super_send(number num_arg);
   void handle_super_ctor_send(number);
   void handle_call(number);
-  void handle_return(oop);
+  void** handle_return(oop, void*);
   void basic_new_and_load(oop);
 
   bool exception_has_handler(oop e, oop cp, bytecode* ip, oop bp);

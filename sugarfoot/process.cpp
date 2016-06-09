@@ -674,15 +674,13 @@ oop Process::call(oop fun, oop args, int* exc) {
   return do_call(fun, exc);
 }
 
-#define MGOTO_NEXT() LOG_BODY(); DBG("NEXT: _ip: " << _ip << ", bp: " << _bp << ", stop_at_bp: " << stop_at_bp << " bp<stop_at ?" << (_bp < stop_at_bp) << endl); if (!_ip || _bp < stop_at_bp) return; goto_ptr = *_tcode; arg = decode_args(*_ip); _ip++; _tcode++; DBG("going to: " << goto_ptr << " ip: " << _ip << endl); goto *goto_ptr
-
-
 void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);
 
-  static void * dispatch_table[] = {0, //0
+  static void * dispatch_table[] = {&&LB_BREAK, //0
                                     0, //1
+                                    //opcodes:
                                     &&LB_PUSH_LOCAL, //2
                                     &&LB_PUSH_LITERAL, //3
                                     &&LB_PUSH_FIELD, //4
@@ -749,100 +747,329 @@ void Process::fetch_cycle(void* stop_at_bp) {
   oop val;
   int arg;
   bytecode code = *_ip;
-  arg = decode_args(*_ip);
   // std::cerr << " going to " << *tcode << " " << &&LB_PUSH_LITERAL << " " << ((*tcode) == (&&LB_PUSH_LITERAL)) << endl;
-  void* goto_ptr;
-  MGOTO_NEXT();
+  void* goto_ptr = *_tcode;
+  goto *goto_ptr;
 
     LB_PUSH_LOCAL:
-        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+
+        DBG("[PUSH_LOCAL] " << arg << " " << (oop) *(_fp + arg) << endl);
         stack_push(*(_fp + arg));
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
     LB_PUSH_LITERAL:
-        DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+
+        DBG("[PUSH_LITERAL] " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
-        MGOTO_NEXT();
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
     LB_PUSH_MODULE:
-        DBG("PUSH_MODULE " << arg << " " << _mp << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[PUSH_MODULE] " << arg << " " << _mp << endl);
         stack_push(_mp);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_PUSH_FIELD:
-        DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[PUSH_FIELD] " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
         stack_push(*(dp() + arg + 2));
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_PUSH_THIS:
-        DBG("PUSH_THIS " << rp() << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[PUSH_THIS] " << rp() << endl);
         stack_push(rp());
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_PUSH_FP:
-        DBG("PUSH_FP " << arg << " -- " << _fp << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[PUSH_FP] " << arg << " -- " << _fp << endl);
         stack_push(_fp);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_PUSH_CONTEXT:
-        DBG("PUSH_CONTEXT " << arg << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[PUSH_CONTEXT] " << arg << endl);
         stack_push(_cp);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_PUSH_BIN:
-        DBG("PUSH_BIN " << arg << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[PUSH_BIN] " << arg << endl);
         stack_push(arg);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_RETURN_TOP:
-        DBG("RETURN_TOP " << arg << " " << (oop)*_sp << endl);
+        //assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[RETURN_TOP] " << arg << " " << (oop)*_sp << endl);
         val = stack_pop();
-        handle_return(val);
-        MGOTO_NEXT();
+        goto_ptr =handle_return(val, stop_at_bp);
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        // if (!_ip || _bp < stop_at_bp) {
+        //   DBG("-- return_top returning because ip is " << _ip << " or bp < stop_at_bp " << (_bp < stop_at_bp) << endl);
+        //   return;
+        // }
+        // goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_RETURN_THIS:
-        DBG("RETURN_THIS " << rp() << endl);
-        handle_return(rp());
-        MGOTO_NEXT();
+        //assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[RETURN_THIS] " << rp() << endl);
+        goto_ptr =handle_return(rp(), stop_at_bp);
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        // if (!_ip || _bp < stop_at_bp) {
+        //   DBG("-- return_top returning because ip is " << _ip << " or bp < stop_at_bp " << (_bp < stop_at_bp) << endl);
+        //   return;
+        // }
+        // goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_POP:
-        DBG("POP " << arg << " = " << (oop)*_sp << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[POP] " << arg << " = " << (oop)*_sp << endl);
         val =stack_pop();
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_POP_LOCAL:
-        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[POP_LOCAL] " << arg << " on " << (oop) (_fp + arg) << " -- "
             << (oop) *(_fp + arg) << " = " << (oop)*_sp << endl);
         val = stack_pop();
         *(_fp + arg) = (word) val;
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_POP_FIELD:
-        DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[POP_FIELD] " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
             << (oop) *(dp() + arg + 2) << " = " << (oop)*_sp << endl); //2: vt, delegate
         val = stack_pop();
         *(dp() + arg + 2) = (word) val;
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
     LB_SEND:
-        DBG("SEND " << arg << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[SEND] " << arg << endl);
         handle_send(arg);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
       LB_SUPER_CTOR_SEND:
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
         handle_super_ctor_send(arg);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
       LB_CALL:
-        DBG("CALL " << arg << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[CALL] " << arg << endl);
         handle_call(arg);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
       LB_JMP:
-        DBG("JMP " << arg << " " << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[JMP] " << arg << " " << endl);
         _ip += (arg -1); //_ip already suffered a ++ in dispatch
         _tcode += (arg - 1);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
       LB_JMPB:
-        DBG("JMPB " << arg << " " << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[JMPB] " << arg << " " << endl);
         _ip -= (arg+1); //_ip already suffered a ++ in dispatch
         _tcode -= (arg + 1);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
       LB_JZ:
-        DBG("JZ " << arg << " " << (oop)*_sp << endl);
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
+        DBG("[JZ] " << arg << " " << (oop)*_sp << endl);
         val = stack_pop();
         if ((val == MM_FALSE) || (val == MM_NULL)) {
           _ip += (arg -1); //_ip already suffered a ++ in dispatch
           _tcode += (arg -1);
         }
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
       LB_SUPER_SEND:
+        assert(((_bp >= stop_at_bp) && _ip));
+        arg = decode_args(*_ip);
+        _ip++;
+        _tcode++;
         handle_super_send(arg);
-        MGOTO_NEXT();
+
+        LOG_BODY();
+        DBG("[LABEL] _ip: " << _ip << ", bp: " << _bp
+            << ", stop_at_bp: " << stop_at_bp
+            << " bp<stop_at ?" << (_bp < stop_at_bp) << endl);
+        goto_ptr = *_tcode;
+        goto *goto_ptr;
+
+      LB_BREAK:
+        DBG("[LB_BREAK] returning" << endl);
+        return;
 
 }
 
@@ -1159,10 +1386,20 @@ void Process::handle_call(number num_args) {
 
 }
 
-void Process::handle_return(oop val) {
+void** Process::handle_return(oop val, void* stop_at_bp) {
   unload_fun_and_return(val);
   maybe_break_on_return();
-  DBG(" --- return handled, cp: " << _cp << " ip: " << _ip << " tcode: " << _tcode << endl);
+  DBG(" --- return handled, cp: " << _cp << " ip: " << _ip << endl);
+  if (!_ip) {
+    DBG("ip is null, returning LB_BREAK: " << *_dispatch_table << endl);
+    return (void**) _dispatch_table[0];
+  }
+  if (_bp < stop_at_bp) {
+    DBG("_bp < stop_at_bp: returning LB_BREAK: " << *_dispatch_table << endl);
+    return (void**)  _dispatch_table[0];
+  }
+  DBG("returning _tcode: " << _tcode << endl);
+  return (void**) *_tcode;
 }
 
 // void Process::dispatch(int opcode, int arg) {
