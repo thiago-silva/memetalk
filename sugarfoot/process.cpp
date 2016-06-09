@@ -55,7 +55,7 @@
 #define ERROR() MMLog::error() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
 #define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
 #define TO_C_STR(str) _mmobj->mm_string_cstr(this, str, true)
-
+#define SYM_TO_STR(sym) _mmobj->mm_symbol_cstr(this, sym, true)
 //#include <boost/unordered_map.hpp>
 //typedef boost::unordered_map<unsigned long, entry_t> cache_t;
 
@@ -97,6 +97,7 @@ Process::Process(VM* vm, int debugger_id)
   _step_bp = MM_NULL;
   _current_exception = MM_NULL;
   _break_only_on_this_module = MM_NULL;
+  _dispatch_table = NULL;
 }
 
 std::string Process::dump_stack_trace(bool enabled) {
@@ -176,22 +177,23 @@ std::string Process::dump_stack_top(bool enabled) {
       s <<  sp << " [BP] " << *(oop*)sp << "\n";
       number ss = *(number*)(sp-1);
       s << (sp-1) << " [SS] " << ss << "\n";
-      s << (sp-2) << " [IP] " << *(bytecode*)(sp-2) << "\n";
-      s << (sp-3) << " [CP] " << *(oop*)(sp-3);
-      if (*(oop*)(sp-3)) {
-        s << " - " << CTXNAME(*(oop*)(sp-3)) << "()\n";
+      s << (sp-2) << " [TC] " << *(void**)(sp-2) << "\n";
+      s << (sp-3) << " [IP] " << *(bytecode*)(sp-3) << "\n";
+      s << (sp-4) << " [CP] " << *(oop*)(sp-4);
+      if (*(oop*)(sp-4)) {
+        s << " - " << CTXNAME(*(oop*)(sp-4)) << "()\n";
       } else {
         s << "\n";
       }
-      s << (sp-4) << " [FP] " << *(oop*)(sp-4) << "\n";
-      s << (sp-5) << " [DP] " << *(oop*)(sp-5) << "\n";
-      s << (sp-6) << " [RP] " << *(oop*)(sp-6) << "\n";
+      s << (sp-5) << " [FP] " << *(oop*)(sp-5) << "\n";
+      s << (sp-6) << " [DP] " << *(oop*)(sp-6) << "\n";
+      s << (sp-7) << " [RP] " << *(oop*)(sp-7) << "\n";
       // number j = 7;
       // for (; j < (ss+7); j++) {
       //   s << (sp-j) << " [LOCAL] " << *(oop*)(sp-j) << "\n";
       // }
       bp = *(oop*)bp;
-      sp = sp-6;
+      sp = sp-7;
     } else {
       s << sp << " " << *(oop*)sp << "\n";
       sp--;
@@ -216,6 +218,7 @@ void Process::init() {
   _fp = NULL;
   _bp = NULL; //base
   _ip = NULL; //instruction
+  _tcode = NULL;
   _mp = NULL; //module
   _cp = NULL; //context
   _ss = 0; //local storage
@@ -242,15 +245,15 @@ oop Process::set_dp(oop dp) {
 // }
 
 oop Process::cp_from_base(oop bp) {
-  return * ((oop*)bp - 3);
-}
-
-oop Process::fp_from_base(oop bp) {
   return * ((oop*)bp - 4);
 }
 
+oop Process::fp_from_base(oop bp) {
+  return * ((oop*)bp - 5);
+}
+
 bytecode* Process::ip_from_base(oop bp) {
-  return (bytecode*) * ((oop*)bp - 2);
+  return (bytecode*) * ((oop*)bp - 3);
 }
 
 void Process::push_frame(oop recv, oop drecv, number arity, number storage_size) {
@@ -267,17 +270,18 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
 
   DBG("before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl);
 
-  // for (int i = 0; i < storage_size - arity; i++) {
-  //   stack_push(MM_NULL);
-  // }
-  _sp += (storage_size - arity);
+  for (int i = 0; i < storage_size - arity; i++) {
+    stack_push(MM_NULL);
+  }
+  // _sp += (storage_size - arity);
 
   stack_push(recv);
   stack_push(drecv);
 
   stack_push(fp);
   stack_push(_cp);
-  stack_push(_ip);
+  stack_push((bytecode*)_ip);
+  stack_push((oop)_tcode);
   stack_push(_ss); //storage size
   stack_push(_bp);
 
@@ -300,6 +304,7 @@ void Process::pop_frame() {
 
   _bp = stack_pop();
   _ss = (number) stack_pop();
+  _tcode = (void**) stack_pop();
   _ip = (bytecode*) stack_pop();
   _cp = stack_pop();
   _fp = stack_pop();
@@ -390,7 +395,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
     raise("TypeError", "Expecting function or context");
   }
 
-  DBG(fun << endl);
+  DBG("loaded fun: " << fun << endl);
 
   if (_mmobj->mm_function_is_getter(this, fun, true)) {
     number idx = _mmobj->mm_function_access_field(this, fun, true);
@@ -490,8 +495,13 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // DBG("load_fun: module for fun " << fun << " is " << _mp << endl);
   // DBG("load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl);
   _ip = _mmobj->mm_function_get_code(this, fun, true);
+  _tcode = _mmobj->mm_function_get_thread_code(this, fun, true);
   // DBG("first instruction " << decode_opcode(*_ip) << endl);
-  _code_size = _mmobj->mm_function_get_code_size(this, fun, true);
+  //_code_size = _mmobj->mm_function_get_code_size(this, fun, true);
+  if (!_tcode && _dispatch_table) {
+     _tcode = create_threaded_code(_dispatch_table, _ip, _mmobj->mm_function_get_code_size(this, _cp));
+     _mmobj->mm_function_set_thread_code(this, _cp, _tcode);
+  }
   maybe_break_on_call();
   return true;
 }
@@ -664,10 +674,54 @@ oop Process::call(oop fun, oop args, int* exc) {
   return do_call(fun, exc);
 }
 
+#define MGOTO_NEXT() LOG_BODY(); DBG("NEXT: _ip: " << _ip << ", bp: " << _bp << ", stop_at_bp: " << stop_at_bp << " bp<stop_at ?" << (_bp < stop_at_bp) << endl); if (!_ip || _bp < stop_at_bp) return; goto_ptr = *_tcode; arg = decode_args(*_ip); _ip++; _tcode++; DBG("going to: " << goto_ptr << " ip: " << _ip << endl); goto *goto_ptr
+
+
 void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);
 
+  static void * dispatch_table[] = {0, //0
+                                    0, //1
+                                    &&LB_PUSH_LOCAL, //2
+                                    &&LB_PUSH_LITERAL, //3
+                                    &&LB_PUSH_FIELD, //4
+                                    0, //5
+                                    &&LB_PUSH_THIS, //6
+                                    &&LB_PUSH_MODULE, //7
+                                    &&LB_PUSH_BIN, //8
+                                    &&LB_PUSH_FP, //9
+                                    &&LB_PUSH_CONTEXT, //10
+                                    0,0,0,0,0,0,0,0,0,0, //11-20
+                                    &&LB_POP_LOCAL, //21
+                                    &&LB_POP_FIELD, //22
+                                    0, //23
+                                    &&LB_POP, //24
+                                    0,0,0,0,0, //25-29
+                                    &&LB_RETURN_THIS, //30
+                                    &&LB_RETURN_TOP,//31
+                                    0,0,0,0,0,0,0,0, //32-39
+                                    &&LB_SEND, //40
+                                    &&LB_CALL, //41
+                                    &&LB_SUPER_SEND, //42
+                                    &&LB_SUPER_CTOR_SEND, //43
+                                    0,0,0,0,0,0, //44-49
+                                    &&LB_JZ, //50
+                                    &&LB_JMP, //51
+                                    &&LB_JMPB //52
+  };
+  _dispatch_table = dispatch_table;
+
+  for (int i = 0; i < 53; i++) {
+    DBG("full dispatch_table[" << i << "]" << dispatch_table[i] << "]" << endl);
+  }
+  DBG("tcode: " << _tcode << endl);
+  //_tcode = (void**) _mmobj->mm_function_get_thread_code(this, _cp);
+  if (!_tcode) {
+    //first instruction of _cp
+    _tcode = create_threaded_code(dispatch_table, _ip, _mmobj->mm_function_get_code_size(this, _cp));
+    _mmobj->mm_function_set_thread_code(this, _cp, _tcode);
+  }
   //at least one instructionn should be executed.  stop_at_bp is usually the
   //top mark of the stack when a function is loaded (_bp). So starting a fetch
   //cycle when this value is smaller than _bp likely means the bytecodes
@@ -678,128 +732,118 @@ void Process::fetch_cycle(void* stop_at_bp) {
 
   assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
-  while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
+//  while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
 
     //at tick we may pause for debugging interactions.
     //Because debugger may interfere with _ip,
     //we must take the code from _ip, decode and dispatch
     //*after* the tick()
-    if (_vm->running_online()) tick();
-
-    bytecode code = *_ip;
-
-
-    int opcode = decode_opcode(code);
-    int arg = decode_args(code);
-
-    DBG("IP: " << _ip << " with code: " << code << " decoded as opcode " << opcode << ", arg: " << arg << endl);
-
-    _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
+    //if (_vm->running_online()) tick();
 
     // if (_state != RUN_STATE) {
     //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
     //   DBG(" [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl);
     // }
     //dispatch(opcode, arg);
-    oop val;
-    switch(opcode) {
-      case PUSH_LOCAL:
+
+  oop val;
+  int arg;
+  bytecode code = *_ip;
+  arg = decode_args(*_ip);
+  // std::cerr << " going to " << *tcode << " " << &&LB_PUSH_LITERAL << " " << ((*tcode) == (&&LB_PUSH_LITERAL)) << endl;
+  void* goto_ptr;
+  MGOTO_NEXT();
+
+    LB_PUSH_LOCAL:
         DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
         stack_push(*(_fp + arg));
-        break;
-      case PUSH_LITERAL:
+        MGOTO_NEXT();
+    LB_PUSH_LITERAL:
         DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
-        break;
-      case PUSH_MODULE:
+        MGOTO_NEXT();
+    LB_PUSH_MODULE:
         DBG("PUSH_MODULE " << arg << " " << _mp << endl);
         stack_push(_mp);
-        break;
-      case PUSH_FIELD:
+        MGOTO_NEXT();
+    LB_PUSH_FIELD:
         DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
         stack_push(*(dp() + arg + 2));
-        break;
-      case PUSH_THIS:
+        MGOTO_NEXT();
+    LB_PUSH_THIS:
         DBG("PUSH_THIS " << rp() << endl);
         stack_push(rp());
-        break;
-      case PUSH_FP:
+        MGOTO_NEXT();
+    LB_PUSH_FP:
         DBG("PUSH_FP " << arg << " -- " << _fp << endl);
         stack_push(_fp);
-        break;
-
-      case PUSH_CONTEXT:
+        MGOTO_NEXT();
+    LB_PUSH_CONTEXT:
         DBG("PUSH_CONTEXT " << arg << endl);
         stack_push(_cp);
-        break;
-      case PUSH_BIN:
+        MGOTO_NEXT();
+    LB_PUSH_BIN:
         DBG("PUSH_BIN " << arg << endl);
         stack_push(arg);
-        break;
-      case RETURN_TOP:
+        MGOTO_NEXT();
+    LB_RETURN_TOP:
+        DBG("RETURN_TOP " << arg << " " << (oop)*_sp << endl);
         val = stack_pop();
-        DBG("RETURN_TOP " << arg << " " << val << endl);
         handle_return(val);
-        break;
-      case RETURN_THIS:
+        MGOTO_NEXT();
+    LB_RETURN_THIS:
         DBG("RETURN_THIS " << rp() << endl);
         handle_return(rp());
-        break;
-      case POP:
+        MGOTO_NEXT();
+    LB_POP:
+        DBG("POP " << arg << " = " << (oop)*_sp << endl);
         val =stack_pop();
-        DBG("POP " << arg << " = " << val << endl);
-        break;
-      case POP_LOCAL:
-        val = stack_pop();
+        MGOTO_NEXT();
+    LB_POP_LOCAL:
         DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
-            << (oop) *(_fp + arg) << " = " << val << endl);
-        *(_fp + arg) = (word) val;
-        break;
-      case POP_FIELD:
+            << (oop) *(_fp + arg) << " = " << (oop)*_sp << endl);
         val = stack_pop();
+        *(_fp + arg) = (word) val;
+        MGOTO_NEXT();
+    LB_POP_FIELD:
         DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
-            << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
+            << (oop) *(dp() + arg + 2) << " = " << (oop)*_sp << endl); //2: vt, delegate
+        val = stack_pop();
         *(dp() + arg + 2) = (word) val;
-        break;
-      case SEND:
+        MGOTO_NEXT();
+    LB_SEND:
         DBG("SEND " << arg << endl);
         handle_send(arg);
-        break;
-      case SUPER_CTOR_SEND:
+        MGOTO_NEXT();
+      LB_SUPER_CTOR_SEND:
         handle_super_ctor_send(arg);
-        break;
-      case CALL:
+        MGOTO_NEXT();
+      LB_CALL:
         DBG("CALL " << arg << endl);
         handle_call(arg);
-        break;
-      case JMP:
+        MGOTO_NEXT();
+      LB_JMP:
         DBG("JMP " << arg << " " << endl);
         _ip += (arg -1); //_ip already suffered a ++ in dispatch
-        break;
-      case JMPB:
+        _tcode += (arg - 1);
+        MGOTO_NEXT();
+      LB_JMPB:
         DBG("JMPB " << arg << " " << endl);
         _ip -= (arg+1); //_ip already suffered a ++ in dispatch
-        break;
-
-      case JZ:
+        _tcode -= (arg + 1);
+        MGOTO_NEXT();
+      LB_JZ:
+        DBG("JZ " << arg << " " << (oop)*_sp << endl);
         val = stack_pop();
-        DBG("JZ " << arg << " " << val << endl);
         if ((val == MM_FALSE) || (val == MM_NULL)) {
           _ip += (arg -1); //_ip already suffered a ++ in dispatch
+          _tcode += (arg -1);
         }
-        break;
-      case SUPER_SEND:
+        MGOTO_NEXT();
+      LB_SUPER_SEND:
         handle_super_send(arg);
-        break;
-      // case RETURN_THIS:
-      //   break;
-      default:
-        ERROR() << "Unknown opcode " << opcode << endl;
-        _vm->bail("opcode not implemented");
-    }
-    // DBG(" [end of dispatch] " << opcode << endl);
-  }
-  DBG("end" << endl);
+        MGOTO_NEXT();
+
 }
 
 void Process::maybe_break_on_return() {
@@ -949,6 +993,7 @@ void Process::resume() {
 void Process::reload_frame() {
   _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
   _ip = _mmobj->mm_function_get_code(this, _cp, true);
+  _tcode = _mmobj->mm_function_get_thread_code(this, _cp, true);
 
   DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
 }
@@ -1117,6 +1162,7 @@ void Process::handle_call(number num_args) {
 void Process::handle_return(oop val) {
   unload_fun_and_return(val);
   maybe_break_on_return();
+  DBG(" --- return handled, cp: " << _cp << " ip: " << _ip << " tcode: " << _tcode << endl);
 }
 
 // void Process::dispatch(int opcode, int arg) {
@@ -1274,10 +1320,10 @@ oop Process::stack_pop() {
 int Process::execute_primitive(oop name) {
   try {
     int val = _vm->get_primitive(this, name)(this);
-    DBG("primitive " << SYM_TO_STR(name) << " returned " << val << endl);
+    //DBG("primitive " << SYM_TO_STR(name) << " returned " << val << endl);
     return val;
   } catch(mm_exception_rewind e) {
-    DBG("primitive " << SYM_TO_STR(name) << " raised " << e.mm_exception << endl);
+  //DBG("primitive " << SYM_TO_STR(name) << " raised " << e.mm_exception << endl);
     stack_push(e.mm_exception);
     return PRIM_RAISED;
   }
@@ -1471,6 +1517,7 @@ oop Process::unwind_with_exception(oop e) {
         (type_oop == MM_NULL || delegates_to)) {
       DBG("CAUGHT " << endl);
       _ip = code + catch_block;
+      _tcode = _mmobj->mm_function_get_thread_code(this, _cp, true) + catch_block;
       clear_exception_state();
       return e;
     }
@@ -1660,4 +1707,16 @@ std::string Process::log_label() {
     s << "DBGProc{" << _debugger_id << "}";
     return s.str();
   }
+}
+
+void** Process::create_threaded_code(void** table, bytecode* ip, number size) {
+  bytecode instr;
+  void** thread_code = (void**) calloc(sizeof(void*), size);
+  for (int i = 0; *ip; i++, ip++) {
+    instr = *ip;
+    int opcode = decode_opcode(instr);
+    thread_code[i] = table[opcode];
+    DBG(" thread_code[" << i << "]" << " = table[" << bytecode_to_str(*ip) << "] = " << table[opcode] << " opcode: " << opcode << endl);
+  }
+  return thread_code;
 }

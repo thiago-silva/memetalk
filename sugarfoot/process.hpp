@@ -150,6 +150,8 @@ private:
 
   bool load_fun(oop, oop, oop, bool);
 
+  void** create_threaded_code(void** table, bytecode* ip, number size);
+
 
   oop stack_pop();
   int execute_primitive(oop);
@@ -199,6 +201,7 @@ private:
   oop _fp;
   oop _cp;
   bytecode* _ip;
+  void** _tcode;
   number _ss;
   oop _bp;
   //
@@ -206,13 +209,13 @@ private:
   word* _sp;
 
   word* _stack;
-  number _code_size;
   std::list<bytecode_range_t> _volatile_breakpoints;
   std::list<bytecode*> _breakpoints;
   oop _break_only_on_this_module;
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;
+  void ** _dispatch_table;
 };
 
 #endif
