@@ -148,6 +148,11 @@ public:
     return (oop) ((oop*)fun)[2];
   }
 
+  inline void* mm_function_get_jit_code(Process* p, oop fun, bool should_assert = false) {
+    oop cfun = mm_function_get_cfun(p, fun, should_assert);
+    return ((oop*)cfun)[27];
+  }
+
   bytecode* mm_function_get_code(Process*, oop fun, bool should_assert = false);
   number mm_function_get_code_size(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_literal_by_index(Process*, oop fun, int idx, bool should_assert = false);

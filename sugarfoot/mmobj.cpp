@@ -747,6 +747,7 @@ void MMObj::mm_overwrite_compiled_function(Process* p, oop target_cfun, oop orig
                     24, //line_mapping
                     25, //loc_mapping
                     26, //closures
+                    27, //jit
                     0};
 
   int i = 0;

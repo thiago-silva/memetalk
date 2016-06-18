@@ -8,6 +8,7 @@
 
 #include "defs.hpp"
 #include "log.hpp"
+#include <setjmp.h>
 
 class VM;
 class MMObj;
@@ -143,6 +144,14 @@ public:
   std::string dump_stack_trace(bool);
 
   void report_profile();
+
+  void handle_send(number);
+  void handle_super_send(number num_arg);
+  void handle_super_ctor_send(number);
+  void handle_call(number);
+
+  jmp_buf proc_setjmp_buf;
+  jmp_buf* _frame_setjump_buffer;
 private:
   std::string log_label();
   const char* meme_curr_fname();
@@ -166,10 +175,6 @@ private:
   void restore_fp(oop, number, number);
 
   void dispatch(int, int);
-  void handle_send(number);
-  void handle_super_send(number num_arg);
-  void handle_super_ctor_send(number);
-  void handle_call(number);
   void handle_return(oop);
   void basic_new_and_load(oop);
 
@@ -214,6 +219,10 @@ private:
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;
+
+  oop _rp;
+  oop _dp;
+  void* _jit_code;
 
 //profiling
   long _PUSH_LOCAL;

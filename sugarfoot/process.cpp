@@ -12,6 +12,7 @@
 #include "ctrl.hpp"
 #include <sstream>
 #include <assert.h>
+#include "mmjit.hpp"
 
 #ifdef MM_NO_DEBUG
   #define LOG_HEAD(log)
@@ -55,6 +56,7 @@
 #define ERROR() MMLog::error() << COLOR(_log) << "[" << log_label() << "|" << BCOLOR(_log) + meme_curr_fname() << COLOR(_log) << "." << __FUNCTION__ << "] " << _log.normal
 #define CTXNAME(ctx) _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, ctx), true)
 #define TO_C_STR(str) _mmobj->mm_string_cstr(this, str, true)
+#define SYM_TO_STR(sym) _mmobj->mm_symbol_cstr(this, sym, true)
 
 //#include <boost/unordered_map.hpp>
 //typedef boost::unordered_map<unsigned long, entry_t> cache_t;
@@ -219,6 +221,9 @@ void Process::init() {
   _mp = NULL; //module
   _cp = NULL; //context
   _ss = 0; //local storage
+  _jit_code = NULL;
+  _rp = NULL;
+  _dp = NULL;
 }
 
 // oop Process::get_arg(number idx) {
@@ -278,12 +283,16 @@ void Process::push_frame(oop recv, oop drecv, number arity, number storage_size)
   stack_push(fp);
   stack_push(_cp);
   stack_push(_ip);
+  stack_push((oop)(void*)_frame_setjump_buffer);
   stack_push(_ss); //storage size
   stack_push(_bp);
 
   //END of frame layout
 
   _bp = _sp;
+
+  _rp = rp();
+  _dp = dp();
 
   _ss = storage_size;
 
@@ -300,11 +309,15 @@ void Process::pop_frame() {
 
   _bp = stack_pop();
   _ss = (number) stack_pop();
+  _frame_setjump_buffer = (jmp_buf*) (void*) stack_pop();
   _ip = (bytecode*) stack_pop();
   _cp = stack_pop();
   _fp = stack_pop();
 
   _sp = _sp - (storage_size + 2); //2: fp, dp
+
+  _rp = rp();
+  _dp = dp();
 
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
@@ -490,8 +503,12 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // DBG("load_fun: module for fun " << fun << " is " << _mp << endl);
   // DBG("load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl);
   _ip = _mmobj->mm_function_get_code(this, fun, true);
-  // DBG("first instruction " << decode_opcode(*_ip) << endl);
+  _jit_code = _mmobj->mm_function_get_jit_code(this, fun, true);
   _code_size = _mmobj->mm_function_get_code_size(this, fun, true);
+  if (!_jit_code) {
+    _jit_code = gnerate_code_for(_ip, _code_size, this, _mmobj);
+  }
+  // DBG("first instruction " << decode_opcode(*_ip) << endl);
   maybe_break_on_call();
   return true;
 }
@@ -666,7 +683,29 @@ oop Process::call(oop fun, oop args, int* exc) {
 
 void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
-      << " ip: " << _ip << endl);
+      << " ip: " << _ip << " jit: " <<   _jit_code << endl);
+
+  if (_jit_code) {
+    void* (*clsr)(word**, oop*, oop*, bytecode**, number*, oop*, oop*, oop*, oop*) =
+      (void* (*)(word**, oop*, oop*, bytecode**, number*, oop*, oop*, oop*, oop*)) _jit_code;
+
+    oop res;
+    switch(setjmp(this->proc_setjmp_buf)) {
+      case 0:
+        printf("calling jitted code\n");
+        res = (oop) clsr(&_sp, &_fp, &_cp, &_ip, &_ss, &_bp, &_mp, &_rp, &_dp);
+        printf("RETVAL: %p\n", res);
+        handle_return(res);
+        return;
+      case 10:
+        printf("main jumped from jitted code: continuing..\n");
+        longjmp(*_frame_setjump_buffer,1);//FIXME
+        break;
+      case 20:
+        printf("jitted code ended\n");
+    }
+    bail("done");
+  }
 
   //at least one instructionn should be executed.  stop_at_bp is usually the
   //top mark of the stack when a function is loaded (_bp). So starting a fetch
