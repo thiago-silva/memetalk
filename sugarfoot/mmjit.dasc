@@ -1,0 +1,141 @@
+#include "mmjit.hpp"
+
+#include <assert.h>
+#include <stdio.h>
+#include <sys/mman.h>
+
+#include "dynasm/dasm_proto.h"
+#include "dynasm/dasm_x86.h"
+
+// DynASM directives.
+|.arch x64
+|.actionlist actions
+
+#define Dst &state
+
+#include JIT
+
+static
+void initjit(dasm_State **state, const void *actionlist) {
+  dasm_init(state, 1);
+  dasm_setup(state, actionlist);
+}
+
+static
+void *jitcode(dasm_State **state) {
+  size_t size;
+  int dasm_status = dasm_link(state, &size);
+  assert(dasm_status == DASM_S_OK);
+
+  // Allocate memory readable and writable so we can
+  // write the encoded instructions there.
+  char *mem = mmap(NULL, size + sizeof(size_t),
+		   PROT_READ | PROT_WRITE,
+                   MAP_ANON | MAP_PRIVATE, -1, 0);
+  assert(mem != MAP_FAILED);
+
+  // Store length at the beginning of the region, so we
+  // can free it without additional context.
+  *(size_t*)mem = size;
+  void *ret = mem + sizeof(size_t);
+
+  dasm_encode(state, ret);
+
+  // Adjust the memory permissions so it is executable
+  // but no longer writable.
+  int success = mprotect(mem, size, PROT_EXEC | PROT_READ);
+  assert(success == 0);
+
+  // Write generated machine code to a temporary file.
+  // View with:
+  //  objdump -D -b binary -mi386 -Mx86-64 /tmp/jitcode
+  // Or:
+  //  ndisasm -b 64 /tmp/jitcode
+  FILE *f = fopen("/tmp/jitcode", "wb");
+  fwrite(ret, size, 1, f);
+  fclose(f);
+
+  return ret;
+}
+
+void free_jitcode(void *code) {
+  void *mem = (char*)code - sizeof(size_t);
+  int status = munmap(mem, *(size_t*)mem);
+  assert(status == 0);
+}
+
+
+void* gnerate_code(bytecode* ip, number size, void* handler) {
+/*
+ handler: a (label) address exit point so the code can jump out back to the VM
+
+ This function returns an address for a block of compiled code.
+
+ The code should be executed by jmp'ing into it (NOT calling it).
+ whenever an opcode needs the VM to perform tasks, it will jump to *handler
+ and put in eax the ID of the task needed (e.g. handling return, sends, etc).
+
+ The "argument" to the code is a Process pointer that should be
+ in r10 register prior to jumping into it.
+
+ Finally, the compiled code makes strong assumptions about the layout of Process
+ object, so any reordering of it's attributes will turn out badly.
+*/
+
+  dasm_State *state;
+  initjit(&state, actions);
+  dasm_growpc(&state, size); //dynamic labels
+
+
+  for (int idx = 0; idx < size; idx++) {
+    bytecode instr = *_ip;
+    int opcode = decode_opcode(instr);
+    int arg = decode_args(instr);
+
+    switch(opcode) {
+      case PUSH_THIS:
+        | =>idx:
+        //sp++, *sp = this
+        | mov rax, [r10+0x8] //sp
+        | lea rcx, [rax+0x8] //sp+sizeof(void*)
+        | mov [r10+0x8], rcx //sp = sp+1
+        | mov rax, [r10+0x28] //rp
+        | mov qword [rcx], rax //sp=rp
+        //ip++
+        | mov rax, [r10] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecpde
+        | mov [r10], rcx
+        break;
+      case RETURN_TOP:
+        | =>idx:
+        | mov eax, 2 //handle return
+        | jmp &handler
+        break;
+      case PUSH_MP:
+        | =>idx:
+        //sp++, *sp = this
+        | mov rax, [r10+0x8] //sp
+        | lea rcx, [rax+0x8] //sp+sizeof(void*)
+        | mov [r10+0x8], rcx //sp = sp+1
+        | mov rax, [r10+0x38] //mp
+        | mov qword [rcx], rax //sp=mp
+        //ip++
+        | mov rax, [r10] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecpde
+        | mov [r10], rcx
+        break;
+      case JMP:
+        | =>idx:
+        | jmp =>arg
+      default:
+        printf("WRONG OPCODE\n");
+    }
+    idx++;
+    code++;
+  }
+
+  void *fptr = jitcode(&state);
+
+  //dasm_free(state);
+  return fptr;
+}
