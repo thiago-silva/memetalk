@@ -12,6 +12,7 @@
 #include "ctrl.hpp"
 #include <sstream>
 #include <assert.h>
+#include "mmjit.hpp"
 
 #ifdef MM_NO_DEBUG
   #define LOG_HEAD(log)
@@ -219,6 +220,7 @@ void Process::init() {
   _mp = NULL; //module
   _cp = NULL; //context
   _ss = 0; //local storage
+  _jit_code = NULL;
 }
 
 // oop Process::get_arg(number idx) {
@@ -490,8 +492,9 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // DBG("load_fun: module for fun " << fun << " is " << _mp << endl);
   // DBG("load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl);
   _ip = _mmobj->mm_function_get_code(this, fun, true);
-  // DBG("first instruction " << decode_opcode(*_ip) << endl);
   _code_size = _mmobj->mm_function_get_code_size(this, fun, true);
+  _jit_code = _mmobj->mm_function_get_jit_code(this, fun, true);
+  // DBG("first instruction " << decode_opcode(*_ip) << endl);
   maybe_break_on_call();
   return true;
 }
@@ -664,9 +667,55 @@ oop Process::call(oop fun, oop args, int* exc) {
   return do_call(fun, exc);
 }
 
+
 void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);
+
+# if 0
+  LOG_ENTER_FRAME();
+
+  DBG("proc: " << this << endl);
+  DBG("stack: " << &_stack << " " << ((long)&_stack - (long)this) << endl);
+  DBG("codes: " << &_code_size << " " << ((long)&_code_size - (long)this) << endl);
+  DBG("lit: " << &_literal_frame << " " << ((long)&_literal_frame - (long)this) << endl);
+  DBG("sp: " << &_sp << " " << ((long)&_sp - (long)this) << endl);
+  DBG("ip: " << &_ip << " " << ((long)&_ip - (long)this) << endl);
+  DBG("fp: " << &_fp << " " << ((long)&_fp - (long)this) << endl);
+  DBG("cp: " << &_cp << " " << ((long)&_cp - (long)this) << endl);
+  DBG("ss: " << &_ss << " " << ((long)&_ss - (long)this) << endl);
+  DBG("bp: " << &_bp << " " << ((long)&_bp - (long)this) << endl);
+  DBG("mp: " << &_mp << " " << ((long)&_mp - (long)this) << endl);
+
+
+  if (!_jit_code) {
+    _jit_code = gnerate_jit_code(_ip, _code_size, &&lb_handler);
+    _mmobj->mm_function_set_jit_code(this, _cp, _jit_code, true);
+  }
+
+  _literal_frame = _mmobj->mm_function_get_literal_frame(this, _cp, true);
+
+  asm volatile("mov %0, %%r10" : : "r" (this) :"memory"); //r10 = this
+  asm volatile("jmp *%0" : : "a" (_jit_code) :"memory"); //rax = _jit_code / jmp eax
+
+  int handler_id = -1;
+
+  lb_handler:
+
+  asm("movl %%eax,%0" : "=r"(handler_id));
+  DBG("handler " << handler_id << endl);
+  oop literal_0 = _mmobj->mm_function_get_literal_by_index(this, _cp, 0, true);
+  LOG_ENTER_FRAME();
+  if (handler_id == 1) { //return top
+    oop val = stack_pop();
+    handle_return(val);
+    if (_bp >= stop_at_bp && _ip) {
+      fetch_cycle(stop_at_bp);
+    }
+  }
+  // the rest is unreachable
+  return;
+#endif
 
   //at least one instructionn should be executed.  stop_at_bp is usually the
   //top mark of the stack when a function is loaded (_bp). So starting a fetch
@@ -1293,10 +1342,10 @@ oop Process::stack_pop() {
 int Process::execute_primitive(oop name) {
   try {
     int val = _vm->get_primitive(this, name)(this);
-    DBG("primitive " << SYM_TO_STR(name) << " returned " << val << endl);
+    // DBG("primitive " << SYM_TO_STR(name) << " returned " << val << endl);
     return val;
   } catch(mm_exception_rewind e) {
-    DBG("primitive " << SYM_TO_STR(name) << " raised " << e.mm_exception << endl);
+    // DBG("primitive " << SYM_TO_STR(name) << " raised " << e.mm_exception << endl);
     stack_push(e.mm_exception);
     return PRIM_RAISED;
   }

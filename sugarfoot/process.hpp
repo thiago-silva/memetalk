@@ -180,6 +180,19 @@ private:
   void maybe_break_on_return();
   void maybe_break_on_exception();
 
+  word* _stack; //0x0
+  number _code_size; //0x8
+  oop* _literal_frame; //0x10
+  //this order is important: it reflects the order of registers
+  //in the stack, and is used by bp_at()
+  word* _sp; //0x18
+  bytecode* _ip; //0x20
+  oop _fp; //0x28
+  oop _cp; //0x30
+  number _ss; //0x38
+  oop _bp; //0x40
+  oop _mp; //0x48
+
   MMLog _log;
   MMLog _log_registers;
   MMLog _log_stack;
@@ -195,19 +208,6 @@ private:
   ProcessControl* _control;
   std::pair<Process*, oop> _dbg_handler;
 
-  //this order is important: it reflects the order of registers
-  //in the stack, and is used by bp_at()
-  oop _fp;
-  oop _cp;
-  bytecode* _ip;
-  number _ss;
-  oop _bp;
-  //
-  oop _mp;
-  word* _sp;
-
-  word* _stack;
-  number _code_size;
   std::list<bytecode_range_t> _volatile_breakpoints;
   std::list<bytecode*> _breakpoints;
   oop _break_only_on_this_module;
@@ -215,6 +215,7 @@ private:
   oop _unwind_to_bp;
   oop _current_exception;
 
+  void* _jit_code;
 //profiling
   long _PUSH_LOCAL;
   long _PUSH_LITERAL;

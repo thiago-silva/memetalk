@@ -580,7 +580,7 @@ class CompiledFunction(Entry):
         oop_closures = vmem.append_list_of_oops_for_labels([x.label() for x in self.closures])
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(27 * bits.WSIZE)
+        vmem.append_int(28 * bits.WSIZE)
 
         oop = vmem.append_external_ref('CompiledFunction', self.label()) # CompiledFunction vt
         vmem.append_pointer_to(oop_delegate)
@@ -637,6 +637,7 @@ class CompiledFunction(Entry):
         vmem.append_pointer_to(oop_line_mappings)
         vmem.append_pointer_to(oop_loc_mappings)
         vmem.append_pointer_to(oop_closures)
+        vmem.append_null() # jit code
 
         # vmem.append_label_ref(self.cmod.label())
         self.oop = oop
