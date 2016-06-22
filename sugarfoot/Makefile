@@ -43,7 +43,7 @@ QT_FLAGS = -pipe -g -arch x86_64 -W \
 
 sf-vm: $(CPP_FILES) $(HPP_FILES)
 	moc qsc.hpp > qsc.moc.cpp
-	g++ -Wall -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(INC_PATHS)  -o sf-vm $(QT_FLAGS) -DMM_NO_DEBUG
+	g++ -Wall -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(INC_PATHS)  -o sf-vm $(QT_FLAGS)
 
 clean:
 	rm -f sf-vm

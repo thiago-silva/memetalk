@@ -673,7 +673,6 @@ void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);
 
-#if 0
   LOG_ENTER_FRAME();
 
   DBG("proc: " << this << endl);
@@ -743,7 +742,6 @@ void Process::fetch_cycle(void* stop_at_bp) {
   }
   // the rest is unreachable
   return;
-#endif
 
   //at least one instructionn should be executed.  stop_at_bp is usually the
   //top mark of the stack when a function is loaded (_bp). So starting a fetch
@@ -783,49 +781,41 @@ void Process::fetch_cycle(void* stop_at_bp) {
         // _PUSH_LOCAL++;
         DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
         stack_push(*(_fp + arg));
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_LITERAL:
         // _PUSH_LITERAL++;
         DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_MODULE:
         // _PUSH_MODULE++;
         DBG("PUSH_MODULE " << arg << " " << _mp << endl);
         stack_push(_mp);
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_FIELD:
         // _PUSH_FIELD++;
         DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
         stack_push(*(dp() + arg + 2));
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_THIS:
         // _PUSH_THIS++;
         DBG("PUSH_THIS " << rp() << endl);
         stack_push(rp());
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_FP:
         // _PUSH_FP++;
         DBG("PUSH_FP " << arg << " -- " << _fp << endl);
         stack_push(_fp);
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_CONTEXT:
         // _PUSH_CONTEXT++;
         DBG("PUSH_CONTEXT " << arg << endl);
         stack_push(_cp);
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_BIN:
         // _PUSH_BIN++;
         DBG("PUSH_BIN " << arg << endl);
         stack_push(arg);
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case RETURN_TOP:
         // _RETURN_TOP++;
@@ -844,7 +834,6 @@ void Process::fetch_cycle(void* stop_at_bp) {
         // _POP++;
         val =stack_pop();
         DBG("POP " << arg << " = " << val << endl);
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case POP_LOCAL:
         // _POP_LOCAL++;
@@ -852,7 +841,6 @@ void Process::fetch_cycle(void* stop_at_bp) {
         DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
             << (oop) *(_fp + arg) << " = " << val << endl);
         *(_fp + arg) = (word) val;
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case POP_FIELD:
         // _POP_FIELD++;
@@ -860,7 +848,6 @@ void Process::fetch_cycle(void* stop_at_bp) {
         DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
             << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
         *(dp() + arg + 2) = (word) val;
-        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case SEND:
         // _SEND++;
@@ -882,19 +869,19 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case JMP:
         // _JMP++;
         DBG("JMP " << arg << " " << endl);
-        _ip += arg-1;
+        _ip += (arg -1); //_ip already suffered a ++ in dispatch
         break;
       case JMPB:
         // _JMPB++;
         DBG("JMPB " << arg << " " << endl);
-        _ip -= arg-1;
+        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
         break;
       case JZ:
         // _JZ++;
         val = stack_pop();
         DBG("JZ " << arg << " " << val << endl);
         if ((val == MM_FALSE) || (val == MM_NULL)) {
-          _ip += arg-1;
+          _ip += (arg -1); //_ip already suffered a ++ in dispatch
         }
         break;
       case SUPER_SEND:
