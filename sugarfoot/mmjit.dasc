@@ -179,7 +179,7 @@ void* gnerate_jit_code(bytecode* _ip, number size, void* handler) {
         | mov [SP], rcx //sp = sp+1
         //        stack_push(*(dp() + arg + 2));
         | load_dp r11
-        | mov r11, [r11+(arg*sizeof(oop))+2]
+        | mov r11, [r11+((arg+2)*sizeof(oop))]
         | mov [rcx], r11
         break;
       case PUSH_THIS:
@@ -223,8 +223,16 @@ void* gnerate_jit_code(bytecode* _ip, number size, void* handler) {
         | lea rax, [rax-sizeof(oop)] //rax = sp-sizeof(void*)
         | mov [SP], rax //sp = sp-1
         break;
-      // case POP_FIELD:
-      //   break;
+      case POP_FIELD:
+        | mov rax, [SP] //rax = sp
+        | mov rcx, [rax] //rcx = *sp
+        | lea rax, [rax-sizeof(oop)] //rax = sp-sizeof(void*)
+        | mov [SP], rax //sp = sp-1
+        //*(dp() + arg + 2) = (word) val;
+        | load_dp r11
+        | lea r11, [r11+((arg+2)*sizeof(oop))]
+        | mov [r11], rcx
+        break;
       case SEND:
         | mov rcx, arg
         | mov rax, JIT_HANDLER_SEND
@@ -293,6 +301,7 @@ void* gnerate_jit_code(bytecode* _ip, number size, void* handler) {
   ip = _ip;
   for (int i = 0; *ip; i++, ip++) {
     int offset = dasm_getpclabel(&state, i);
+    // *ip = (char*)_ip + offset;
     // printf("ip %p = offset %d\n", ip, offset);
     *ip = offset;
   }

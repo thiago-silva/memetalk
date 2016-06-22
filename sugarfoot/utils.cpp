@@ -78,7 +78,7 @@ void relocate_addresses(char* data, int data_size, int start_reloc_table) {
 }
 
 
-void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, CoreImage*) {
+void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, CoreImage* core) {
   const char* base = data;
 
   for (int i = 0; i < es_size; i += (2 * WSIZE)) {
@@ -88,8 +88,9 @@ void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, C
     word* obj = (word*) (base + obj_offset);
     _log << "Symbol: " << (oop) obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
     * obj = (word) vm->new_symbol(name);
-    // _log << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
-    //         << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
+    _log << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
+            << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
+    assert((* (oop*) *obj) == core->get_prime("Symbol"));
   }
 }
 

@@ -310,8 +310,9 @@ void Process::pop_frame() {
 
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
-    _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
     _literal_frame = _mmobj->mm_function_get_literal_frame(this, _cp, true);
+    //we use _jit_code == NULL to check if we should generate asm in fetch_cycle
+    _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
   } else {
     DBG("MP unloaded is null! we should be in the first stack frame!" << endl);
     _state = RUN_STATE; //without this, we end up debugging the printing of
@@ -495,8 +496,9 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // DBG("load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl);
   _ip = _mmobj->mm_function_get_code(this, fun, true);
   _code_size = _mmobj->mm_function_get_code_size(this, fun, true);
-  _jit_code = _mmobj->mm_function_get_jit_code(this, fun, true);
   _literal_frame = _mmobj->mm_function_get_literal_frame(this, fun, true);
+  //we use _jit_code == NULL to check if we should generate asm in fetch_cycle
+  _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
   // DBG("first instruction " << decode_opcode(*_ip) << endl);
   maybe_break_on_call();
   return true;
@@ -672,8 +674,10 @@ oop Process::call(oop fun, oop args, int* exc) {
 
 
 void Process::fetch_cycle(void* stop_at_bp) {
+ begin_fetch:
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);
+
 
   LOG_ENTER_FRAME();
 
@@ -694,8 +698,12 @@ void Process::fetch_cycle(void* stop_at_bp) {
     _jit_code = gnerate_jit_code(_ip, _code_size, &&lb_handler);
     _mmobj->mm_function_set_jit_code(this, _cp, _jit_code, true);
   } else {
-    DBG("RESUMING! ip: " << _ip << " has value: " << *_ip << endl);
+    //_jit_code here should ALWAYS point to the first instruction of the body
+    _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
     _jit_code = ((char*)_jit_code + *_ip);
+    DBG("RESUMING! ip: " << _ip << " has value: " << *_ip << " base: " << _mmobj->mm_function_get_jit_code(this, _cp, true) << " code: " << _jit_code << endl);
+    // DBG("RESUMING! " << _ip << endl);
+    // _jit_code = *_ip;
   }
 
  begin_jit:
@@ -719,27 +727,33 @@ void Process::fetch_cycle(void* stop_at_bp) {
       DBG("HANDLING RETURN_TOP : " << val << endl);
       handle_return(val);
       if (_bp >= stop_at_bp && _ip) {
-        fetch_cycle(stop_at_bp);
+        goto begin_fetch;
       }
       break;
     case JIT_HANDLER_RETURN_THIS:
       handle_return(rp());
       if (_bp >= stop_at_bp && _ip) {
-        fetch_cycle(stop_at_bp);
+        goto begin_fetch;
       }
       break;
     case JIT_HANDLER_SEND:
       DBG("HANDLING SEND : " << arg << endl);
       handle_send(arg);
       if (_bp >= stop_at_bp && _ip) {
-        fetch_cycle(stop_at_bp);
+        goto begin_fetch;
+      }
+      break;
+    case JIT_HANDLER_SUPER_CTOR_SEND:
+      handle_super_ctor_send(arg);
+      if (_bp >= stop_at_bp && _ip) {
+        goto begin_fetch;
       }
       break;
     case JIT_HANDLER_CALL:
       DBG("HANDLING CALL : " << arg << endl);
       handle_call(arg);
       if (_bp >= stop_at_bp && _ip) {
-        fetch_cycle(stop_at_bp);
+        goto begin_fetch;
       }
       break;
     case JIT_HANDLER_DBG:
