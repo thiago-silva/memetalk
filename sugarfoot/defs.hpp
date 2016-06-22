@@ -57,3 +57,10 @@ typedef int (*prim_function_t) (Process*);
 #define JZ 50
 #define JMP 51
 #define JMPB 52
+
+#define JIT_HANDLER_RETURN_TOP 1
+#define JIT_HANDLER_RETURN_THIS 2
+#define JIT_HANDLER_SEND 3
+#define JIT_HANDLER_SUPER_SEND 4
+#define JIT_HANDLER_SUPER_CTOR_SEND 5
+#define JIT_HANDLER_CALL 6

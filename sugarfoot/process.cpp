@@ -310,6 +310,7 @@ void Process::pop_frame() {
 
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
+    _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
   } else {
     DBG("MP unloaded is null! we should be in the first stack frame!" << endl);
     _state = RUN_STATE; //without this, we end up debugging the printing of
@@ -672,7 +673,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);
 
-# if 0
+#if 0
   LOG_ENTER_FRAME();
 
   DBG("proc: " << this << endl);
@@ -691,6 +692,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
   if (!_jit_code) {
     _jit_code = gnerate_jit_code(_ip, _code_size, &&lb_handler);
     _mmobj->mm_function_set_jit_code(this, _cp, _jit_code, true);
+  } else {
+    DBG("RESUMING! ip: " << _ip << " has value: " << *_ip << endl);
+    _jit_code = ((char*)_jit_code + *_ip);
   }
 
   _literal_frame = _mmobj->mm_function_get_literal_frame(this, _cp, true);
@@ -699,19 +703,43 @@ void Process::fetch_cycle(void* stop_at_bp) {
   asm volatile("jmp *%0" : : "a" (_jit_code) :"memory"); //rax = _jit_code / jmp eax
 
   int handler_id = -1;
-
+  int arg = -1;
   lb_handler:
 
-  asm("movl %%eax,%0" : "=r"(handler_id));
-  DBG("handler " << handler_id << endl);
-  oop literal_0 = _mmobj->mm_function_get_literal_by_index(this, _cp, 0, true);
+  asm("movl %%eax,%0" : "=a"(handler_id));
+  asm("movl %%ecx,%0" : "=c"(arg));
+  DBG("handler " << handler_id << " arg: " << arg << endl);
   LOG_ENTER_FRAME();
-  if (handler_id == 1) { //return top
-    oop val = stack_pop();
-    handle_return(val);
-    if (_bp >= stop_at_bp && _ip) {
-      fetch_cycle(stop_at_bp);
-    }
+  oop val;
+  switch(handler_id) {
+    case JIT_HANDLER_RETURN_TOP:
+      val = stack_pop();
+      handle_return(val);
+      if (_bp >= stop_at_bp && _ip) {
+        fetch_cycle(stop_at_bp);
+      }
+      break;
+    case JIT_HANDLER_RETURN_THIS:
+      handle_return(rp());
+      if (_bp >= stop_at_bp && _ip) {
+        fetch_cycle(stop_at_bp);
+      }
+      break;
+    case JIT_HANDLER_SEND:
+      handle_send(arg);
+      if (_bp >= stop_at_bp && _ip) {
+        fetch_cycle(stop_at_bp);
+      }
+      break;
+    case JIT_HANDLER_CALL:
+      handle_call(arg);
+      if (_bp >= stop_at_bp && _ip) {
+        fetch_cycle(stop_at_bp);
+      }
+      break;
+    default:
+      DBG("unknown handler for " << handler_id << endl);
+      _vm->bail("ugh");
   }
   // the rest is unreachable
   return;
@@ -737,13 +765,12 @@ void Process::fetch_cycle(void* stop_at_bp) {
 
     bytecode code = *_ip;
 
+    _ip++;
 
     int opcode = decode_opcode(code);
     int arg = decode_args(code);
 
     DBG("IP: " << _ip << " with code: " << code << " decoded as opcode " << opcode << ", arg: " << arg << endl);
-
-    _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
 
     // if (_state != RUN_STATE) {
     //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
@@ -756,57 +783,68 @@ void Process::fetch_cycle(void* stop_at_bp) {
         // _PUSH_LOCAL++;
         DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
         stack_push(*(_fp + arg));
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_LITERAL:
         // _PUSH_LITERAL++;
         DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
         stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_MODULE:
         // _PUSH_MODULE++;
         DBG("PUSH_MODULE " << arg << " " << _mp << endl);
         stack_push(_mp);
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_FIELD:
         // _PUSH_FIELD++;
         DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
         stack_push(*(dp() + arg + 2));
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_THIS:
         // _PUSH_THIS++;
         DBG("PUSH_THIS " << rp() << endl);
         stack_push(rp());
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_FP:
         // _PUSH_FP++;
         DBG("PUSH_FP " << arg << " -- " << _fp << endl);
         stack_push(_fp);
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_CONTEXT:
         // _PUSH_CONTEXT++;
         DBG("PUSH_CONTEXT " << arg << endl);
         stack_push(_cp);
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case PUSH_BIN:
         // _PUSH_BIN++;
         DBG("PUSH_BIN " << arg << endl);
         stack_push(arg);
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case RETURN_TOP:
         // _RETURN_TOP++;
         val = stack_pop();
         DBG("RETURN_TOP " << arg << " " << val << endl);
         handle_return(val);
+        //no ip++
         break;
       case RETURN_THIS:
         // _RETURN_THIS++;
         DBG("RETURN_THIS " << rp() << endl);
         handle_return(rp());
+        //no ip++
         break;
       case POP:
         // _POP++;
         val =stack_pop();
         DBG("POP " << arg << " = " << val << endl);
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case POP_LOCAL:
         // _POP_LOCAL++;
@@ -814,6 +852,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
         DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
             << (oop) *(_fp + arg) << " = " << val << endl);
         *(_fp + arg) = (word) val;
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case POP_FIELD:
         // _POP_FIELD++;
@@ -821,43 +860,47 @@ void Process::fetch_cycle(void* stop_at_bp) {
         DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
             << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
         *(dp() + arg + 2) = (word) val;
+        // _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
         break;
       case SEND:
         // _SEND++;
         DBG("SEND " << arg << endl);
         handle_send(arg);
+        //no ip++
         break;
       case SUPER_CTOR_SEND:
         // _SUPER_CTOR_SEND++;
         handle_super_ctor_send(arg);
+        //no ip++
         break;
       case CALL:
         // _CALL++;
         DBG("CALL " << arg << endl);
         handle_call(arg);
+        //no ip++
         break;
       case JMP:
         // _JMP++;
         DBG("JMP " << arg << " " << endl);
-        _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        _ip += arg-1;
         break;
       case JMPB:
         // _JMPB++;
         DBG("JMPB " << arg << " " << endl);
-        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+        _ip -= arg-1;
         break;
-
       case JZ:
         // _JZ++;
         val = stack_pop();
         DBG("JZ " << arg << " " << val << endl);
         if ((val == MM_FALSE) || (val == MM_NULL)) {
-          _ip += (arg -1); //_ip already suffered a ++ in dispatch
+          _ip += arg-1;
         }
         break;
       case SUPER_SEND:
         // _SUPER_SEND++;
         handle_super_send(arg);
+        //no ip++
         break;
       // case RETURN_THIS:
       //   break;

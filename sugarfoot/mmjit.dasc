@@ -10,7 +10,16 @@
 |.define SS, PROC+56
 |.define BP, PROC+64
 |.define MP, PROC+72
-
+|.macro load_rp, target
+|  mov r9, [FP]
+|  mov r8, [SS]
+|  mov target, [r9+r8]
+|.endmacro
+|.macro load_dp, target
+|  mov r9, [FP]
+|  mov r8, [SS]
+|  mov target, [r9+r8+1]
+|.endmacro
 #include "dynasm/dasm_proto.h"
 #include "dynasm/dasm_x86.h"
 
@@ -59,9 +68,9 @@ void *jitcode(dasm_State **state) {
   //  objdump -D -b binary -mi386 -Mx86-64 /tmp/jitcode
   // Or:
   //  ndisasm -b 64 /tmp/jitcode
-  FILE *f = fopen("/tmp/jitcode", "wb");
-  fwrite(ret, size, 1, f);
-  fclose(f);
+  // FILE *f = fopen("/tmp/jitcode", "wb");
+  // fwrite(ret, size, 1, f);
+  // fclose(f);
 
   return ret;
 }
@@ -73,7 +82,7 @@ void free_jitcode(void *code) {
 }
 
 
-void* gnerate_jit_code(bytecode* ip, number size, void* handler) {
+void* gnerate_jit_code(bytecode* _ip, number size, void* handler) {
 /*
  handler: a (label) address exit point so the code can jump out back to the VM
 
@@ -95,6 +104,7 @@ void* gnerate_jit_code(bytecode* ip, number size, void* handler) {
   dasm_growpc(&state, size); //dynamic labels
 
 
+  bytecode* ip = _ip;
   for (int idx = 0; *ip; idx++, ip++) {
     bytecode instr = *ip;
     int opcode = decode_opcode(instr);
@@ -146,53 +156,188 @@ void* gnerate_jit_code(bytecode* ip, number size, void* handler) {
         | mov rax, [IP] //ip
         | lea rcx, [rax+sizeof(int)] ////int == bytecode
         | mov [IP], rcx
-        | mov eax, 1 //handle return_top
+        | mov rax, 1 //handle return_top
         | jmp &handler
         break;
       case RETURN_TOP:
         | =>idx:
-        | mov eax, 1 //handle return_top
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        | mov rax, JIT_HANDLER_RETURN_TOP
         | jmp &handler
         break;
       case RETURN_THIS:
         | =>idx:
-        | mov eax, 2 //handle return
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        | mov rax, JIT_HANDLER_RETURN_THIS
         | jmp &handler
         break;
+      case PUSH_MODULE:
+        | =>idx:
+        //sp++, *sp = literal
+        | mov rax, [SP] //rax = sp
+        | lea rcx, [rax+sizeof(oop)] //rcx = sp+sizeof(oop)
+        | mov [SP], rcx //sp = sp+1
+        //sp = _mp
+        | mov r11, [MP] //r11 = mp
+        | mov [rcx], r11 //*sp = r11
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        break;
+      case PUSH_FIELD:
+        | =>idx:
+        //sp++, *sp = literal
+        | mov rax, [SP] //rax = sp
+        | lea rcx, [rax+sizeof(oop)] //rcx = sp+sizeof(oop)
+        | mov [SP], rcx //sp = sp+1
+        //        stack_push(*(dp() + arg + 2));
+        | load_dp r11
+        | mov r11, [r11+arg+2]
+        | mov [rcx], r11
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        break;
+      case PUSH_THIS:
+        | =>idx:
+        //sp++, *sp = literal
+        | mov rax, [SP] //rax = sp
+        | lea rcx, [rax+sizeof(oop)] //rcx = sp+sizeof(oop)
+        | mov [SP], rcx //sp = sp+1
+        | load_rp r11 //r11 = rp
+        //sp = _rp
+        | mov [rcx], r11 //*sp = r11
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        break;
+      case PUSH_FP:
+        | =>idx:
+        //sp++, *sp = literal
+        | mov rax, [SP] //rax = sp
+        | lea rcx, [rax+sizeof(oop)] //rcx = sp+sizeof(oop)
+        | mov [SP], rcx //sp = sp+1
+        //sp = _fp
+        | mov r11, [FP] //r11 = fp
+        | mov [rcx], r11 //*sp = r11
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        break;
+      case PUSH_CONTEXT:
+        | =>idx:
+        //sp++, *sp = literal
+        | mov rax, [SP] //rax = sp
+        | lea rcx, [rax+sizeof(oop)] //rcx = sp+sizeof(oop)
+        | mov [SP], rcx //sp = sp+1
+        //sp = _fp
+        | mov r11, [CP] //r11 = cp
+        | mov [rcx], r11 //*sp = r11
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        break;
+      case PUSH_BIN:
+        | =>idx:
+        //sp++, *sp = literal
+        | mov rax, [SP] //rax = sp
+        | lea rcx, [rax+sizeof(oop)] //rcx = sp+sizeof(oop)
+        | mov [SP], rcx //sp = sp+1
+        //sp = arg
+        | mov [rcx], qword arg //*sp = arg
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        break;
+      case POP:
+        | =>idx:
+        | mov rax, [SP] //rax = sp
+        | mov rcx, [rax] //rcx = *sp
+        | lea rax, [rax-sizeof(oop)] //rax = sp-sizeof(void*)
+        | mov [SP], rax //sp = sp-1
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        break;
+      // case POP_FIELD:
+      case SEND:
+        | =>idx:
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] //int == bytecode
+        | mov [IP], rcx
+        | mov rcx, arg
+        | mov rax, JIT_HANDLER_SEND
+        | jmp &handler
+        break;
+      case SUPER_CTOR_SEND:
+        | =>idx:
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        | mov rcx, arg
+        | mov rax, JIT_HANDLER_SUPER_CTOR_SEND
+        | jmp &handler
+        break;
+      case CALL:
+        | =>idx:
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        | mov rcx, arg
+        | mov rax, JIT_HANDLER_CALL
+        | jmp &handler
+        break;
+      case JMP:
+        | =>idx:
+        //ip += arg-1
+        | mov rax, [IP] //ip
+        | add rax, arg-1
+        | mov [IP], rcx
+        | jmp =>arg-1
+        break;
+      case JMPB:
+        | jmp => -arg //_ip -= (arg+1); //_ip already suffered a ++ in dispatch
+        break;
+      case JZ:
+        // val = stack_pop();
+        // DBG("JZ " << arg << " " << val << endl);
+        // if ((val == MM_FALSE) || (val == MM_NULL)) {
+        //   _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        // }
+        | =>idx:
+        | mov rax, [SP] //rax = sp
+        | mov rcx, [rax] //rcx = *sp
+        | lea rax, [rax-sizeof(oop)] //rax = sp-sizeof(void*)
+        | mov [SP], rax //sp = sp-1
+        | cmp rcx, 1
+        | jz => arg
+        //ip++
+        | mov rax, [IP] //ip
+        | lea rcx, [rax+sizeof(int)] ////int == bytecode
+        | mov [IP], rcx
+        break;
 
-      // //
-      // case PUSH_THIS:
+      // case SUPER_SEND:
       //   | =>idx:
-      //   //sp++, *sp = this
-      //   | mov rax, [r10+0x8] //rax = sp
-      //   | lea rcx, [rax+sizeof(void*)] //rcx = sp+sizeof(void*)
-      //   | mov [r10+0x8], rcx //sp = sp+1
-      //   //sp = rp
-      //   | mov rsp, [r10+0x18] //fp
-      //   | mov r11, [r10+0x28] //ss
-      //   | mov rax, [rsp+r11] //rp
-      //   | mov qword [rcx], rax //sp=rp
-      //   //ip++
-      //   | mov rax, [r10+0x10] //ip
-      //   | lea rcx, [rax+sizeof(int)] ////int == bytecpde
-      //   | mov [rax], rcx
-      //   break;
-      // case PUSH_MODULE:
-      //   | =>idx:
-      //   //sp++, *sp = this
-      //   | mov rax, [r10+0x8] //sp
-      //   | lea rcx, [rax+0x8] //sp+sizeof(void*)
-      //   | mov [r10+0x8], rcx //sp = sp+1
-      //   | mov rax, [r10+0x38] //mp
-      //   | mov qword [rcx], rax //sp=mp
-      //   //ip++
-      //   | mov rax, [r10] //ip
-      //   | lea rcx, [rax+sizeof(int)] ////int == bytecpde
-      //   | mov [r10], rcx
-      //   break;
-      // case JMP:
-      //   | =>idx:
-      //   | jmp =>arg
+      //   | mov r11, arg
+      //   | mov eax, JIT_HANDLER_CALL
+      //   | jmp &handler
       default:
         printf("WRONG OPCODE %d\n", ip);
     }
@@ -200,6 +345,12 @@ void* gnerate_jit_code(bytecode* ip, number size, void* handler) {
 
   void *fptr = jitcode(&state);
 
+  ip = _ip;
+  for (int i = 0; *ip; i++, ip++) {
+    int offset = dasm_getpclabel(&state, i);
+    *ip = offset;
+    printf("offset for i=%d: %d\n", i, offset);
+  }
   //dasm_free(state);
   return fptr;
 }
