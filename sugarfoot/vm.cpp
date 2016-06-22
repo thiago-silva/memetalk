@@ -64,8 +64,13 @@ void VM::print_error(Process* proc, oop retval) {
 
 Process* VM::init() {
   Process* proc = new Process(this);
-  init_primitives(this); //module initialization could execute primitives
   _core_image->load();
+  init_primitives(this); //module initialization could execute primitives but
+                         //now we are using Symbol objects as entries in the
+                         //primitives dict, and without core we don't have the
+                         //class Symbol loaded to link objects to.  so lets
+                         //just trust core never really `send` -- and probably
+                         //shouldn't.
   _mmobj->init();
   return proc;
 }
