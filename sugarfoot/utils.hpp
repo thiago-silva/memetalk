@@ -23,6 +23,7 @@ inline int decode_args(bytecode code) {
 }
 
 std::string bytecode_to_str(bytecode code);
+std::string opcode_to_str(int code);
 
 inline bool is_small_int(oop num) {
 #if WSIZE == 8

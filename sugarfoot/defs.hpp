@@ -64,3 +64,4 @@ typedef int (*prim_function_t) (Process*);
 #define JIT_HANDLER_SUPER_SEND 4
 #define JIT_HANDLER_SUPER_CTOR_SEND 5
 #define JIT_HANDLER_CALL 6
+#define JIT_HANDLER_DBG 10

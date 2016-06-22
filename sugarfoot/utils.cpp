@@ -106,9 +106,14 @@ bool check_and_print_exception(Process* proc, int exc, oop ex) {
 }
 
 
+
 std::string bytecode_to_str(bytecode code) {
+  return opcode_to_str(decode_opcode(code));
+}
+
+std::string opcode_to_str(int code) {
   std::stringstream s;
-  switch(decode_opcode(code)) {
+  switch(code) {
     case PUSH_LOCAL:
       s <<"PUSH_LOCAL" << decode_args(code);
       break;

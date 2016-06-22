@@ -1664,6 +1664,7 @@ void get_mm_files(const fs::path& root, std::vector<std::string>& ret) {
     while(it != endit) {
       if (fs::is_regular_file(*it) and it->path().extension() == ".mmc")
       {
+        DBG("test file: " << it->path().string());
         ret.push_back(it->path().string());
       }
       ++it;
