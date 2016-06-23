@@ -675,10 +675,6 @@ oop Process::call(oop fun, oop args, int* exc) {
 
 void Process::fetch_cycle(void* stop_at_bp) {
  begin_fetch:
-  DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
-      << " ip: " << _ip << endl);
-
-
   LOG_ENTER_FRAME();
 
   // DBG("proc: " << this << endl);
@@ -706,7 +702,6 @@ void Process::fetch_cycle(void* stop_at_bp) {
     // _jit_code = *_ip;
   }
 
- begin_jit:
   DBG("-- going native" << endl);
   asm volatile("mov %0, %%r10" : : "r" (this) :"memory"); //r10 = this
   asm volatile("jmp *%0" : : "a" (_jit_code) :"memory"); //rax = _jit_code / jmp eax
@@ -756,15 +751,29 @@ void Process::fetch_cycle(void* stop_at_bp) {
         goto begin_fetch;
       }
       break;
-    case JIT_HANDLER_DBG:
-      DBG("--JIT DBG: " << opcode_to_str(arg) << endl);
-      _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
-      _jit_code = ((char*)_jit_code + *_ip);
-      goto begin_jit;
-      break;
+    case JIT_HANDLER_JZ:
+      val = stack_pop();
+      DBG("JZ " << arg << " " << val << " " << ((val == MM_FALSE) || (val == MM_NULL)) << endl);
+      if ((val == MM_FALSE) || (val == MM_NULL)) {
+        _ip += (arg -1); //_ip already suffered a ++ in dispatch
+      }
+      goto begin_fetch;
+    case JIT_HANDLER_JMP:
+      DBG("JMP " << arg << " " << endl);
+      _ip += (arg -1); //_ip already suffered a ++ in dispatch
+      goto begin_fetch;
+    case JIT_HANDLER_JMPB:
+      DBG("JMPB " << arg << " " << endl);
+      _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+      goto begin_fetch;
     default:
       DBG("unknown handler for " << handler_id << endl);
       _vm->bail("ugh");
+    // case JIT_HANDLER_DBG:
+    //   DBG("--JIT DBG: " << opcode_to_str(arg) << endl);
+    //   _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
+    //   _jit_code = ((char*)_jit_code + *_ip);
+    //   goto begin_jit;
   }
   // the rest is unreachable
   return;
@@ -848,12 +857,14 @@ void Process::fetch_cycle(void* stop_at_bp) {
         val = stack_pop();
         DBG("RETURN_TOP " << arg << " " << val << endl);
         handle_return(val);
+        goto begin_fetch;
         //no ip++
         break;
       case RETURN_THIS:
         // _RETURN_THIS++;
         DBG("RETURN_THIS " << rp() << endl);
         handle_return(rp());
+        goto begin_fetch;
         //no ip++
         break;
       case POP:
@@ -879,17 +890,20 @@ void Process::fetch_cycle(void* stop_at_bp) {
         // _SEND++;
         DBG("SEND " << arg << endl);
         handle_send(arg);
+        goto begin_fetch;
         //no ip++
         break;
       case SUPER_CTOR_SEND:
         // _SUPER_CTOR_SEND++;
         handle_super_ctor_send(arg);
+        goto begin_fetch;
         //no ip++
         break;
       case CALL:
         // _CALL++;
         DBG("CALL " << arg << endl);
         handle_call(arg);
+        goto begin_fetch;
         //no ip++
         break;
       case JMP:
@@ -913,6 +927,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case SUPER_SEND:
         // _SUPER_SEND++;
         handle_super_send(arg);
+        goto begin_fetch;
         //no ip++
         break;
       // case RETURN_THIS:

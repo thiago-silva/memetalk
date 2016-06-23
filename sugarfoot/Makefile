@@ -98,4 +98,4 @@ test: $(TEST_DEPS) $(MMC_TESTER) $(MMC_TESTS) $(MEMETALK)
 	MEME_PATH=./mm/ ./sf-vm mm/memetest.mmc
 
 jit:
-	lua ../dynasm/dynasm.lua mmjit.dasc > mmjit.cpp
+	lua ../dynasm/dynasm.lua -L mmjit.dasc  > mmjit.cpp

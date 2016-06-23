@@ -249,42 +249,48 @@ void* gnerate_jit_code(bytecode* _ip, number size, void* handler) {
         | jmp &handler
         break;
       case JMP:
-        //ip += arg-1
-        | mov rax, [IP] //ip
-        | add rax, (arg*sizeof(bytecode))-sizeof(bytecode)
-        | mov [IP], rax
-        | jmp =>arg-1
+        // //ip += arg-1
+        // | mov rax, [IP] //ip
+        // | add rax, (arg*sizeof(bytecode))-sizeof(bytecode)
+        // | mov [IP], rax
+        // | jmp =>arg-1
+        | mov rcx, arg
+        | mov rax, JIT_HANDLER_JMP
+        | jmp &handler
         break;
       case JMPB:
         //_ip -= (arg+1)
-        | mov rax, [IP] //ip
-        | sub rax, (arg*sizeof(bytecode))+sizeof(bytecode)
-        | mov [IP], rax
-        | jmp => -((arg*sizeof(bytecode))+sizeof(bytecode))
+        // | mov rax, [IP] //ip
+        // | sub rax, (arg*sizeof(bytecode))+sizeof(bytecode)
+        // | mov [IP], rax
+        // | jmp => -((arg*sizeof(bytecode))+sizeof(bytecode))
+        | mov rcx, arg
+        | mov rax, JIT_HANDLER_JMPB
+        | jmp &handler
         break;
       case JZ:
-        // val = stack_pop();
-        // DBG("JZ " << arg << " " << val << endl);
-        // if ((val == MM_FALSE) || (val == MM_NULL)) {
-        //   _ip += (arg -1); //_ip already suffered a ++ in dispatch
-        // }
-        | mov rax, [SP] //rax = sp
-        | mov rcx, [rax] //rcx = *sp
-        | lea rax, [rax-sizeof(oop)] //rax = sp-sizeof(void*)
-        | mov [SP], rax //sp = sp-1
-        | test rcx, MM_FALSE
-        | jz >1
-        | test rcx, MM_NULL
-        | jz >1
-        | jmp >2
-        | 1:
-        //_ip += (arg -1); //_ip already suffered a ++ in dispatch
-        | mov rax, [IP] //ip
-        | add rax, (arg*sizeof(bytecode))-sizeof(bytecode)
-        | mov [IP], rax
-        | 2:
-        | nop
+        | mov rcx, arg
+        | mov rax, JIT_HANDLER_JZ
+        | jmp &handler
         break;
+        // // val = stack_pop();
+        // // DBG("JZ " << arg << " " << val << endl);
+        // // if ((val == MM_FALSE) || (val == MM_NULL)) {
+        // //   _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        // // }
+        // | mov rax, [SP] //rax = sp
+        // | mov rcx, [rax] //rcx = *sp
+        // | lea rax, [rax-sizeof(oop)] //rax = sp-sizeof(void*)
+        // | mov [SP], rax //sp = sp-1
+        // | cmp rcx, 1
+        // | jle >1
+        // | mov rax, [IP] //ip
+        // | add rax, =>idx+arg-1
+        // | mov [IP], rax
+        // | jmp =>idx+arg-1
+        // | 1:
+        // | nop
+        // break;
 
       // case SUPER_SEND:
       //   | =>idx:

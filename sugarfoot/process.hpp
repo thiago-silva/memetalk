@@ -5,7 +5,7 @@
 #include <map>
 #include <list>
 #include <fstream>
-
+#include <boost/unordered_map.hpp>
 #include "defs.hpp"
 #include "log.hpp"
 
@@ -155,6 +155,8 @@ private:
   oop stack_pop();
   int execute_primitive(oop);
   void fetch_cycle(void*);
+  // void jit_fetch_cycle(void*);
+  // void bytecode_fetch_cycle(void*);
 
   void push_frame(oop,oop,number, number);
   void pop_frame();
@@ -214,6 +216,8 @@ private:
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;
+
+  boost::unordered_map<oop, long> _jit_count;
 
   void* _jit_code;
 //profiling
