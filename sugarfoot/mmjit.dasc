@@ -89,7 +89,7 @@ void free_jitcode(void *code) {
 }
 
 
-void* gnerate_jit_code(bytecode* _ip, number size, void* handler) {
+void* generate_jit_code(bytecode* _ip, number size, void* handler, boost::unordered_map<bytecode*, void*>& jmp_table) {
 /*
  handler: a (label) address exit point so the code can jump out back to the VM
 
@@ -307,9 +307,8 @@ void* gnerate_jit_code(bytecode* _ip, number size, void* handler) {
   ip = _ip;
   for (int i = 0; *ip; i++, ip++) {
     int offset = dasm_getpclabel(&state, i);
-    // *ip = (char*)_ip + offset;
+    jmp_table[ip] = ((char*)fptr) + offset;
     // printf("ip %p = offset %d\n", ip, offset);
-    *ip = offset;
   }
   //dasm_free(state);
   return fptr;

@@ -220,6 +220,7 @@ private:
   boost::unordered_map<oop, long> _jit_count;
 
   void* _jit_code;
+  int _jit_no;
 //profiling
   long _PUSH_LOCAL;
   long _PUSH_LITERAL;

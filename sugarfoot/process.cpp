@@ -98,6 +98,7 @@ Process::Process(VM* vm, int debugger_id)
   _step_bp = MM_NULL;
   _current_exception = MM_NULL;
   _break_only_on_this_module = MM_NULL;
+  _jit_no =   getenv("JIT") ? std::atoi(getenv("JIT")) : 1000;
 }
 
 std::string Process::dump_stack_trace(bool enabled) {
@@ -674,6 +675,8 @@ oop Process::call(oop fun, oop args, int* exc) {
 
 
 void Process::fetch_cycle(void* stop_at_bp) {
+  assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
+
  begin_fetch:
   LOG_ENTER_FRAME();
 
@@ -689,94 +692,106 @@ void Process::fetch_cycle(void* stop_at_bp) {
   // DBG("bp: " << &_bp << " " << ((long)&_bp - (long)this) << endl);
   // DBG("mp: " << &_mp << " " << ((long)&_mp - (long)this) << endl);
 
-  if (!_jit_code) {
-    DBG("GENERATING JIT" << endl);
-    _jit_code = gnerate_jit_code(_ip, _code_size, &&lb_handler);
-    _mmobj->mm_function_set_jit_code(this, _cp, _jit_code, true);
-  } else {
-    //_jit_code here should ALWAYS point to the first instruction of the body
-    _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
-    _jit_code = ((char*)_jit_code + *_ip);
-    DBG("RESUMING! ip: " << _ip << " has value: " << *_ip << " base: " << _mmobj->mm_function_get_jit_code(this, _cp, true) << " code: " << _jit_code << endl);
-    // DBG("RESUMING! " << _ip << endl);
-    // _jit_code = *_ip;
+  long call_count = _jit_count[_cp]++;
+  DBG("JIT: fun called " << call_count << " < " << _jit_no << endl);
+  boost::unordered_map<bytecode*, void*>* jmp_table;
+  if (call_count > _jit_no) {
+    if (!_jit_code) {
+      DBG("GENERATING JIT" << endl);
+      jmp_table = new boost::unordered_map<bytecode*, void*>;
+      _jit_code = generate_jit_code(_ip, _code_size / 4, &&lb_handler, *jmp_table);
+      _mmobj->mm_function_set_jit_code(this, _cp, _jit_code, true);
+      _mmobj->mm_function_set_jit_jump_table(this, _cp, jmp_table, true);
+    } else {
+      //_jit_code here should ALWAYS point to the first instruction of the body
+      jmp_table = _mmobj->mm_function_get_jit_jump_table(this, _cp, true);
+      _jit_code = (*jmp_table)[_ip];
+      DBG("RESUMING! ip: " << _ip << " has value: " << *_ip << " base: " << _mmobj->mm_function_get_jit_code(this, _cp, true) << " code: " << _jit_code << endl);
+      // DBG("RESUMING! " << _ip << endl);
+      // _jit_code = *_ip;
+    }
+    goto jit_fetch;
   }
+  goto bytecode_fetch;
 
-  DBG("-- going native" << endl);
-  asm volatile("mov %0, %%r10" : : "r" (this) :"memory"); //r10 = this
-  asm volatile("jmp *%0" : : "a" (_jit_code) :"memory"); //rax = _jit_code / jmp eax
+  {
+    jit_fetch:
 
-  int handler_id = -1;
-  int arg = -1;
-  lb_handler:
+    DBG("-- going native" << endl);
+    asm volatile("mov %0, %%r10" : : "r" (this) :"memory"); //r10 = this
+    asm volatile("jmp *%0" : : "a" (_jit_code) :"memory"); //rax = _jit_code / jmp eax
 
-  asm volatile("movl %%eax,%0" : "=a"(handler_id));
-  asm volatile("movl %%ecx,%0" : "=c"(arg));
-  DBG("+++++ bak from jit " << handler_id << " arg: " << arg << endl);
-  LOG_ENTER_FRAME();
+    int handler_id = -1;
+    int arg = -1;
+    lb_handler:
 
-  oop val;
-  switch(handler_id) {
-    case JIT_HANDLER_RETURN_TOP:
-      val = stack_pop();
-      DBG("HANDLING RETURN_TOP : " << val << endl);
-      handle_return(val);
-      if (_bp >= stop_at_bp && _ip) {
+    asm volatile("movl %%eax,%0" : "=a"(handler_id));
+    asm volatile("movl %%ecx,%0" : "=c"(arg));
+    DBG("+++++ bak from jit " << handler_id << " arg: " << arg << endl);
+    LOG_ENTER_FRAME();
+
+    oop val;
+    switch(handler_id) {
+      case JIT_HANDLER_RETURN_TOP:
+        val = stack_pop();
+        DBG("HANDLING RETURN_TOP : " << val << endl);
+        handle_return(val);
+        if (_bp >= stop_at_bp && _ip) {
+          goto begin_fetch;
+        }
+        break;
+      case JIT_HANDLER_RETURN_THIS:
+        handle_return(rp());
+        if (_bp >= stop_at_bp && _ip) {
+          goto begin_fetch;
+        }
+        break;
+      case JIT_HANDLER_SEND:
+        DBG("HANDLING SEND : " << arg << endl);
+        handle_send(arg);
+        if (_bp >= stop_at_bp && _ip) {
+          goto begin_fetch;
+        }
+        break;
+      case JIT_HANDLER_SUPER_CTOR_SEND:
+        handle_super_ctor_send(arg);
+        if (_bp >= stop_at_bp && _ip) {
+          goto begin_fetch;
+        }
+        break;
+      case JIT_HANDLER_CALL:
+        DBG("HANDLING CALL : " << arg << endl);
+        handle_call(arg);
+        if (_bp >= stop_at_bp && _ip) {
+          goto begin_fetch;
+        }
+        break;
+      case JIT_HANDLER_JZ:
+        val = stack_pop();
+        DBG("JZ " << arg << " " << val << " " << ((val == MM_FALSE) || (val == MM_NULL)) << endl);
+        if ((val == MM_FALSE) || (val == MM_NULL)) {
+          _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        }
         goto begin_fetch;
-      }
-      break;
-    case JIT_HANDLER_RETURN_THIS:
-      handle_return(rp());
-      if (_bp >= stop_at_bp && _ip) {
-        goto begin_fetch;
-      }
-      break;
-    case JIT_HANDLER_SEND:
-      DBG("HANDLING SEND : " << arg << endl);
-      handle_send(arg);
-      if (_bp >= stop_at_bp && _ip) {
-        goto begin_fetch;
-      }
-      break;
-    case JIT_HANDLER_SUPER_CTOR_SEND:
-      handle_super_ctor_send(arg);
-      if (_bp >= stop_at_bp && _ip) {
-        goto begin_fetch;
-      }
-      break;
-    case JIT_HANDLER_CALL:
-      DBG("HANDLING CALL : " << arg << endl);
-      handle_call(arg);
-      if (_bp >= stop_at_bp && _ip) {
-        goto begin_fetch;
-      }
-      break;
-    case JIT_HANDLER_JZ:
-      val = stack_pop();
-      DBG("JZ " << arg << " " << val << " " << ((val == MM_FALSE) || (val == MM_NULL)) << endl);
-      if ((val == MM_FALSE) || (val == MM_NULL)) {
+      case JIT_HANDLER_JMP:
+        DBG("JMP " << arg << " " << endl);
         _ip += (arg -1); //_ip already suffered a ++ in dispatch
-      }
-      goto begin_fetch;
-    case JIT_HANDLER_JMP:
-      DBG("JMP " << arg << " " << endl);
-      _ip += (arg -1); //_ip already suffered a ++ in dispatch
-      goto begin_fetch;
-    case JIT_HANDLER_JMPB:
-      DBG("JMPB " << arg << " " << endl);
-      _ip -= (arg+1); //_ip already suffered a ++ in dispatch
-      goto begin_fetch;
-    default:
-      DBG("unknown handler for " << handler_id << endl);
-      _vm->bail("ugh");
-    // case JIT_HANDLER_DBG:
-    //   DBG("--JIT DBG: " << opcode_to_str(arg) << endl);
-    //   _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
-    //   _jit_code = ((char*)_jit_code + *_ip);
-    //   goto begin_jit;
+        goto begin_fetch;
+      case JIT_HANDLER_JMPB:
+        DBG("JMPB " << arg << " " << endl);
+        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+        goto begin_fetch;
+      default:
+        DBG("unknown handler for " << handler_id << endl);
+        _vm->bail("ugh");
+        // case JIT_HANDLER_DBG:
+        //   DBG("--JIT DBG: " << opcode_to_str(arg) << endl);
+        //   _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
+        //   _jit_code = ((char*)_jit_code + *_ip);
+        //   goto begin_jit;
+    }
+    return;
   }
-  // the rest is unreachable
-  return;
 
   //at least one instructionn should be executed.  stop_at_bp is usually the
   //top mark of the stack when a function is loaded (_bp). So starting a fetch
@@ -786,7 +801,8 @@ void Process::fetch_cycle(void* stop_at_bp) {
   //Thus, let's just do a hard crash if this happens or if _ip -- which
   //we use below -- is 0.
 
-  assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
+  bytecode_fetch:
+
 
   while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
 

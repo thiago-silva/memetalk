@@ -161,6 +161,14 @@ public:
     oop cfun = mm_function_get_cfun(p, fun, should_assert);
     return  ((oop**)cfun)[17];
   }
+  void mm_function_set_jit_jump_table(Process* p, oop fun, boost::unordered_map<bytecode*, void*>* tb, bool should_assert = false) {
+    oop cfun = mm_function_get_cfun(p, fun, should_assert);
+    ((oop*)cfun)[28] = (oop) (void*)tb;
+  }
+  boost::unordered_map<bytecode*, void*>* mm_function_get_jit_jump_table(Process* p, oop fun, bool should_assert = false) {
+    oop cfun = mm_function_get_cfun(p, fun, should_assert);
+    return (boost::unordered_map<bytecode*, void*>*)  (void*) ((oop*)cfun)[28];
+  }
 
   number mm_function_get_code_size(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_literal_by_index(Process*, oop fun, int idx, bool should_assert = false);
