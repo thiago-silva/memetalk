@@ -183,7 +183,7 @@ private:
   void maybe_break_on_exception();
 
   word* _stack; //0x0
-  number _code_size; //0x8
+  number _code_size_unused; //0x8
   oop* _literal_frame; //0x10
   //this order is important: it reflects the order of registers
   //in the stack, and is used by bp_at()

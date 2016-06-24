@@ -2037,6 +2037,24 @@ static int prim_modules_path(Process* proc) {
   return 0;
 }
 
+static clock_t start;
+
+#include <time.h>
+static int prim_start_time(Process* proc) {
+  start = clock() ;
+  proc->stack_push(MM_NULL);
+  return 0;
+}
+
+#include <time.h>
+static int prim_end_time(Process* proc) {
+  clock_t end = clock() ;
+  double elapsed_time = (end-start)/(double)CLOCKS_PER_SEC ;
+  std::cerr << "TIME: " << elapsed_time << endl;
+  proc->stack_push(MM_NULL);
+  return 0;
+}
+
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);
   vm->register_primitive("io_read_file", prim_io_read_file);
@@ -2197,6 +2215,9 @@ void init_primitives(VM* vm) {
   vm->register_primitive("get_compiled_module_by_name", prim_get_compiled_module_by_name);
 
   vm->register_primitive("modules_path", prim_modules_path);
+
+  vm->register_primitive("start_time", prim_start_time);
+  vm->register_primitive("end_time", prim_end_time);
 
   qt_init_primitives(vm);
 }

@@ -496,7 +496,6 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate) {
   // DBG("load_fun: module for fun " << fun << " is " << _mp << endl);
   // DBG("load_fun: is ctor? " << _mmobj->mm_function_is_ctor(fun) << " alloc? " << should_allocate << endl);
   _ip = _mmobj->mm_function_get_code(this, fun, true);
-  _code_size = _mmobj->mm_function_get_code_size(this, fun, true);
   _literal_frame = _mmobj->mm_function_get_literal_frame(this, fun, true);
   //we use _jit_code == NULL to check if we should generate asm in fetch_cycle
   _jit_code = _mmobj->mm_function_get_jit_code(this, _cp, true);
@@ -678,6 +677,10 @@ void Process::fetch_cycle(void* stop_at_bp) {
   assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
  begin_fetch:
+  if  ((_bp < stop_at_bp) || !_ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
+    return;
+  }
+
   LOG_ENTER_FRAME();
 
   // DBG("proc: " << this << endl);
@@ -693,20 +696,30 @@ void Process::fetch_cycle(void* stop_at_bp) {
   // DBG("mp: " << &_mp << " " << ((long)&_mp - (long)this) << endl);
 
   long call_count = _jit_count[_cp]++;
-  DBG("JIT: fun called " << call_count << " < " << _jit_no << endl);
+  DBG("JIT: fun called " << call_count << " > " << _jit_no << endl);
   boost::unordered_map<bytecode*, void*>* jmp_table;
-  if (call_count > _jit_no) {
+  bytecode* ip = _mmobj->mm_function_get_code(this, _cp, true);
+  if (ip == _ip && call_count > _jit_no) { //are we starting a function and is it hot?
+    void *jmp_to;
     if (!_jit_code) {
       DBG("GENERATING JIT" << endl);
       jmp_table = new boost::unordered_map<bytecode*, void*>;
-      _jit_code = generate_jit_code(_ip, _code_size / 4, &&lb_handler, *jmp_table);
+      _jit_code = generate_jit_code(_ip,   _mmobj->mm_function_get_code_size(this, _cp, true) / 4, &&lb_handler, *jmp_table);
       _mmobj->mm_function_set_jit_code(this, _cp, _jit_code, true);
       _mmobj->mm_function_set_jit_jump_table(this, _cp, jmp_table, true);
+      jmp_to = _jit_code;
     } else {
       //_jit_code here should ALWAYS point to the first instruction of the body
       jmp_table = _mmobj->mm_function_get_jit_jump_table(this, _cp, true);
-      _jit_code = (*jmp_table)[_ip];
-      DBG("RESUMING! ip: " << _ip << " has value: " << *_ip << " base: " << _mmobj->mm_function_get_jit_code(this, _cp, true) << " code: " << _jit_code << endl);
+      jmp_to = (*jmp_table)[_ip];
+
+      DBG("RESUMING! "
+          << " bytecode begin: " << _mmobj->mm_function_get_code(this, _cp, true)
+          << " no. instr: " << (_mmobj->mm_function_get_code_size(this, _cp, true) / 4)
+          << " ip: " << _ip
+          << " jit code: " << _jit_code
+          << " jmp to: " << jmp_to << endl);
+
       // DBG("RESUMING! " << _ip << endl);
       // _jit_code = *_ip;
     }
@@ -826,6 +839,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
     //   DBG(" [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl);
     // }
     //dispatch(opcode, arg);
+    oop cp = _cp;
     oop val;
     switch(opcode) {
       case PUSH_LOCAL:
@@ -873,14 +887,14 @@ void Process::fetch_cycle(void* stop_at_bp) {
         val = stack_pop();
         DBG("RETURN_TOP " << arg << " " << val << endl);
         handle_return(val);
-        goto begin_fetch;
+        if (cp != _cp)   goto begin_fetch;
         //no ip++
         break;
       case RETURN_THIS:
         // _RETURN_THIS++;
         DBG("RETURN_THIS " << rp() << endl);
         handle_return(rp());
-        goto begin_fetch;
+        if (cp != _cp)   goto begin_fetch;
         //no ip++
         break;
       case POP:
@@ -906,20 +920,20 @@ void Process::fetch_cycle(void* stop_at_bp) {
         // _SEND++;
         DBG("SEND " << arg << endl);
         handle_send(arg);
-        goto begin_fetch;
+        if (cp != _cp)   goto begin_fetch;
         //no ip++
         break;
       case SUPER_CTOR_SEND:
         // _SUPER_CTOR_SEND++;
         handle_super_ctor_send(arg);
-        goto begin_fetch;
+        if (cp != _cp)   goto begin_fetch;
         //no ip++
         break;
       case CALL:
         // _CALL++;
         DBG("CALL " << arg << endl);
         handle_call(arg);
-        goto begin_fetch;
+        if (cp != _cp)   goto begin_fetch;
         //no ip++
         break;
       case JMP:
@@ -943,7 +957,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case SUPER_SEND:
         // _SUPER_SEND++;
         handle_super_send(arg);
-        goto begin_fetch;
+        if (cp != _cp)   goto begin_fetch;
         //no ip++
         break;
       // case RETURN_THIS:

@@ -118,7 +118,9 @@ void* generate_jit_code(bytecode* _ip, number size, void* handler, boost::unorde
     int arg = decode_args(instr);
 
     //rax, r10, r11, [r9, r8, rcx, rdx, rsi, rdi]
-
+    // 8 registers
+    // 2 (maybe 3) per instruction
+    // 6 registers (PROC, LFRAME, SP, IP, RP, DP)
     //ip++
     | =>idx:
     | mov rax, [IP] //ip
