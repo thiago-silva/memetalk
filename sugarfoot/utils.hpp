@@ -21,6 +21,16 @@ inline int decode_opcode(bytecode code) {
 inline int decode_args(bytecode code) {
   return 0xFFFFFF & code;
 }
+inline int decode_xarg_0(int xarg) {
+  return (xarg & 0xff0000) >> 16;
+}
+inline int decode_xarg_1(int xarg) {
+  return (xarg & 0xff00) >> 8;
+}
+inline int decode_xarg_2(int xarg) {
+  return xarg & 0xFF;
+}
+
 
 std::string bytecode_to_str(bytecode code);
 

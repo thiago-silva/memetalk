@@ -140,6 +140,7 @@ oop VM::new_symbol(const char* cstr) {
   boost::unordered_map<std::string, oop>::iterator it = _symbols.find(s);
   if (it == _symbols.end()) {
     oop sym = _mmobj->mm_symbol_new(cstr);
+    DBG("new symbol for '" << cstr << "' = " << sym << endl);
     _symbols[s] = sym;
     return sym;
   } else {

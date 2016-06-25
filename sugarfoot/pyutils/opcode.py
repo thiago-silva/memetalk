@@ -56,11 +56,46 @@ opcode_mapping = {
     "jmp": 51,
     "jmpb": 52,
     # ...
-    "exit": 60
+    "exit": 60,
+    # X
+    'X_LOAD_AND_STORE_LOCAL_LO': 70,
+    'X_LOAD_AND_STORE_LOCAL_LI': 71,
+    'X_LOAD_AND_STORE_LOCAL_FI': 72,
+    'X_LOAD_AND_STORE_FIELD_LO': 73,
+    'X_LOAD_AND_STORE_FIELD_LI': 74,
+    'X_LOAD_AND_STORE_FIELD_FI': 75,
+    'X_LOAD_AND_RETURN_LOCAL': 76,
+    'X_LOAD_AND_RETURN_LITERAL': 77,
+    'X_LOAD_AND_RETURN_FIELD': 78,
+    'X_LOAD_AND_JZ_LO': 79,
+    'X_LOAD_AND_JZ_LI': 80,
+    'X_LOAD_AND_JZ_FI': 81,
+    'X_SEND_M': 82,
+    'X_SEND_LO': 83,
+    'X_SEND_FI': 84,
+    'X_SEND_LI': 85
     }
+
 
 def op_name(op):
     return [k for k,v in opcode_mapping.items() if op == v][0]
+
+def encode_x2(op, arg1, arg2):
+    return (op << 24) + (arg1 << 8) + arg2
+
+def encode_x3(op, arg1, arg2, arg3):
+    return (op << 24) + (arg1 << 16) + (arg2 << 8) + arg3
+
+def decode_xargs3_0(xargs):
+    return  (xargs & 0xff0000) >> 16
+
+def decode_xargs3_1(xargs):
+    return  (xargs & 0xff00) >> 8
+
+def decode_xargs3_2(xargs):
+    return xargs & 0xFF
+
+
 
 def encode(op, arg):
     return (op << 24) + arg

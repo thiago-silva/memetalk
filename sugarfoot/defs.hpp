@@ -57,3 +57,20 @@ typedef int (*prim_function_t) (Process*);
 #define JZ 50
 #define JMP 51
 #define JMPB 52
+
+#define X_LOAD_AND_STORE_LOCAL_LO 70
+#define X_LOAD_AND_STORE_LOCAL_LI 71
+#define X_LOAD_AND_STORE_LOCAL_FI 72
+#define X_LOAD_AND_STORE_FIELD_LO 73
+#define X_LOAD_AND_STORE_FIELD_LI 74
+#define X_LOAD_AND_STORE_FIELD_FI 75
+#define X_LOAD_AND_RETURN_LOCAL 76
+#define X_LOAD_AND_RETURN_LITERAL 77
+#define X_LOAD_AND_RETURN_FIELD 78
+#define X_LOAD_AND_JZ_LO 79
+#define X_LOAD_AND_JZ_LI 80
+#define X_LOAD_AND_JZ_FI 81
+#define X_SEND_M 82
+#define X_SEND_LO 83
+#define X_SEND_FI 84
+#define X_SEND_LI 85

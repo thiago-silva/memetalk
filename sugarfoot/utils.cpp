@@ -78,7 +78,7 @@ void relocate_addresses(char* data, int data_size, int start_reloc_table) {
 }
 
 
-void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, CoreImage*) {
+void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, CoreImage* core) {
   const char* base = data;
 
   for (int i = 0; i < es_size; i += (2 * WSIZE)) {
@@ -88,8 +88,8 @@ void link_symbols(char* data, int es_size, int start_external_symbols, VM* vm, C
     word* obj = (word*) (base + obj_offset);
     _log << "Symbol: " << (oop) obj_offset << " - " << (oop) *obj << " [" << name << "] " << endl;
     * obj = (word) vm->new_symbol(name);
-    // _log << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
-    //         << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
+    _log << "offset: " << (oop) obj_offset << " - obj: " << (oop) *obj
+            << " [" << name << "] -> " << " vt: " << * (oop*) *obj << " == " << core->get_prime("Symbol") << endl;
   }
 }
 
@@ -168,6 +168,55 @@ std::string bytecode_to_str(bytecode code) {
       break;
     case JMPB:
       s <<"JMPB"<< decode_args(code);
+      break;
+    case X_LOAD_AND_STORE_LOCAL_LO:
+      s <<"X_LOAD_AND_STORE_LOCAL_LO "<< decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+
+    case X_LOAD_AND_STORE_LOCAL_LI:
+      s << "X_LOAD_AND_STORE_LOCAL_LI " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_STORE_LOCAL_FI:
+      s << "X_LOAD_AND_STORE_LOCAL_FI " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_STORE_FIELD_LO:
+      s << "X_LOAD_AND_STORE_FIELD_LO " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_STORE_FIELD_LI:
+      s << "X_LOAD_AND_STORE_FIELD_LI " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_STORE_FIELD_FI:
+      s << "X_LOAD_AND_STORE_FIELD_FI " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_RETURN_LOCAL:
+      s << "X_LOAD_AND_RETURN_LOCAL " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_RETURN_LITERAL:
+      s << "X_LOAD_AND_RETURN_LITERAL " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_RETURN_FIELD:
+      s << "X_LOAD_AND_RETURN_FIELD " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_JZ_LO:
+      s << "X_LOAD_AND_JZ_LO " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_JZ_LI:
+      s << "X_LOAD_AND_JZ_LI " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_LOAD_AND_JZ_FI:
+      s << "X_LOAD_AND_JZ_FI " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_SEND_M:
+      s << "X_SEND_M " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_SEND_LO:
+      s << "X_SEND_LO " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_SEND_FI:
+      s << "X_SEND_FI " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
+      break;
+    case X_SEND_LI:
+      s << "X_SEND_LI " << decode_xarg_0(code) << " " << decode_xarg_1(code) << " " << decode_xarg_2(code);
       break;
     default:
       std::cerr << "unknown code " << code << endl;

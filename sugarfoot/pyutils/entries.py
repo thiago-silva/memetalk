@@ -521,12 +521,35 @@ class CompiledFunction(Entry):
             with open(fname, "w") as f:
                 f.write(str(self.exceptions_frame))
 
+    def encode(self, x, y):
+        return opcode.encode(x,y)
+
+    def emit_x(self, op_name, x, y=None, z=None):
+        if op_name in ['X_LOAD_AND_RETURN_LOCAL', 'X_LOAD_AND_RETURN_LITERAL', 'X_LOAD_AND_RETURN_FIELD']:
+            return [opcode.encode(opcode.opcode_mapping[op_name], x)]
+        elif op_name in ['X_SEND_M', 'X_SEND_LO', 'X_SEND_FI', 'X_SEND_LI']:
+            return [opcode.encode_x3(opcode.opcode_mapping[op_name], x, y, z)]
+        else:
+            return [opcode.encode_x2(opcode.opcode_mapping[op_name], x, y)]
+
     def fill_bytecodes(self, vmem):
         if len(self.bytecodes) == 0:
             return 0
 
         self.maybe_dump_bytecodes_for_tests()
 
+        # ## creating super instructions
+        # from pyparsers.opt import Opt
+        # codes = [list(opcode.decode(x)) for x in self.bytecodes.words()]
+        # parser = Opt([codes])
+        # parser.i = self
+        # scode = parser.apply('start')[0]
+        # swords = [x[0] for x in scode]
+        # print 'WS', self.bytecodes.words()
+        # print 'SW', swords, [((0xFF000000 & word) >> 24) for word in swords]
+
+        # swords = self.bytecodes.words()
+        # print [list(opcode.decode(x)) for x in self.bytecodes.words()]
         bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes.words()])
 
         vmem.append_int(FRAME_TYPE_BYTECODE_FRAME)

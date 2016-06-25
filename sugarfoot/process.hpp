@@ -166,6 +166,7 @@ private:
   void restore_fp(oop, number, number);
 
   void dispatch(int, int);
+  void handle_send(oop recv, oop selector, number num_args);
   void handle_send(number);
   void handle_super_send(number num_arg);
   void handle_super_ctor_send(number);
