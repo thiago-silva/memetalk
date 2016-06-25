@@ -159,11 +159,13 @@ void* generate_jit_code(bytecode* _ip, number size, void* handler, boost::unorde
         break;
       case RETURN_TOP:
         | mov rax, JIT_HANDLER_RETURN_TOP
-        | jmp &handler
+        | mov rbx, handler
+        | jmp rbx
         break;
       case RETURN_THIS:
         | mov rax, JIT_HANDLER_RETURN_THIS
-        | jmp &handler
+        | mov rbx, handler
+        | jmp rbx
         break;
       case PUSH_MODULE:
         //sp++, *sp = md
@@ -238,17 +240,20 @@ void* generate_jit_code(bytecode* _ip, number size, void* handler, boost::unorde
       case SEND:
         | mov rcx, arg
         | mov rax, JIT_HANDLER_SEND
-        | jmp &handler
+        | mov rbx, handler
+        | jmp rbx
         break;
       case SUPER_CTOR_SEND:
         | mov rcx, arg
         | mov rax, JIT_HANDLER_SUPER_CTOR_SEND
-        | jmp &handler
+        | mov rbx, handler
+        | jmp rbx
         break;
       case CALL:
         | mov rcx, arg
         | mov rax, JIT_HANDLER_CALL
-        | jmp &handler
+        | mov rbx, handler
+        | jmp rbx
         break;
       case JMP:
         // //ip += arg-1
@@ -258,7 +263,8 @@ void* generate_jit_code(bytecode* _ip, number size, void* handler, boost::unorde
         // | jmp =>arg-1
         | mov rcx, arg
         | mov rax, JIT_HANDLER_JMP
-        | jmp &handler
+        | mov rbx, handler
+        | jmp rbx
         break;
       case JMPB:
         //_ip -= (arg+1)
@@ -268,12 +274,14 @@ void* generate_jit_code(bytecode* _ip, number size, void* handler, boost::unorde
         // | jmp => -((arg*sizeof(bytecode))+sizeof(bytecode))
         | mov rcx, arg
         | mov rax, JIT_HANDLER_JMPB
-        | jmp &handler
+        | mov rbx, handler
+        | jmp rbx
         break;
       case JZ:
         | mov rcx, arg
         | mov rax, JIT_HANDLER_JZ
-        | jmp &handler
+        | mov rbx, handler
+        | jmp rbx
         break;
         // // val = stack_pop();
         // // DBG("JZ " << arg << " " << val << endl);

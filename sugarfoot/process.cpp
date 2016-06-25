@@ -673,7 +673,7 @@ oop Process::call(oop fun, oop args, int* exc) {
 }
 
 
-void Process::fetch_cycle(void* stop_at_bp) {
+void  __attribute__((optimize("O0"))) Process::fetch_cycle(void* stop_at_bp) {
   assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
  begin_fetch:

@@ -1,33 +1,24 @@
-.license
-.endlicense
-
 .preamble()
 
 .code
 
-// -- module functions --
+class OMetaStream
+fields: memo, idx, hd, tl, data;
+init with_data: fun(data) {
+  @memo = {};
+  @idx = 0;
+  @data = data;
+  @hd = null;
+  @tl = null;
+}
+
+instance_method memo: fun() {
+  return @memo;
+}
+end
 
 main: fun() {
-  return X.throw + X.new(2).x;// == 12, "Testing class method");
+   return 99;
 }
 
-// -- module classes --
-
-class X
-fields: x;
-init new: fun(x) {
-  @x = x;
-}
-
-instance_method x: fun() {
-  return @x;
-}
-
-class_method throw: fun() {
-  return 10;
-}
-
-end //class_method1:X
-
-
-.end
+.endcode
