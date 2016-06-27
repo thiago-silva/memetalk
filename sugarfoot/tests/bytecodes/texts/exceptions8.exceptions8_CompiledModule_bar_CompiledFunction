@@ -1,0 +1,13 @@
+push_module 0
+push_literal 0
+send 0
+pop 0
+push_bin 2
+push_literal 1
+push_module 0
+push_literal 2
+send 0
+push_literal 3
+send 2
+pop 0
+ret_this 0

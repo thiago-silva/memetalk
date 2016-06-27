@@ -1,0 +1,3 @@
+push_local 0
+pop_field 0
+ret_this 0

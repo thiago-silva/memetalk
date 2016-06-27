@@ -1,0 +1,7 @@
+push_module 0
+push_literal 3
+send 0
+push_literal 1
+send 0
+pop_field 0
+ret_this 0

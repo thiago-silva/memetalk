@@ -59,6 +59,8 @@ opcode_mapping = {
     "exit": 60
     }
 
+def op_name(op):
+    return [k for k,v in opcode_mapping.items() if op == v][0]
 
 def encode(op, arg):
     return (op << 24) + arg

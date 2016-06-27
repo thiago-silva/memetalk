@@ -1,0 +1,5 @@
+push_literal 0
+push_local 0
+call 1
+ret_top 0
+ret_this 0

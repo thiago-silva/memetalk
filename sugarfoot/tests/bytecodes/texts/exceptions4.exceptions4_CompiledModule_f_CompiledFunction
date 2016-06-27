@@ -1,0 +1,4 @@
+push_local 0
+call 0
+pop 0
+ret_this 0

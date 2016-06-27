@@ -1,0 +1,7 @@
+push_literal 0
+push_local 1
+push_literal 1
+send 1
+ret_top 0
+push_bin 0
+ret_top 0

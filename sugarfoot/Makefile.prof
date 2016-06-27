@@ -43,7 +43,7 @@ QT_FLAGS = -pipe -g -arch x86_64 -W \
 
 sf-vm: $(CPP_FILES) $(HPP_FILES)
 	moc qsc.hpp > qsc.moc.cpp
-	g++ -Wall -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(INC_PATHS)  -o sf-vm $(QT_FLAGS) -DMM_NO_DEBUG
+	g++ -Wall -O2 -g $(CPP_FILES) $(LIBS) $(LIB_PATHS) $(INC_PATHS)  -o sf-vm $(QT_FLAGS) -DMM_NO_DEBUG
 
 clean:
 	rm -f sf-vm
@@ -94,11 +94,5 @@ $(MMC_TESTER): $(MM_TESTER) $(MEMETALK)
 $(MMC_TESTS): $(MM_TESTS) $(MEMETALK)
 	python -m pycompiler.compiler $(MM_TESTS)
 
-memetest: $(TEST_DEPS) $(MMC_TESTER) $(MMC_TESTS) $(MEMETALK)
+test: $(TEST_DEPS) $(MMC_TESTER) $(MMC_TESTS) $(MEMETALK)
 	MEME_PATH=./mm/ ./sf-vm mm/memetest.mmc
-
-bytecode_test: $(MM_TESTS)
-	DUMP_BC=1 python -m pycompiler.compiler $(MM_TESTS)
-	diff tests/bytecodes/texts tests/bytecodes/output
-
-test: memetest bytecode_test

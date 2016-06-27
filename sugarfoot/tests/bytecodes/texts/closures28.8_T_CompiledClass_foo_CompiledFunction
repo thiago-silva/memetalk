@@ -1,0 +1,11 @@
+push_fp 0
+push_module 0
+push_literal 0
+push_literal 1
+send 2
+pop_local 0
+push_literal 2
+pop_field 0
+push_field 0
+ret_top 0
+ret_this 0

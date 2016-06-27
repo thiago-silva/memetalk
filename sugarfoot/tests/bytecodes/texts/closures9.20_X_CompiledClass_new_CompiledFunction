@@ -1,0 +1,10 @@
+push_fp 0
+push_module 0
+push_literal 0
+push_literal 1
+send 2
+pop_local 0
+push_local 0
+call 0
+pop 0
+ret_this 0

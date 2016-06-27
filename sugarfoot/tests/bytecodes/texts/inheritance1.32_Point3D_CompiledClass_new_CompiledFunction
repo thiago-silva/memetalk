@@ -1,0 +1,8 @@
+push_local 0
+push_local 1
+push_literal 0
+super_ctor_send 2
+pop 0
+push_local 2
+pop_field 0
+ret_this 0

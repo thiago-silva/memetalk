@@ -1,0 +1,11 @@
+push_bin 1
+jz 4
+push_literal 0
+pop 0
+jmp 3
+push_literal 1
+pop 0
+push_literal 2
+ret_top 0
+push_bin 0
+ret_top 0

@@ -1,0 +1,6 @@
+push_literal 0
+push_module 0
+push_literal 1
+send 1
+ret_top 0
+ret_this 0

@@ -1,0 +1,4 @@
+push_literal 0
+pop_field 0
+push_bin 0
+ret_top 0

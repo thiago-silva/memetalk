@@ -1,0 +1,13 @@
+push_local 0
+pop_field 0
+push_local 1
+pop_field 1
+push_local 2
+pop_field 2
+push_fp 0
+push_module 0
+push_literal 0
+push_literal 1
+send 2
+pop_local 3
+ret_this 0

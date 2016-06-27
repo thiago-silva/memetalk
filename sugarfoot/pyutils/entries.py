@@ -15,6 +15,7 @@ from . import (behavior_label,
                mod_label,
                closure_name)
 
+import os
 from pdb import set_trace as br
 
     #!(fnobj.current_bytecode_pos()):bpos or fnobj.update_line_mapping(bpos, ast)
@@ -507,9 +508,20 @@ class CompiledFunction(Entry):
         return len(self.literal_frame) * bits.WSIZE
 
 
+    def maybe_dump_for_tests(self):
+        if os.getenv('DUMP_BC'):
+            instructions = [opcode.decode(instr) for instr in self.bytecodes.words()]
+            text = '\n'.join(['{} {}'.format(opcode.op_name(op),arg) for op, arg in instructions])
+            fname = "tests/bytecodes/output/{}".format('{}.{}'.format(self.cmod.name, self.label()))
+            with open(fname, "w") as f:
+                 f.write(text)
+
+
     def fill_bytecodes(self, vmem):
         if len(self.bytecodes) == 0:
             return 0
+
+        self.maybe_dump_for_tests()
 
         bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes.words()])
 
