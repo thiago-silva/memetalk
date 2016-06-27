@@ -508,20 +508,25 @@ class CompiledFunction(Entry):
         return len(self.literal_frame) * bits.WSIZE
 
 
-    def maybe_dump_for_tests(self):
-        if os.getenv('DUMP_BC'):
+    def maybe_dump_bytecodes_for_tests(self):
+        if os.getenv('DUMP_DATA'):
             instructions = [opcode.decode(instr) for instr in self.bytecodes.words()]
             text = '\n'.join(['{} {}'.format(opcode.op_name(op),arg) for op, arg in instructions])
             fname = "tests/bytecodes/output/{}".format('{}.{}'.format(self.cmod.name, self.label()))
             with open(fname, "w") as f:
                  f.write(text)
 
+    def maybe_dump_exception_table_for_tests(self):
+        if os.getenv('DUMP_DATA'):
+            fname = "tests/bytecodes/output/{}".format('{}.{}.exceptions'.format(self.cmod.name, self.label()))
+            with open(fname, "w") as f:
+                f.write(str(self.exceptions_frame))
 
     def fill_bytecodes(self, vmem):
         if len(self.bytecodes) == 0:
             return 0
 
-        self.maybe_dump_for_tests()
+        self.maybe_dump_bytecodes_for_tests()
 
         bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes.words()])
 
@@ -536,6 +541,8 @@ class CompiledFunction(Entry):
         EXCEPTION_FRAME_SIZE = 3
         if len(self.exceptions_frame) == 0:
             return 0
+
+        self.maybe_dump_exception_table_for_tests()
 
         type_oops = []
         for entry in self.exceptions_frame:

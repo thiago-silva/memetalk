@@ -98,7 +98,7 @@ memetest: $(TEST_DEPS) $(MMC_TESTER) $(MMC_TESTS) $(MEMETALK)
 	MEME_PATH=./mm/ ./sf-vm mm/memetest.mmc
 
 bytecode_test: $(MM_TESTS)
-	DUMP_BC=1 python -m pycompiler.compiler $(MM_TESTS)
+	DUMP_DATA=1 python -m pycompiler.compiler $(MM_TESTS)
 	diff tests/bytecodes/texts tests/bytecodes/output
 
 test: memetest bytecode_test
