@@ -69,33 +69,77 @@ def decode(word):
     return ((0xFF000000 & word) >> 24), (0xFFFFFF & word)
 
 
-class Label(object):
-    def __init__(self, bytecodes, pos=None):
+class Ref(object):
+    def __init__(self, bytecodes, late_pos):
         self.bytecodes = bytecodes
-        self.start = len(bytecodes)
-        self.pos = pos
+        self.idx = late_pos
+        self.target = None
+
+    def __str__(self):
+        return str(self())
+
+    def __repr__(self):
+        return str(self())
+
+    def __call__(self):
+        return self.bytecodes[self.idx].pos()
+
+    def update(self):
+        if self.target is None and self.idx < len(self.bytecodes):
+            self.target = self.bytecodes[self.idx]
+
+class Label(object):
+    def __init__(self, bytecodes):
+        self.bytecodes = bytecodes
+        self.target = None
+        if len(self.bytecodes) > 0:
+            self.base = self.bytecodes[-1]
+        else:
+            self.base = 0
+
+    def base_pos(self):
+        if hasattr(self.base, 'pos'):
+            return self.base.pos()
+        else:
+            return self.base()
+
+    # def as_initial(self):
+    #     self.pos = 0
+    #     return self
 
     def as_current(self):
-        self.pos = len(self.bytecodes) - self.start
+        # points to the next instruction to be added to bytecodes
+        # [to keep compatibility with the current behavior]
+        if len(self.bytecodes) > 0:
+            self.target = self.bytecodes[-1]
+        else:
+            self.target = 0
         return self
 
     def __call__(self):
-        return self.pos
+        if isinstance(self.target, int):
+            return self.target # likey 0
+        else:
+            return self.target.pos() - self.base_pos()
+
 
 class Bytecodes(object):
     def __init__(self):
         self.lst = []
+        self.refs = []
 
     def append(self, name, arg):
         if isinstance(arg, numbers.Number):
-            self.lst.append(Bytecode(name, lambda: arg))
+            self.lst.append(Bytecode(self, name, lambda: arg))
         elif callable(arg):
-            self.lst.append(Bytecode(name, arg))
+            self.lst.append(Bytecode(self, name, arg))
         else:
             raise Exception("Unsupported arg type")
+        for ref in self.refs:
+            ref.update()
 
-    def words(self):
-        return [x() for x in self.lst]
+    def __getitem__(self, idx):
+        return self.lst[idx]
 
     def __len__(self):
         return len(self.lst)
@@ -103,17 +147,47 @@ class Bytecodes(object):
     def __iter__(self):
         return iter(self.lst)
 
-    def new_label(self, current=False):
-        if current:
-            return Label(self, len(self))
-        else:
-            return Label(self)
+    def index(self, obj):
+        return self.lst.index(obj)
+
+    def words(self):
+        return [x() for x in self.lst]
+
+    def new_relative_label(self):
+        return Label(self)
+
+    def ref_for_initial(self):
+        ref = Ref(self, late_pos=0)
+        self.refs.append(ref)
+        return ref
+
+    def ref_for_next_pos(self):
+        ref = Ref(self, late_pos=len(self))
+        self.refs.append(ref)
+        return ref
+
+
+    # def replace(self, pos, other_bytecodes):
+    #     # -replace cell's data in [pos] with bytecodes[0]
+    #     #   so labels pointing to it are preserved
+    #     # -insert into [pos+1] bytecodes[1:]
+
+    #     self.lst[pos].replace(other_bytecodes[0])
+    #     self.lst[pos+1:pos+1] = other_bytecodes[1:]
 
 
 class Bytecode(object):
-    def __init__(self, name, arg):
+    def __init__(self, bytecodes, name, arg):
+        self.bytecodes = bytecodes
         self.name = name
         self.arg = arg
+
+    # def replace(self, other):
+    #     self.name = other.name
+    #     self.arg = other.arg
+
+    def pos(self):
+        return self.bytecodes.index(self)
 
     def __call__(self):
         global opcode_mapping

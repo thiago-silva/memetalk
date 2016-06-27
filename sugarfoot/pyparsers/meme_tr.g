@@ -112,15 +112,15 @@ stm :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | '==' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '==')
                | '!=' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, '!=')
                | 'if' expr(fnobj) !(fnobj.emit_jz()):label [expr(fnobj)* !(fnobj.emit_jmp()):lb2] !(label.as_current()) [expr_elif(fnobj lb2)*] [expr(fnobj)*] !(lb2.as_current())
-               | 'while' !(fnobj.current_label(False)):lbcond
+               | 'while' !(fnobj.new_relative_label()):lbcond
                    expr(fnobj)
                    !(fnobj.emit_jz()):lbend [expr(fnobj)*] !(fnobj.emit_jmp_back(lbcond.as_current())) -> lbend.as_current()
                | 'try'
-                  !(fnobj.current_label()):label_begin_try
+                  !(fnobj.ref_to_next()):label_begin_try
                     [expr(fnobj)*]
                   !(fnobj.emit_catch_jump()):end_pos
-                  !(fnobj.current_label()):label_begin_catch
                     catch_decl:cp
+                  !(fnobj.ref_to_next()):label_begin_catch
                   !(fnobj.bind_catch_var(cp[1]))
                     [expr(fnobj)*] -> fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0])
                | '=' ['id' :v] expr(fnobj)    -> fnobj.emit_local_assignment(ast, v)

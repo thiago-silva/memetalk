@@ -507,7 +507,6 @@ class CompiledFunction(Entry):
 
         return len(self.literal_frame) * bits.WSIZE
 
-
     def maybe_dump_bytecodes_for_tests(self):
         if os.getenv('DUMP_DATA'):
             instructions = [opcode.decode(instr) for instr in self.bytecodes.words()]
@@ -557,8 +556,8 @@ class CompiledFunction(Entry):
         vmem.label_current(self.exceptions_frame_label())
 
         for idx, entry in enumerate(self.exceptions_frame):
-            vmem.append_int(entry['start'])
-            vmem.append_int(entry['catch'])
+            vmem.append_int(entry['start']())
+            vmem.append_int(entry['catch']())
             if type_oops[idx] is None:
                 vmem.append_null()
             else:
@@ -567,8 +566,8 @@ class CompiledFunction(Entry):
         return len(self.exceptions_frame)
 
     def wrap_catch_for_non_local_return(self):
-        lb_begin_try = opcode.Label(self.bytecodes, pos=0)
-        lb_begin_catch = self.current_label()
+        lb_begin_try = self.bytecodes.ref_for_initial()
+        lb_begin_catch = self.bytecodes.ref_for_next_pos()
         catch_type = "NonLocalReturn"
 
         ## taking out the value from exception object -- it is on top of stack
@@ -680,13 +679,19 @@ class CompiledFunction(Entry):
 
     def add_exception_entry(self, label_begin_try, label_begin_catch, catch_type):
         self.exceptions_frame.append({
-            'start': label_begin_try(),
-            'catch': label_begin_catch(),
+            'start': label_begin_try,
+            'catch': label_begin_catch,
             'type': catch_type})
 
 
-    def current_label(self, current=True):
-        return self.bytecodes.new_label(current)
+    def new_relative_label(self):
+        return self.bytecodes.new_relative_label()
+
+    def ref_to_next(self):
+        return self.bytecodes.ref_for_next_pos()
+
+    # def relative_label_for_current(self):
+    #     return self.bytecodes.new_relative_label().as_current()
 
     # def identifier_is_param(self, name):
     #     return name in self.params
@@ -890,18 +895,18 @@ class CompiledFunction(Entry):
         self.bytecodes.append('push_literal', idx)
         self.bytecodes.append('send', 0)
 
-    def emit_jz(self, lb=None):
-        lb = lb or self.bytecodes.new_label()
+    def emit_jz(self):
+        lb = self.bytecodes.new_relative_label()
         self.bytecodes.append('jz', lb)
         return lb
 
     def emit_jmp(self, lb=None):
-        lb = lb or self.bytecodes.new_label()
+        lb = lb or self.bytecodes.new_relative_label()
         self.bytecodes.append('jmp', lb)
         return lb
 
     def emit_jmp_back(self, lb=None):
-        lb = lb or self.bytecodes.new_label()
+        lb = lb or self.bytecodes.new_relative_label()
         self.bytecodes.append('jmpb', lb)
         return lb
 
