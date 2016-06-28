@@ -812,116 +812,116 @@ void Process::fetch_cycle(void* stop_at_bp) {
         // _SUPER_SEND++;
         handle_super_send(arg);
         break;
-      // case X_LOAD_AND_STORE_LOCAL_LO:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_STORE_LOCAL_LO " << xarg0 << " " << xarg1 << endl);
-      //   *(_fp + xarg1) = (word) *(_fp + xarg0);
-      //   break;
-      // case X_LOAD_AND_STORE_LOCAL_LI:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_STORE_LOCAL_LI " << xarg0 << " " << xarg1 << " " << endl);
-      //   *(_fp + xarg1) = (word) _mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true);
-      //   break;
-      // case X_LOAD_AND_STORE_LOCAL_FI:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_STORE_LOCAL_FI " << xarg0 << " " << xarg1 << " " << endl);
-      //   *(_fp + xarg1) = *(dp() + xarg0 + 2);
-      //   break;
-      // case X_LOAD_AND_STORE_FIELD_LO:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_STORE_FIELD_LO " << xarg0 << " " << xarg1 << " " << endl);
-      //   *(dp() + xarg1 + 2) = (word) *(_fp + xarg0);
-      //   break;
-      // case X_LOAD_AND_STORE_FIELD_LI:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_STORE_FIELD_LI " << xarg0 << " " << xarg1 << " " << endl);
-      //   *(dp() + xarg1 + 2) = (word) _mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true);
-      //   break;
-      // case X_LOAD_AND_STORE_FIELD_FI:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_STORE_FIELD_FI " << xarg0 << " " << xarg1 << " " << endl);
-      //   *(dp() + xarg1 + 2) = *(dp() + xarg0 + 2);
-      //   break;
-      // case X_LOAD_AND_RETURN_LOCAL:
-      //   xarg0 = decode_xarg_0(arg);
-      //   DBG("X_LOAD_AND_RETURN_LOCAL " << xarg0 << " " << endl);
-      //   handle_return((oop)*(_fp + xarg0));
-      //   break;
-      // case X_LOAD_AND_RETURN_LITERAL:
-      //   xarg0 = decode_xarg_0(arg);
-      //   DBG("X_LOAD_AND_RETURN_LITERAL " << xarg0 << " " << endl);
-      //   handle_return((oop) _mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true));
-      //   break;
-      // case X_LOAD_AND_RETURN_FIELD:
-      //   xarg0 = decode_xarg_0(arg);
-      //   DBG("X_LOAD_AND_RETURN_FIELD " << xarg0 << " " << endl);
-      //   handle_return((oop)*(dp() + xarg0 + 2));
-      //   break;
-      // case X_LOAD_AND_JZ_LO:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_JZ_LO " << xarg0 << " " << xarg1 << " " << endl);
-      //   val = (oop)*(_fp + xarg0);
-      //   if ((val == MM_FALSE) || (val == MM_NULL)) {
-      //     _ip += (xarg1 -1); //_ip already suffered a ++ in dispatch
-      //   }
-      //   break;
-      // case X_LOAD_AND_JZ_LI:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_JZ_LI " << xarg0 << " " << xarg1 << " " << endl);
-      //   val = _mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true);
-      //   if ((val == MM_FALSE) || (val == MM_NULL)) {
-      //     _ip += (xarg1 -1); //_ip already suffered a ++ in dispatch
-      //   }
-      //   break;
-      // case X_LOAD_AND_JZ_FI:
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   DBG("X_LOAD_AND_JZ_FI " << xarg0 << " " << xarg1 << " " << endl);
-      //   val = (oop) *(dp() + xarg0 + 2);
-      //   if ((val == MM_FALSE) || (val == MM_NULL)) {
-      //     _ip += (xarg1 -1); //_ip already suffered a ++ in dispatch
-      //   }
-      //   break;
-      // case X_SEND_M: //3
-      //   //xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   xarg2 = decode_xarg_2(arg);
-      //   DBG("X_SEND_M " << xarg1 << " " << xarg2 << endl);
-      //   handle_send(_mp, _mmobj->mm_function_get_literal_by_index(this, _cp, xarg1, true), xarg2);
-      //   //xarg0
-      //   break;
-      // case X_SEND_LO: //3
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   xarg2 = decode_xarg_2(arg);
-      //   DBG("X_SEND_LO " << xarg0 << " " << xarg1 << " " << xarg2 << endl);
-      //   handle_send((oop)*(_fp + xarg0), _mmobj->mm_function_get_literal_by_index(this, _cp, xarg1, true), xarg2);
-      //   //xarg0
-      //   break;
-      // case X_SEND_FI: //3
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   xarg2 = decode_xarg_2(arg);
-      //   DBG("X_SEND_FI " << xarg0 << " " << xarg1 << " " << xarg2 << endl);
-      //   handle_send((oop)*(dp() + xarg0 + 2), _mmobj->mm_function_get_literal_by_index(this, _cp, xarg1, true), xarg2);
-      //   //xarg0
-      //   break;
-      // case X_SEND_LI: //3
-      //   xarg0 = decode_xarg_0(arg);
-      //   xarg1 = decode_xarg_1(arg);
-      //   xarg2 = decode_xarg_2(arg);
-      //   DBG("X_SEND_LI " << xarg0 << " " << xarg1 << " " << xarg2 << endl);
-      //   handle_send(_mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true), _mmobj->mm_function_get_literal_by_index(this, _cp, xarg1, true), xarg2);
-      //   //xarg0
-      //   break;
+      case X_LOAD_AND_STORE_LOCAL_LO:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_STORE_LOCAL_LO " << xarg0 << " " << xarg1 << endl);
+        *(_fp + xarg1) = (word) *(_fp + xarg0);
+        break;
+      case X_LOAD_AND_STORE_LOCAL_LI:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_STORE_LOCAL_LI " << xarg0 << " " << xarg1 << " " << endl);
+        *(_fp + xarg1) = (word) _mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true);
+        break;
+      case X_LOAD_AND_STORE_LOCAL_FI:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_STORE_LOCAL_FI " << xarg0 << " " << xarg1 << " " << endl);
+        *(_fp + xarg1) = *(dp() + xarg0 + 2);
+        break;
+      case X_LOAD_AND_STORE_FIELD_LO:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_STORE_FIELD_LO " << xarg0 << " " << xarg1 << " " << endl);
+        *(dp() + xarg1 + 2) = (word) *(_fp + xarg0);
+        break;
+      case X_LOAD_AND_STORE_FIELD_LI:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_STORE_FIELD_LI " << xarg0 << " " << xarg1 << " " << endl);
+        *(dp() + xarg1 + 2) = (word) _mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true);
+        break;
+      case X_LOAD_AND_STORE_FIELD_FI:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_STORE_FIELD_FI " << xarg0 << " " << xarg1 << " " << endl);
+        *(dp() + xarg1 + 2) = *(dp() + xarg0 + 2);
+        break;
+      case X_LOAD_AND_RETURN_LOCAL:
+        xarg0 = decode_xarg_0(arg);
+        DBG("X_LOAD_AND_RETURN_LOCAL " << xarg0 << " " << endl);
+        handle_return((oop)*(_fp + xarg0));
+        break;
+      case X_LOAD_AND_RETURN_LITERAL:
+        xarg0 = decode_xarg_0(arg);
+        DBG("X_LOAD_AND_RETURN_LITERAL " << xarg0 << " " << endl);
+        handle_return((oop) _mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true));
+        break;
+      case X_LOAD_AND_RETURN_FIELD:
+        xarg0 = decode_xarg_0(arg);
+        DBG("X_LOAD_AND_RETURN_FIELD " << xarg0 << " " << endl);
+        handle_return((oop)*(dp() + xarg0 + 2));
+        break;
+      case X_LOAD_AND_JZ_LO:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_JZ_LO " << xarg0 << " " << xarg1 << " " << endl);
+        val = (oop)*(_fp + xarg0);
+        if ((val == MM_FALSE) || (val == MM_NULL)) {
+          _ip += (xarg1 -1); //_ip already suffered a ++ in dispatch
+        }
+        break;
+      case X_LOAD_AND_JZ_LI:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_JZ_LI " << xarg0 << " " << xarg1 << " " << endl);
+        val = _mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true);
+        if ((val == MM_FALSE) || (val == MM_NULL)) {
+          _ip += (xarg1 -1); //_ip already suffered a ++ in dispatch
+        }
+        break;
+      case X_LOAD_AND_JZ_FI:
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        DBG("X_LOAD_AND_JZ_FI " << xarg0 << " " << xarg1 << " " << endl);
+        val = (oop) *(dp() + xarg0 + 2);
+        if ((val == MM_FALSE) || (val == MM_NULL)) {
+          _ip += (xarg1 -1); //_ip already suffered a ++ in dispatch
+        }
+        break;
+      case X_SEND_M: //3
+        //xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        xarg2 = decode_xarg_2(arg);
+        DBG("X_SEND_M " << xarg1 << " " << xarg2 << endl);
+        handle_send(_mp, _mmobj->mm_function_get_literal_by_index(this, _cp, xarg1, true), xarg2);
+        //xarg0
+        break;
+      case X_SEND_LO: //3
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        xarg2 = decode_xarg_2(arg);
+        DBG("X_SEND_LO " << xarg0 << " " << xarg1 << " " << xarg2 << endl);
+        handle_send((oop)*(_fp + xarg0), _mmobj->mm_function_get_literal_by_index(this, _cp, xarg1, true), xarg2);
+        //xarg0
+        break;
+      case X_SEND_FI: //3
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        xarg2 = decode_xarg_2(arg);
+        DBG("X_SEND_FI " << xarg0 << " " << xarg1 << " " << xarg2 << endl);
+        handle_send((oop)*(dp() + xarg0 + 2), _mmobj->mm_function_get_literal_by_index(this, _cp, xarg1, true), xarg2);
+        //xarg0
+        break;
+      case X_SEND_LI: //3
+        xarg0 = decode_xarg_0(arg);
+        xarg1 = decode_xarg_1(arg);
+        xarg2 = decode_xarg_2(arg);
+        DBG("X_SEND_LI " << xarg0 << " " << xarg1 << " " << xarg2 << endl);
+        handle_send(_mmobj->mm_function_get_literal_by_index(this, _cp, xarg0, true), _mmobj->mm_function_get_literal_by_index(this, _cp, xarg1, true), xarg2);
+        //xarg0
+        break;
       // case RETURN_THIS:
       //   break;
       default:

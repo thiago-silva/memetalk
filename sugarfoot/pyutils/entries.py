@@ -524,32 +524,74 @@ class CompiledFunction(Entry):
     def encode(self, x, y):
         return opcode.encode(x,y)
 
-    def emit_x(self, op_name, x, y=None, z=None):
-        if op_name in ['X_LOAD_AND_RETURN_LOCAL', 'X_LOAD_AND_RETURN_LITERAL', 'X_LOAD_AND_RETURN_FIELD']:
-            return [opcode.encode(opcode.opcode_mapping[op_name], x)]
-        elif op_name in ['X_SEND_M', 'X_SEND_LO', 'X_SEND_FI', 'X_SEND_LI']:
-            return [opcode.encode_x3(opcode.opcode_mapping[op_name], x, y, z)]
-        else:
-            return [opcode.encode_x2(opcode.opcode_mapping[op_name], x, y)]
+    def subst(self):
+        i = 0
+        while True:
+            if self.bytecodes.at(i).name == 'push_local' and self.bytecodes.at(i+1).name == 'pop_local':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_STORE_LOCAL_LO', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+            elif self.bytecodes.at(i).name == 'push_literal' and self.bytecodes.at(i+1).name == 'pop_local':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_STORE_LOCAL_LI', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+            elif self.bytecodes.at(i).name == 'push_field' and self.bytecodes.at(i+1).name == 'pop_local':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_STORE_LOCAL_FI', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
 
+            elif self.bytecodes.at(i).name == 'push_local' and self.bytecodes.at(i+1).name == 'pop_field':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_STORE_FIELD_LO', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+            elif self.bytecodes.at(i).name == 'push_literal' and self.bytecodes.at(i+1).name == 'pop_field':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_STORE_FIELD_LI', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+            elif self.bytecodes.at(i).name == 'push_field' and self.bytecodes.at(i+1).name == 'pop_field':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_STORE_FIELD_FI', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+
+            elif self.bytecodes.at(i).name == 'push_local' and self.bytecodes.at(i+1).name == 'ret_top':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_RETURN_LOCAL', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+            elif self.bytecodes.at(i).name == 'push_literal' and self.bytecodes.at(i+1).name == 'ret_top':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_RETURN_LITERAL', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+            elif self.bytecodes.at(i).name == 'push_field' and self.bytecodes.at(i+1).name == 'ret_top':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_RETURN_FIELD', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+
+            elif self.bytecodes.at(i).name == 'push_local' and self.bytecodes.at(i+1).name == 'jz':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_JZ_LO', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+            elif self.bytecodes.at(i).name == 'push_literal' and self.bytecodes.at(i+1).name == 'jz':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_JZ_LI', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+            elif self.bytecodes.at(i).name == 'push_field' and self.bytecodes.at(i+1).name == 'jz':
+                self.bytecodes.replace(i, i, 2, 'X_LOAD_AND_JZ_FI', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg))
+
+            elif self.bytecodes.at(i).name == 'push_module' and self.bytecodes.at(i+1).name == 'push_literal' and self.bytecodes.at(i+2).name == 'send':
+                self.bytecodes.replace(i, i, 3, 'X_SEND_M', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg, self.bytecodes.at(i+2).arg))
+            elif self.bytecodes.at(i).name == 'push_local' and self.bytecodes.at(i+1).name == 'push_literal' and self.bytecodes.at(i+2).name == 'send':
+                self.bytecodes.replace(i, i, 3, 'X_SEND_LO', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg, self.bytecodes.at(i+2).arg))
+            elif self.bytecodes.at(i).name == 'push_field' and self.bytecodes.at(i+1).name == 'push_literal' and self.bytecodes.at(i+2).name == 'send':
+                self.bytecodes.replace(i, i, 3, 'X_SEND_FI', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg, self.bytecodes.at(i+2).arg))
+            elif self.bytecodes.at(i).name == 'push_literal' and self.bytecodes.at(i+1).name == 'push_literal' and self.bytecodes.at(i+2).name == 'send':
+                self.bytecodes.replace(i, i, 3, 'X_SEND_LI', opcode.ArgX(self.bytecodes.at(i).arg, self.bytecodes.at(i+1).arg, self.bytecodes.at(i+2).arg))
+
+            i+= 1
     def fill_bytecodes(self, vmem):
         if len(self.bytecodes) == 0:
             return 0
 
+
+        # print 'CODE', self.bytecodes.pretty()
+        try:
+            self.subst()
+        except IndexError:
+            pass
+
+        # print 'SUBST', self.bytecodes.pretty()
         self.maybe_dump_bytecodes_for_tests()
 
         # ## creating super instructions
         # from pyparsers.opt import Opt
-        # codes = [list(opcode.decode(x)) for x in self.bytecodes.words()]
-        # parser = Opt([codes])
+        # # codes = [list(opcode.decode(x)) for x in self.bytecodes.words()]
+        # print self.bytecodes.pretty()
+        # parser = Opt([self.bytecodes])
         # parser.i = self
-        # scode = parser.apply('start')[0]
-        # swords = [x[0] for x in scode]
-        # print 'WS', self.bytecodes.words()
-        # print 'SW', swords, [((0xFF000000 & word) >> 24) for word in swords]
+        # parser.apply('start')[0]
+        # print self.bytecodes.pretty()
+        # # print 'WS', self.bytecodes.words()
+        # # print 'SW', swords #, [((0xFF000000 & word) >> 24) for word in swords]
 
-        # swords = self.bytecodes.words()
-        # print [list(opcode.decode(x)) for x in self.bytecodes.words()]
+        # # swords = self.bytecodes.words()
+        # # print [list(opcode.decode(x)) for x in self.bytecodes.words()]
         bytecodes = ''.join([bits.pack32(w) for w in self.bytecodes.words()])
 
         vmem.append_int(FRAME_TYPE_BYTECODE_FRAME)
@@ -590,7 +632,7 @@ class CompiledFunction(Entry):
 
     def wrap_catch_for_non_local_return(self):
         lb_begin_try = self.bytecodes.ref_for_initial()
-        lb_begin_catch = self.bytecodes.ref_for_next_pos()
+        lb_begin_catch = self.bytecodes.ref_for_current()
         catch_type = "NonLocalReturn"
 
         ## taking out the value from exception object -- it is on top of stack
@@ -707,11 +749,11 @@ class CompiledFunction(Entry):
             'type': catch_type})
 
 
-    def new_relative_label(self):
-        return self.bytecodes.new_relative_label()
+    def label_for_current(self):
+        return self.bytecodes.label_for_current()
 
-    def ref_to_next(self):
-        return self.bytecodes.ref_for_next_pos()
+    def ref_for_current(self):
+        return self.bytecodes.ref_for_current()
 
     # def relative_label_for_current(self):
     #     return self.bytecodes.new_relative_label().as_current()
@@ -919,17 +961,17 @@ class CompiledFunction(Entry):
         self.bytecodes.append('send', 0)
 
     def emit_jz(self):
-        lb = self.bytecodes.new_relative_label()
+        lb = self.label_for_current()
         self.bytecodes.append('jz', lb)
         return lb
 
     def emit_jmp(self, lb=None):
-        lb = lb or self.bytecodes.new_relative_label()
+        lb = lb or self.label_for_current()
         self.bytecodes.append('jmp', lb)
         return lb
 
     def emit_jmp_back(self, lb=None):
-        lb = lb or self.bytecodes.new_relative_label()
+        lb = lb or self.label_for_current()
         self.bytecodes.append('jmpb', lb)
         return lb
 
@@ -994,14 +1036,13 @@ class CompiledFunction(Entry):
         self.emit_local_assignment(None, name)
 
     def emit_catch_jump(self):
-        self.bytecodes.append("jmp", 0) # arg 0 will be substituted later
-        # hack
-        return len(self.bytecodes) - 1
+        lb = self.bytecodes.label_for_current()
+        self.bytecodes.append("jmp", lb) # arg 0 will be substituted later
+        return lb
 
-    def emit_try_catch(self, lb_begin_try, lb_begin_catch, jmp_pos, catch_type):
+    def emit_try_catch(self, lb_begin_try, lb_begin_catch, jmp_lb, catch_type):
         # hack
-        blen = len(self.bytecodes)
-        self.bytecodes.lst[jmp_pos].arg = lambda: blen - jmp_pos
+        jmp_lb.as_current()
         self.add_exception_entry(lb_begin_try, lb_begin_catch, catch_type)
 
 

@@ -86,6 +86,9 @@ def encode_x2(op, arg1, arg2):
 def encode_x3(op, arg1, arg2, arg3):
     return (op << 24) + (arg1 << 16) + (arg2 << 8) + arg3
 
+def encode_x3_args(arg1, arg2, arg3):
+    return (arg1 << 16) + (arg2 << 8) + arg3
+
 def decode_xargs3_0(xargs):
     return  (xargs & 0xff0000) >> 16
 
@@ -105,10 +108,10 @@ def decode(word):
 
 
 class Ref(object):
-    def __init__(self, bytecodes, late_pos):
+    def __init__(self, bytecodes, target=None):
+        # print 'REF', late_pos
         self.bytecodes = bytecodes
-        self.idx = late_pos
-        self.target = None
+        self.target = target
 
     def __str__(self):
         return str(self())
@@ -117,112 +120,142 @@ class Ref(object):
         return str(self())
 
     def __call__(self):
-        return self.bytecodes[self.idx].pos()
+        return self.target.pos()
 
-    def update(self):
-        if self.target is None and self.idx < len(self.bytecodes):
-            self.target = self.bytecodes[self.idx]
 
 class Label(object):
-    def __init__(self, bytecodes):
+    def __init__(self, bytecodes, base=None):
         self.bytecodes = bytecodes
         self.target = None
-        if len(self.bytecodes) > 0:
-            self.base = self.bytecodes[-1]
-        else:
-            self.base = 0
-
-    def base_pos(self):
-        if hasattr(self.base, 'pos'):
-            return self.base.pos()
-        else:
-            return self.base()
-
-    # def as_initial(self):
-    #     self.pos = 0
-    #     return self
+        self.base = base
 
     def as_current(self):
+        # print 'LABEL::as_current'
         # points to the next instruction to be added to bytecodes
         # [to keep compatibility with the current behavior]
-        if len(self.bytecodes) > 0:
-            self.target = self.bytecodes[-1]
-        else:
-            self.target = 0
+        self.target = self.bytecodes[-1]
         return self
 
     def __call__(self):
-        if isinstance(self.target, int):
-            return self.target # likey 0
-        else:
-            return self.target.pos() - self.base_pos()
+        return self.target.pos() - self.base.pos()
 
 
 class Bytecodes(object):
     def __init__(self):
         self.lst = []
-        self.refs = []
+        self.idx = 0
 
     def append(self, name, arg):
-        if isinstance(arg, numbers.Number):
-            self.lst.append(Bytecode(self, name, lambda: arg))
-        elif callable(arg):
-            self.lst.append(Bytecode(self, name, arg))
+        b = self[-1]
+        b.set(name, arg)
+        self.idx += 1
+
+    def at(self, idx):
+        if idx < self.idx:
+            return self.lst[idx]
         else:
-            raise Exception("Unsupported arg type")
-        for ref in self.refs:
-            ref.update()
+            raise IndexError
 
     def __getitem__(self, idx):
+        if len(self.lst) == self.idx:
+            bytecode = Bytecode(self)
+            self.lst.append(bytecode)
         return self.lst[idx]
 
     def __len__(self):
-        return len(self.lst)
+        return self.idx
 
     def __iter__(self):
-        return iter(self.lst)
+        return iter(self.lst[0:self.idx])
 
     def index(self, obj):
         return self.lst.index(obj)
 
     def words(self):
-        return [x() for x in self.lst]
+        return [x() for x in self.lst[0:self.idx]]
 
-    def new_relative_label(self):
-        return Label(self)
+    # def new_relative_label_for_current_pos(self):
+    #     if len(self) > 0:
+    #         lb = Label(self, late_base=len(self)-1)
+    #     else:
+    #         lb = Label(self, late_base=0)
+    #     self.refs.append(lb)
+    #     return lb
+
+    def label_for_current(self):
+        b = self[-1]
+        return Label(self, base=b)
 
     def ref_for_initial(self):
-        ref = Ref(self, late_pos=0)
-        self.refs.append(ref)
-        return ref
+        b = self[0]
+        return Ref(self, target=b)
 
-    def ref_for_next_pos(self):
-        ref = Ref(self, late_pos=len(self))
-        self.refs.append(ref)
-        return ref
+    def ref_for_current(self):
+        b = self[-1]
+        return Ref(self, target=b)
+
+    def replace(self, target, begin, num,  op_name, arg):
+        # -substitute a range of bytecodes for a single bytecode
+        #  * target specifies which bytecode is replaced preserving identity
+        new_instruction = Bytecode(self, op_name, arg)
+        # avoid assigning so refs and labels still refer to valid cells
+        self.lst[target].replace(new_instruction)
+        # remove substituted instructions
+        self.lst[begin:begin+num] = [self.lst[target]]
+
+    def pretty(self):
+        return ', '.join(['[{} {}]'.format(op_name(op),arg) for op, arg in self])
 
 
-    # def replace(self, pos, other_bytecodes):
-    #     # -replace cell's data in [pos] with bytecodes[0]
-    #     #   so labels pointing to it are preserved
-    #     # -insert into [pos+1] bytecodes[1:]
+class ArgX(object):
+    def __init__(self, x=None, y=None, z=None):
+        self.x = x or (lambda: 0)
+        self.y = y or (lambda: 0)
+        self.z = z or (lambda: 0)
 
-    #     self.lst[pos].replace(other_bytecodes[0])
-    #     self.lst[pos+1:pos+1] = other_bytecodes[1:]
+    def __call__(self):
+        # print 'xargs', self.x(), self.y(), self.z()
+        return encode_x3_args(self.x(), self.y(), self.z())
 
+    def update_labels(self, bc):
+        if isinstance(self.x, Label):
+            self.x.base = bc
+        if isinstance(self.y, Label):
+            self.y.base = bc
+        if isinstance(self.x, Label):
+            self.z.base = bc
 
 class Bytecode(object):
-    def __init__(self, bytecodes, name, arg):
+    def __init__(self, bytecodes, name=None, arg=None):
         self.bytecodes = bytecodes
-        self.name = name
-        self.arg = arg
+        if not (name is None and arg is None):
+            self.set(name, arg)
 
-    # def replace(self, other):
-    #     self.name = other.name
-    #     self.arg = other.arg
+    def set(self, name, arg):
+        self.name = name
+        if isinstance(arg, numbers.Number):
+            self.arg = lambda: arg
+        elif callable(arg) or isinstance(arg, ArgX):
+            self.arg = arg
+        else:
+            raise Exception("Unsupported arg type")
+
+    def replace(self, other):
+        self.name = other.name
+        self.arg = other.arg # other.arg: ArgX
+        self.arg.update_labels(self)
 
     def pos(self):
         return self.bytecodes.index(self)
+
+    def __getitem__(self, idx):
+        return [opcode_mapping[self.name], self.arg()][idx]
+
+    def __len__(self):
+        return 2
+
+    def __iter__(self):
+        return iter([opcode_mapping[self.name], self.arg()])
 
     def __call__(self):
         global opcode_mapping
