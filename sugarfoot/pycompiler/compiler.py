@@ -29,12 +29,12 @@ class MMC(object):
                {'magic_number': None,
                 'ot_size': None,
                 'er_size': None,
-                'es_size': None,
+                'ir_size': None,
                 'names_size': None},
                'names': [],
                'object_table': [],
                'external_references': [],
-               'external_symbols': [],
+               'symbols': [],
                'exception_types': [],
                'reloc_table': []
             }
@@ -66,10 +66,10 @@ class MMC(object):
         mmc['header']['er_size'] = len(mmc['external_references']) * bits.WSIZE
 
         for pair in vmem.symbols_references():
-            mmc['external_symbols'].append(self.name_ptr_for(pair[0], mmc))
-            mmc['external_symbols'].append(pair[1])
+            mmc['symbols'].append(self.name_ptr_for(pair[0], mmc))
+            mmc['symbols'].append(pair[1])
 
-        mmc['header']['es_size'] = len(mmc['external_symbols']) * bits.WSIZE
+        mmc['header']['st_size'] = len(mmc['symbols']) * bits.WSIZE
 
         mmc['reloc_table'] = vmem.reloc_table()
 
@@ -83,7 +83,7 @@ class MMC(object):
             fp.write(bits.pack_word(mmc['header']['magic_number']))
             fp.write(bits.pack_word(mmc['header']['ot_size']))
             fp.write(bits.pack_word(mmc['header']['er_size']))
-            fp.write(bits.pack_word(mmc['header']['es_size']))
+            fp.write(bits.pack_word(mmc['header']['st_size']))
             fp.write(bits.pack_word(mmc['header']['names_size']))
 
             # names
@@ -99,8 +99,8 @@ class MMC(object):
             for v in mmc['external_references']:
                 fp.write(bits.pack_word(v))
 
-            # external symbols
-            for v in mmc['external_symbols']:
+            # symbols
+            for v in mmc['symbols']:
                 fp.write(bits.pack_word(v))
 
             # reloc table
@@ -129,13 +129,13 @@ class MMC_Fun(object):
                {'magic_number': None,
                 'ot_size': None,
                 'er_size': None,
-                'es_size': None,
+                'st_size': None,
                 'names_size': None,
                 'cfun_addr': None},
                'names': [],
                'object_table': [],
                'external_references': [],
-               'external_symbols': [],
+               'symbols': [],
                'exception_types': [],
                'reloc_table': []
             }
@@ -164,10 +164,10 @@ class MMC_Fun(object):
         mmc['header']['er_size'] = len(mmc['external_references']) * bits.WSIZE
 
         for pair in vmem.symbols_references():
-            mmc['external_symbols'].append(self.name_ptr_for(pair[0], mmc))
-            mmc['external_symbols'].append(pair[1])
+            mmc['symbols'].append(self.name_ptr_for(pair[0], mmc))
+            mmc['symbols'].append(pair[1])
 
-        mmc['header']['es_size'] = len(mmc['external_symbols']) * bits.WSIZE
+        mmc['header']['st_size'] = len(mmc['symbols']) * bits.WSIZE
 
         mmc['reloc_table'] = vmem.reloc_table()
 
@@ -184,7 +184,7 @@ class MMC_Fun(object):
         fp.write(bits.pack_word(mmc['header']['magic_number']))
         fp.write(bits.pack_word(mmc['header']['ot_size']))
         fp.write(bits.pack_word(mmc['header']['er_size']))
-        fp.write(bits.pack_word(mmc['header']['es_size']))
+        fp.write(bits.pack_word(mmc['header']['st_size']))
         fp.write(bits.pack_word(mmc['header']['names_size']))
         fp.write(bits.pack_word(mmc['header']['cfun_addr']))
 
@@ -201,8 +201,8 @@ class MMC_Fun(object):
         for v in mmc['external_references']:
             fp.write(bits.pack_word(v))
 
-        # external symbols
-        for v in mmc['external_symbols']:
+        # symbols
+        for v in mmc['symbols']:
             fp.write(bits.pack_word(v))
 
         # reloc table

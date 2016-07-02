@@ -24,14 +24,14 @@ void MMCImage::load_header() {
   word magic_number = unpack_word(_data, 0 * WSIZE);
   _ot_size = unpack_word(_data,  1 * WSIZE);
   _er_size = unpack_word(_data, 2 * WSIZE);
-  _es_size = unpack_word(_data, 3 * WSIZE);
+  _st_size = unpack_word(_data, 3 * WSIZE);
   _names_size = unpack_word(_data,  4 * WSIZE);
 
   DBG(" ============ Module: " << _name_or_path << " ===========" << endl);
   DBG("Header:magic: " << magic_number << " =?= " << MMCImage::MAGIC_NUMBER << endl);
   DBG("Header:ot_size: " << _ot_size << endl);
   DBG("Header:er_size: " << _er_size << endl);
-  DBG("Header:es_size: " << _es_size << endl);
+  DBG("Header:st_size: " << _st_size << endl);
   DBG("Header:names_size: " << _names_size << endl);
 }
 
@@ -327,9 +327,9 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 oop MMCImage::load() {
   _data = read_mmc_file(_name_or_path, &_data_size);
   load_header();
-  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _es_size);
+  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _st_size);
   link_external_references();
-  link_symbols(_data, _es_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _proc->vm(), _core_image);
+  link_symbols(_data, _st_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _proc->vm(), _core_image);
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
 
   DBG(" ============ Done module: " << _name_or_path << " ===========" << endl);

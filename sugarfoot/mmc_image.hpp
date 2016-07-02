@@ -45,7 +45,7 @@ private:
 
   //header
   word _ot_size;
-  word _es_size;
+  word _st_size;
   word _er_size;
   word _names_size;
 
