@@ -8,11 +8,15 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def __init__(self):
         super(CompVirtualMemory, self).__init__()
         self.ext_ref_table = []
+        self.int_ref_table = []
         self.symb_table = []
         self.string_table = {}
 
     def external_references(self):
         return [(x[0], self.physical_address(x[1])) for x in self.ext_ref_table]
+
+    def internal_references(self):
+        return [(x[0], self.physical_address(x[1])) for x in self.int_ref_table]
 
     def external_names(self):
         return sorted(set([x[0] for x in self.ext_ref_table] + [x[0] for x in self.symb_table]))
@@ -23,6 +27,11 @@ class CompVirtualMemory(vmemory.VirtualMemory):
     def append_external_ref(self, name, label=None):
         oop = self.append_int(0xAAAA, label)
         self.ext_ref_table.append((name, oop))
+        return oop
+
+    def append_internal_ref(self, name, label=None):
+        oop = self.append_int(0xCCCC, label)
+        self.int_ref_table.append((name, oop))
         return oop
 
     def append_object_instance(self):

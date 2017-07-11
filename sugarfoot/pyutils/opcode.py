@@ -32,6 +32,7 @@ opcode_mapping = {
     "push_fp": 9,
 
     "push_context": 10,
+    "push_module_field": 11,
 
     # pop
     # "pop_param": 20,

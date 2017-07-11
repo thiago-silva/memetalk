@@ -30,12 +30,13 @@ class MMC(object):
                 'ot_size': None,
                 'er_size': None,
                 'ir_size': None,
+                'st_size': None,
                 'names_size': None},
                'names': [],
                'object_table': [],
                'external_references': [],
+               'internal_references': [],
                'symbols': [],
-               'exception_types': [],
                'reloc_table': []
             }
 
@@ -65,6 +66,13 @@ class MMC(object):
 
         mmc['header']['er_size'] = len(mmc['external_references']) * bits.WSIZE
 
+        for pair in vmem.internal_references():
+            mmc['internal_references'].append(self.name_ptr_for(pair[0], mmc))
+            mmc['internal_references'].append(pair[1])
+
+            mmc['header']['ir_size'] = len(mmc['internal_references']) * bits.WSIZE
+
+
         for pair in vmem.symbols_references():
             mmc['symbols'].append(self.name_ptr_for(pair[0], mmc))
             mmc['symbols'].append(pair[1])
@@ -83,6 +91,7 @@ class MMC(object):
             fp.write(bits.pack_word(mmc['header']['magic_number']))
             fp.write(bits.pack_word(mmc['header']['ot_size']))
             fp.write(bits.pack_word(mmc['header']['er_size']))
+            fp.write(bits.pack_word(mmc['header']['ir_size']))
             fp.write(bits.pack_word(mmc['header']['st_size']))
             fp.write(bits.pack_word(mmc['header']['names_size']))
 
@@ -97,6 +106,10 @@ class MMC(object):
 
             # external references
             for v in mmc['external_references']:
+                fp.write(bits.pack_word(v))
+
+            # internal references
+            for v in mmc['internal_references']:
                 fp.write(bits.pack_word(v))
 
             # symbols
@@ -136,7 +149,6 @@ class MMC_Fun(object):
                'object_table': [],
                'external_references': [],
                'symbols': [],
-               'exception_types': [],
                'reloc_table': []
             }
 

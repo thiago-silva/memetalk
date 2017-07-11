@@ -8,6 +8,7 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
     def __init__(self):
         self.string_table = {}
         self.symb_table = []
+        self.int_ref_table = []
         super(CoreVirtualMemory, self).__init__()
 
     def index_for(self, name):
@@ -18,6 +19,11 @@ class CoreVirtualMemory(vmemory.VirtualMemory):
 
     def append_external_ref(self, name, label):
         return self.append_label_ref(name, label) # core is self contained and does not require external names
+
+    def append_internal_ref(self, name, label=None):
+        oop = self.append_int(0xCCCC, label)
+        self.int_ref_table.append((name, oop))
+        return oop
 
     def append_object_instance(self):
         self.append_int(pyutils.FRAME_TYPE_OBJECT)

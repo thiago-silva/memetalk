@@ -13,7 +13,7 @@ using namespace std;
 #define WARNING() MMLog::warning() << "[MMCImg|" << __FUNCTION__ << "] " << _log.normal
 #define ERROR() MMLog::error() << "[MMCImg|" << __FUNCTION__ << "] " << _log.normal
 
-word MMCImage::HEADER_SIZE = 5 * WSIZE;
+word MMCImage::HEADER_SIZE = 6 * WSIZE;
 word MMCImage::MAGIC_NUMBER = 0x420;
 
 MMCImage::MMCImage(Process* proc, CoreImage* core_image, const std::string& name_or_path)
@@ -24,13 +24,15 @@ void MMCImage::load_header() {
   word magic_number = unpack_word(_data, 0 * WSIZE);
   _ot_size = unpack_word(_data,  1 * WSIZE);
   _er_size = unpack_word(_data, 2 * WSIZE);
-  _st_size = unpack_word(_data, 3 * WSIZE);
-  _names_size = unpack_word(_data,  4 * WSIZE);
+  _ir_size = unpack_word(_data, 3 * WSIZE);
+  _st_size = unpack_word(_data, 4 * WSIZE);
+  _names_size = unpack_word(_data,  5 * WSIZE);
 
   DBG(" ============ Module: " << _name_or_path << " ===========" << endl);
   DBG("Header:magic: " << magic_number << " =?= " << MMCImage::MAGIC_NUMBER << endl);
   DBG("Header:ot_size: " << _ot_size << endl);
   DBG("Header:er_size: " << _er_size << endl);
+  DBG("Header:ir_size: " << _ir_size << endl);
   DBG("Header:st_size: " << _st_size << endl);
   DBG("Header:names_size: " << _names_size << endl);
 }
@@ -42,11 +44,28 @@ void MMCImage::link_external_references() {
   for (word i = 0; i < _er_size; i += (2 * WSIZE)) {
     word name_offset = unpack_word(_data, start_external_refs + i);
     char* name = (char*) (base + name_offset);
+    DBG("ext ref name " << name << endl);
     word obj_offset = unpack_word(_data, start_external_refs + i + WSIZE);
-    // word* obj = (word*) (base + obj_offset);
-    // DBG(obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl);
+    word* obj = (word*) (base + obj_offset);
+    DBG(obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl);
     * (word*) (base + obj_offset) = (word) _core_image->get_prime(name);
-    // DBG("External refs " << obj_offset << " - " << (oop) *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl);
+    DBG("External refs " << obj_offset << " - " << (oop) *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl);
+  }
+}
+
+void MMCImage::link_internal_references() {
+  const char* base = _data;
+  int start_internal_refs = HEADER_SIZE + _names_size + _ot_size + _er_size;
+
+  for (word i = 0; i < _ir_size; i += (2 * WSIZE)) {
+    word name_offset = unpack_word(_data, start_internal_refs + i);
+    char* name = (char*) (base + name_offset);
+    DBG("int ref name " << name << endl);
+    word obj_offset = unpack_word(_data, start_internal_refs + i + WSIZE);
+    word* obj = (word*) (base + obj_offset);
+    DBG(obj_offset << " - " << *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl);
+    * (word*) (base + obj_offset) = (word) _core_image->get_prime(name);
+    DBG("External refs " << obj_offset << " - " << (oop) *obj << " [" << name << "] -> " << _core_image->get_prime(name) << endl);
   }
 }
 
@@ -327,9 +346,12 @@ oop MMCImage::instantiate_module(oop module_arguments_list) {
 oop MMCImage::load() {
   _data = read_mmc_file(_name_or_path, &_data_size);
   load_header();
-  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _st_size);
+  DBG("relocating addresses..." << endl);
+  relocate_addresses(_data, _data_size, HEADER_SIZE + _names_size + _ot_size + _er_size + _ir_size + _st_size);
+  DBG("linking external references..." << endl);
   link_external_references();
-  link_symbols(_data, _st_size, HEADER_SIZE + _names_size + _ot_size + _er_size, _proc->vm(), _core_image);
+  DBG("linking symbols..." << endl);
+  link_symbols(_data, _st_size, HEADER_SIZE + _names_size + _ot_size + _ir_size + _er_size, _proc->vm(), _core_image);
   _compiled_module = (oop) * (word*)(& _data[HEADER_SIZE + _names_size]);
 
   DBG(" ============ Done module: " << _name_or_path << " ===========" << endl);

@@ -435,9 +435,9 @@ class CompiledFunction(Entry):
     def declare_vars(self, names):
         self.var_declarations.add_names(self, names)
 
-    def set_getter(self, idx):
-        self.accessor_flag = 1 # normal=0/getter=1/setter=2
-        self.accessor_field = idx
+    # def set_getter(self, idx):
+    #     self.accessor_flag = 1 # normal=0/getter=1/setter=2
+    #     self.accessor_field = idx
 
     def body_processor(self):
         return self
@@ -478,6 +478,10 @@ class CompiledFunction(Entry):
                 lit['oop'] = vmem.append_string_instance(lit['value'])
             elif lit['tag'] == 'cfun':
                 lit['oop'] = lit['value'].fill(vmem)
+            elif lit['tag'] == 'internal_reference':
+                lit['oop'] = vmem.append_internal_ref(lit['value'])
+            elif lit['tag'] == 'external_reference':
+                lit['oop'] = vmem.append_external_ref(lit['value'])
             else:
                 raise Exception('Todo')
 
@@ -500,6 +504,10 @@ class CompiledFunction(Entry):
             elif lit['tag'] == 'string':
                 vmem.append_pointer_to(lit['oop'])
             elif lit['tag'] == 'cfun':
+                vmem.append_pointer_to(lit['oop'])
+            elif lit['tag'] == 'internal_reference':
+                vmem.append_pointer_to(lit['oop'])
+            elif lit['tag'] == 'external_reference':
                 vmem.append_pointer_to(lit['oop'])
             else:
                 raise Exception('Todo')
@@ -716,6 +724,14 @@ class CompiledFunction(Entry):
         return self.index_for_literal(entry)
 
 
+    def create_internal_ref(self, name):
+        entry = {"tag": "internal_reference", "value": name}
+        return self.index_for_literal(entry)
+
+    def create_external_ref(self, name):
+        entry = {"tag": "external_reference", "value": name}
+        return self.index_for_literal(entry)
+
     # emit procedures
     #!(fnobj.current_bytecode_pos()):bpos or fnobj.update_line_mapping(bpos, ast)
 
@@ -724,19 +740,19 @@ class CompiledFunction(Entry):
         if self.identifier_in_scope(self, name):
             idx = self.var_declarations.index(self, name)
             self.bytecodes.append("push_local", idx)
-        elif self.identifier_is_module_scoped(name) or self.identifier_is_prime(name):
-            idx = self.create_and_register_symbol_literal(name)
-            self.bytecodes.append("push_module", 0)
-            self.bytecodes.append("push_literal", idx)
-            self.bytecodes.append('send', 0)
+        elif self.identifier_is_module_scoped(name):
+            idx = self.create_internal_ref(name)
+            self.bytecodes.append("push_module_field", idx)
         else:
             # raise Exception('push_var: undeclared ' + name)
             # for now, lets assume its a module instead of raising,
             # to make it easy for dynamic eval() code
-            idx = self.create_and_register_symbol_literal(name)
-            self.bytecodes.append('push_module', 0)
-            self.bytecodes.append('push_literal', idx)
-            self.bytecodes.append('send', 0)
+            idx = self.create_external_ref(name)
+            self.bytecodes.append('push_module_field', idx)
+            # idx = self.create_and_register_symbol_literal(name)
+            # self.bytecodes.append('push_module', 0)
+            # self.bytecodes.append('push_literal', idx)
+            # self.bytecodes.append('send', 0)
 
     @emitter
     def emit_local_assignment(self, _, name):
@@ -1154,26 +1170,26 @@ class CoreModule(Entry):
         return '@core_module'
 
 
-    def create_getter(self, name, idx, vmem):
-        cfun = CompiledFunction(self.cmod, self.cmod, 'get_' + name, [])
-        cfun.set_getter(idx)
-        cfun.fill(vmem)
-        return Function(self, cfun)
+    # def create_getter(self, name, idx, vmem):
+    #     cfun = CompiledFunction(self.cmod, self.cmod, 'get_' + name, [])
+    #     cfun.set_getter(idx)
+    #     cfun.fill(vmem)
+    #     return Function(self, cfun)
 
     def emit_dict(self, vmem):
         d = dict(self.functions.items())
 
-        idx = 4 # start after vt, delegate, dict, compiled_module
+        # idx = 4 # start after vt, delegate, dict, compiled_module
 
         for obj in self.objects:
             obj.fill(vmem)
-            d[obj.label()] = self.create_getter(obj.label(), idx, vmem)
-            idx += 1
+        #     d[obj.label()] = self.create_getter(obj.label(), idx, vmem)
+        #     idx += 1
 
         for klass in self.classes:
             klass.fill(vmem)
-            d[klass.label()] = self.create_getter(klass.label(), idx, vmem)
-            idx +=1
+        #     d[klass.label()] = self.create_getter(klass.label(), idx, vmem)
+        #     idx +=1
 
         return vmem.append_sym_dict_emiting_entries(d)
 
