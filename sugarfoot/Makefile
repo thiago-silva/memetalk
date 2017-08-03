@@ -18,7 +18,10 @@ QSCI_INC ?= $(dir $(foreach i,$(INC_DIRS),$(shell find -L $(i) -name qscicommand
 
 PKGLIBS = QtCore QtGui QtScript QtWebKit QtNetwork
 
-CXXFLAGS = -Wall -g -DMM_NO_DEBUG $(shell pkg-config --cflags $(PKGLIBS)) -I$(QSCI_INC)
+CXXFLAGS = -Wall $(shell pkg-config --cflags $(PKGLIBS)) -I$(QSCI_INC)
+
+#CXXFLAGS = -Wall  -O2 -DMM_NO_DEBUG $(shell pkg-config --cflags $(PKGLIBS)) -I$(QSCI_INC)
+#CXXFLAGS = -Wall  -g $(shell pkg-config --cflags $(PKGLIBS)) -I$(QSCI_INC)
 
 LDFLAGS = $(shell pkg-config --libs $(PKGLIBS)) -lqscintilla2	\
 	-lboost_system -lboost_iostreams -lboost_filesystem
@@ -33,7 +36,15 @@ HPP_FILES = mmc_image.hpp core_image.hpp vm.hpp log.hpp utils.hpp	\
 
 OBJS = $(CPP_FILES:%.cpp=%.o)
 
-all: $(BIN)
+all: release
+
+debug: CXXFLAGS += -g
+debug: build
+
+release: CXXFLAGS += -DMM_NO_DEBUG -O2
+release: build
+
+build: $(BIN)
 
 qsc.moc.cpp: qsc.hpp
 	moc $< > $@
@@ -47,9 +58,7 @@ $(BIN): $(OBJS)
 	g++ $(OBJS) $(LDFLAGS) -o $@
 
 clean:
-	-rm -f $(BIN) $(OBJS) qsc.moc.cpp
-	-rm mm/*.mmc
-	-rm tests/*.mmc
+	rm -f $(BIN) $(OBJS) qsc.moc.cpp
 
 ############ Compiler Section ############
 
@@ -68,8 +77,6 @@ $(PY_PARSER_FILES): $(GRAMMARS)
 
 core.img: $(PY_PARSER_FILES) $(MM_CORE) $(PY_COMPILER_DEPENDENCIES)
 	python -m pycore.compiler
-
-
 
 ############ Memetalk Tests Section ############
 
@@ -95,5 +102,18 @@ $(MMC_TESTER): $(MM_TESTER) $(MEMETALK)
 $(MMC_TESTS): $(MM_TESTS) $(MEMETALK)
 	python -m pycompiler.compiler $(MM_TESTS)
 
-test: $(TEST_DEPS) $(MMC_TESTER) $(MMC_TESTS) $(MEMETALK)
+mm/qt.mmc: mm/qt.mm # debugger tests need qt
+	python -m pycompiler.compiler mm/qt.mm
+
+test: core.img $(TEST_DEPS) $(MMC_TESTER) $(MMC_TESTS) $(MEMETALK) mm/qt.mmc
 	MEME_PATH=./mm/ ./sf-vm mm/memetest.mmc
+
+
+memeclean:
+	rm -f mm/*.mmc
+	rm -f tests/*.mmc
+
+cleanall: memeclean clean
+	rm -f core.img
+	rm -f $(PY_PARSER_FILES)
+	rm -f pyparsers/*pyc
