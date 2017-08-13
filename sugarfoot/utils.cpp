@@ -27,34 +27,50 @@ char* read_file(fstream& file, int* file_size) {
   return (char*) memcpy(ret, str, (sizeof(char) * *file_size)+1);
 }
 
+#include <boost/algorithm/string.hpp>
+using namespace std;
+using namespace boost;
+
+void open_file_in_meme_path(const std::string& filename, fstream & file) {
+  typedef split_iterator<string::iterator> string_split_iterator;
+  std::string mmpath = getenv("MEME_PATH");
+  for(string_split_iterator it = make_split_iterator(mmpath, first_finder(":", is_iequal()));
+      it != string_split_iterator(); ++it) {
+    std::string prefix = copy_range<std::string>(*it);
+    if (prefix.at(prefix.length() - 1) != '/') {
+      prefix += '/';
+    }
+    std::string filepath =  prefix + filename;
+    _log << "trying to open " << filepath << std::endl;
+    file.open(filepath.c_str(), fstream::in | fstream::binary);
+    if (file.good()) {
+      break;
+    }
+  }
+  if (!file.good()) {
+    throw std::invalid_argument(string("file not found: ") + filename);
+  }
+}
+
 char* read_mmc_file(const std::string& name_or_path, int* file_size) {
   fstream file;
 
-  std::string filepath = name_or_path;
+  file.open(name_or_path.c_str(), fstream::in | fstream::binary); //might be an absolute path
 
-  _log << "read_mmc_file: " << filepath << endl;
-  if (filepath[0] == '.' || filepath[0] == '/') { //relative or absolute path
-    file.open(filepath.c_str(), fstream::in | fstream::binary);
-  } else { //filename
-    if (filepath.substr(filepath.find_last_of(".") + 1) != "img" &&
-        filepath.substr(filepath.find_last_of(".") + 1) != "mmc") {
-      filepath = filepath + ".mmc";
+  if (!file.good()) { //might be the name of the module alone with no extension
+    std::string module_name = name_or_path;
+    if (module_name.substr(module_name.find_last_of(".") + 1) != "img" &&  //xxx.img
+        module_name.substr(module_name.find_last_of(".") + 1) != "mmc") {  //xxx.mmc
+      module_name = module_name + ".mmc";
     }
-    file.open(filepath.c_str(), fstream::in | fstream::binary);
-    if (!file.good()) {
-      char* mmpath = getenv("MEME_PATH");
-      std::string base = mmpath == NULL ? "" : mmpath;
-      _log << "failed to open " << name_or_path <<
-        " trying " << (base + filepath) << endl;
-      file.open((base + filepath).c_str(), fstream::in | fstream::binary);
-      if (!file.good()) {
-        throw std::invalid_argument(string("Unable to open file: ") + filepath);
-      }
-    }
+    _log << "trying to find " << name_or_path << " in MEME_PATH" << std::endl;
+    open_file_in_meme_path(module_name, file);
+  } else {
+    _log << "opened " << name_or_path << " successfully" << std::endl;
   }
 
   if (!file.is_open()) {
-    throw std::invalid_argument(string("file not found: ") + filepath);
+    throw std::invalid_argument(string("could not open file: ") + name_or_path);
   }
   return read_file(file, file_size);
 }

@@ -312,13 +312,22 @@
 
 (defvar memetalk-path (or  (getenv "MEME_PATH") "/Users/thiago/src/memetalk/sugarfoot/"))
 
-(defun memetalk-get-module-file-path (mod-name)
-  (let ((mm-path (concat (file-name-as-directory memetalk-path) "mm/" mod-name))
-        (test-path (concat (file-name-as-directory memetalk-path) "tests/" mod-name)))
-    (cond
-     ((file-exists-p mm-path) mm-path)
-     ((file-exists-p test-path) test-path)
-     (t (error (format "can't open file %s" mod-name))))))
+(defun memetalk-get-module-file-path (file-name)
+  (let (res)
+    (dolist (prefix (parse-colon-path memetalk-path) res)
+      (let ((path (cond
+                   ((string-match ".*/\$" prefix) prefix)
+                   (t (concat prefix "/")))))
+        (let ((full-path (concat path file-name))
+              (test-path (concat path "../tests/" file-name)))
+          (unless res
+            (setq res (cond
+                       ((file-exists-p full-path) full-path)
+                       ((file-exists-p test-path) test-path)
+                       (t nil)))))))
+    (if (null res)
+        (error (format "can't open file %s" file-name))
+      res)))
 
 (defvar commands (list))
 
