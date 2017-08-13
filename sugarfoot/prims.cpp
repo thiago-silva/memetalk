@@ -26,7 +26,7 @@ static int prim_remote_repl_compile_module(Process* proc) {
   oop module_name = proc->get_arg(0);
   char* mmpath = getenv("MEME_PATH");
   std::stringstream s;
-  s << "python -m pycompiler.compiler  "<< mmpath << proc->mmobj()->mm_string_cstr(proc, module_name) << ".mm";
+  s << "python -m pycompiler.compiler  "<< mmpath << proc->mmobj()->mm_string_stl_str(proc, module_name) << ".mm";
   DBG("Executing ... " << s.str() << std::endl);
   if (system(s.str().c_str()) == 0) {
     proc->stack_push(MM_TRUE);
@@ -68,7 +68,7 @@ static int prim_io_print(Process* proc) {
     proc->stack_push(res);
     return PRIM_RAISED;
   }
-  std::cout << proc->mmobj()->mm_string_cstr(proc, res) << endl;
+  std::cout << proc->mmobj()->mm_string_stl_str(proc, res) << endl;
   proc->stack_push(MM_NULL);
   return 0;
 }
@@ -89,7 +89,7 @@ static int prim_io_write_file(Process* proc) {
   oop oop_path = proc->get_arg(0);
   oop oop_text = proc->get_arg(1);
   char* path = proc->mmobj()->mm_string_cstr(proc, oop_path);
-  char* text = proc->mmobj()->mm_string_cstr(proc, oop_text);
+  std::string text = proc->mmobj()->mm_string_stl_str(proc, oop_text);
 
   std::fstream file;
   file.open(path, std::fstream::out | std::fstream::binary);
@@ -99,16 +99,15 @@ static int prim_io_write_file(Process* proc) {
   return 0;
 }
 
-static int prim_string_append(Process* proc) {
+static int prim_string_concat(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
-  char* str_2 = proc->mmobj()->mm_string_cstr(proc, other);
+  std::string str_1 = proc->mmobj()->mm_string_stl_str(proc, self);
+  std::string str_2 = proc->mmobj()->mm_string_stl_str(proc, other);
 
-  std::stringstream s;
-  s << str_1 << str_2;
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  std::string ret(str_1 + str_2);
+  oop oop_str = proc->mmobj()->mm_string_new(ret);
   proc->stack_push(oop_str);
   return 0;
 }
@@ -116,8 +115,20 @@ static int prim_string_append(Process* proc) {
 static int prim_string_to_integer(Process* proc) {
   oop self =  proc->dp();
 
-  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
-  number s = std::atol(str_1); //TODO: check bounds
+  std::string str_1 = proc->mmobj()->mm_string_stl_str(proc, self);
+  number s = std::atol(str_1.c_str()); //TODO: check bounds
+  proc->stack_push(tag_small_int(s));
+  return 0;
+}
+
+static int prim_string_to_byte(Process* proc) {
+  oop self =  proc->dp();
+
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+  if (str.length() != 1) {
+    proc->raise("TypeError", "Expecting string of length 1");
+  }
+  number s = str[0];
   proc->stack_push(tag_small_int(s));
   return 0;
 }
@@ -127,13 +138,13 @@ static int prim_string_equal(Process* proc) {
   oop other = proc->get_arg(0);
 
   if (proc->mmobj()->mm_is_string(other)) {
-      char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
-      char* str_2 = proc->mmobj()->mm_string_cstr(proc, other);
-      if (strcmp(str_1, str_2) == 0) {
-        proc->stack_push(MM_TRUE);
-      } else {
-        proc->stack_push(MM_FALSE);
-      }
+    std::string str_1 = proc->mmobj()->mm_string_stl_str(proc, self);
+    std::string str_2 = proc->mmobj()->mm_string_stl_str(proc, other);
+    if (str_1 == str_2) {
+      proc->stack_push(MM_TRUE);
+    } else {
+      proc->stack_push(MM_FALSE);
+    }
   } else {
     proc->stack_push(MM_FALSE);
   }
@@ -142,8 +153,7 @@ static int prim_string_equal(Process* proc) {
 
 static int prim_string_size(Process* proc) {
   oop self =  proc->dp();
-  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
-  int len = strlen(str_1);
+  number len = proc->mmobj()->mm_string_size(proc, self);
   proc->stack_push(tag_small_int(len));
   return 0;
 }
@@ -152,11 +162,11 @@ static int prim_string_count(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
-  char* str_1 = proc->mmobj()->mm_string_cstr(proc, self);
-  char* str_2 = proc->mmobj()->mm_string_cstr(proc, other);
+  std::string str_1 = proc->mmobj()->mm_string_stl_str(proc, self);
+  std::string str_2 = proc->mmobj()->mm_string_stl_str(proc, other);
   int count = 0;
-  char* pos = str_1;
-  while ((pos = strstr(pos, str_2)) != NULL) {
+  const char* pos = str_1.c_str();
+  while ((pos = strstr(pos, str_2.c_str())) != NULL) { //TODO: make it work with \0 in the string
     count++;
     pos++;
   }
@@ -167,8 +177,8 @@ static int prim_string_count(Process* proc) {
 static int prim_string_find(Process* proc) {
   oop self =  proc->dp();
   oop arg = proc->get_arg(0);
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
-  std::string str_arg = proc->mmobj()->mm_string_cstr(proc, arg);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+  std::string str_arg = proc->mmobj()->mm_string_stl_str(proc, arg);
   std::size_t pos = str.find(str_arg);
   if (pos == std::string::npos) {
     proc->stack_push(tag_small_int(-1));
@@ -181,8 +191,8 @@ static int prim_string_find(Process* proc) {
 static int prim_string_rindex(Process* proc) {
   oop self =  proc->dp();
   oop arg = proc->get_arg(0);
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
-  std::string str_arg = proc->mmobj()->mm_string_cstr(proc, arg);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+  std::string str_arg = proc->mmobj()->mm_string_stl_str(proc, arg);
   std::size_t pos = str.rfind(str_arg);
   if (pos == std::string::npos) {
     proc->stack_push(tag_small_int(-1));
@@ -197,7 +207,7 @@ static int prim_string_index(Process* proc) {
   oop arg = proc->get_arg(0);
   number idx = untag_small_int(arg);
 
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
   char res[2];
   res[0] = str[idx];
   res[1] = '\0';
@@ -208,9 +218,9 @@ static int prim_string_index(Process* proc) {
 static int prim_string_from(Process* proc) {
   oop self =  proc->dp();
   oop idx = proc->get_arg(0);
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
   std::string sub = str.substr(untag_small_int(idx));
-  proc->stack_push(proc->mmobj()->mm_string_new(sub.c_str()));
+  proc->stack_push(proc->mmobj()->mm_string_new(sub));
   return 0;
 }
 
@@ -218,9 +228,9 @@ static int prim_string_substr(Process* proc) {
   oop self =  proc->dp();
   oop from = proc->get_arg(0);
   oop max = proc->get_arg(1);
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
   std::string sub = str.substr(untag_small_int(from), untag_small_int(max));
-  proc->stack_push(proc->mmobj()->mm_string_new(sub.c_str()));
+  proc->stack_push(proc->mmobj()->mm_string_new(sub));
   return 0;
 }
 
@@ -231,13 +241,13 @@ static int prim_string_replace_all(Process* proc) {
   oop what = proc->get_arg(0);
   oop val = proc->get_arg(1);
 
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
-  std::string _what = proc->mmobj()->mm_string_cstr(proc, what);
-  std::string _val = proc->mmobj()->mm_string_cstr(proc, val);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+  std::string _what = proc->mmobj()->mm_string_stl_str(proc, what);
+  std::string _val = proc->mmobj()->mm_string_stl_str(proc, val);
 
   std::string output = boost::replace_all_copy(str, _what, _val);
 
-  proc->stack_push(proc->mmobj()->mm_string_new(output.c_str()));
+  proc->stack_push(proc->mmobj()->mm_string_new(output));
   return 0;
 }
 
@@ -337,13 +347,14 @@ static std::string base64_decode(std::string const& encoded_string) {
 static int prim_string_escape(Process* proc) {
   oop self =  proc->dp();
 
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
+  //TODO
   // boost::replace_all(str, "\\", "\\\\");
   // boost::replace_all(str, "\t",  "\\t");
   // boost::replace_all(str, "\n",  "\\n");
   // boost::replace_all(str, "\"",  "\\\"");
 
-  oop oop_ret = proc->mmobj()->mm_string_new(str.c_str());
+  oop oop_ret = proc->mmobj()->mm_string_new(str);
   proc->stack_push(oop_ret);
   return 0;
 }
@@ -352,8 +363,8 @@ static int prim_string_split(Process* proc) {
   oop self =  proc->dp();
   oop sep = proc->get_arg(0);
 
-  std::string sep_str = proc->mmobj()->mm_string_cstr(proc, sep);
-  std::string self_str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string sep_str = proc->mmobj()->mm_string_stl_str(proc, sep);
+  std::string self_str = proc->mmobj()->mm_string_stl_str(proc, self);
 
   oop ret = proc->mmobj()->mm_list_new();
 
@@ -361,7 +372,7 @@ static int prim_string_split(Process* proc) {
     for (number i = 0; i < self_str.size(); i++) {
       std::stringstream s;
       s << self_str[i];
-      oop chr = proc->mmobj()->mm_string_new(s.str().c_str());
+      oop chr = proc->mmobj()->mm_string_new(s.str());
       proc->mmobj()->mm_list_append(proc, ret, chr);
     }
   } else {
@@ -375,14 +386,14 @@ static int prim_string_split(Process* proc) {
       while ((pos = self_str.find(sep_str, prev_pos)) != std::string::npos) {
         std::string str1 = self_str.substr(prev_pos, pos);
         DBG("string: " << self_str << " str1: '" << str1 << "'" << endl);
-        oop oop_str1 = proc->mmobj()->mm_string_new(str1.c_str());
+        oop oop_str1 = proc->mmobj()->mm_string_new(str1);
         proc->mmobj()->mm_list_append(proc, ret, oop_str1);
 
         prev_pos = pos + 1;
       }
       std::string str1 = self_str.substr(prev_pos);
       DBG("string: " << self_str << " str1: '" << str1 << "'" << endl);
-      oop oop_str1 = proc->mmobj()->mm_string_new(str1.c_str());
+      oop oop_str1 = proc->mmobj()->mm_string_new(str1);
       proc->mmobj()->mm_list_append(proc, ret, oop_str1);
     }
   }
@@ -420,9 +431,9 @@ static inline std::string &trim(std::string &s) {
 
 static int prim_string_trim(Process* proc) {
   oop self =  proc->dp();
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
   std::string res = trim(str);
-  oop oop_res = proc->mmobj()->mm_string_new(res.c_str());
+  oop oop_res = proc->mmobj()->mm_string_new(res);
   proc->stack_push(oop_res);
   return 0;
 }
@@ -432,12 +443,12 @@ static int prim_string_each(Process* proc) {
   oop fun = proc->get_arg(0);
 
   // DBG("prim_list_each: closure is: " << fun << endl);
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
 
   for (int i = 0; i < str.size(); i++) {
     std::stringstream s;
     s << str[i];
-    oop next = proc->mmobj()->mm_string_new(s.str().c_str());
+    oop next = proc->mmobj()->mm_string_new(s.str());
     DBG("string each[" << i << "] = " << next << endl);
     int exc;
     oop val = proc->call_2(fun, tag_small_int(i), next, &exc);
@@ -454,34 +465,34 @@ static int prim_string_each(Process* proc) {
 
 static int prim_string_b64decode(Process* proc) {
   oop self =  proc->dp();
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
 
   DBG("decode: [" << str << "] " << str.size() << endl);
   std::string dec = base64_decode(str);
   DBG("decoded: [" << dec << "]" << endl);
 
-  oop oop_res = proc->mmobj()->mm_string_new(dec.c_str());
+  oop oop_res = proc->mmobj()->mm_string_new(dec);
   proc->stack_push(oop_res);
   return 0;
 }
 
 static int prim_string_b64encode(Process* proc) {
   oop self =  proc->dp();
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
 
   DBG("encode: [" << str << "] " << str.size() << endl);
 
   std::string enc = base64_encode(reinterpret_cast<const unsigned char*>(str.c_str()), str.length());
   DBG("encoded: [" << enc << "]" << endl);
 
-  oop oop_res = proc->mmobj()->mm_string_new(enc.c_str());
+  oop oop_res = proc->mmobj()->mm_string_new(enc);
   proc->stack_push(oop_res);
   return 0;
 }
 
 static int prim_string_only_spaces(Process* proc) {
   oop self =  proc->dp();
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
   for (int i = 0; i < str.size(); i++) {
     if (str[i] != ' ' &&
         str[i] != '\t' &&
@@ -497,7 +508,7 @@ static int prim_string_only_spaces(Process* proc) {
 
 static int prim_string_only_digits(Process* proc) {
   oop self =  proc->dp();
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
   for (int i = 0; i < str.size(); i++) {
     if (str[i] < '0' || str[i] > '9') {
       proc->stack_push(MM_FALSE);
@@ -510,7 +521,7 @@ static int prim_string_only_digits(Process* proc) {
 
 static int prim_string_is_lower(Process* proc) {
   oop self =  proc->dp();
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
   for (int i = 0; i < str.size(); i++) {
     if (str[i] < 'a' || str[i] > 'z') {
       proc->stack_push(MM_FALSE);
@@ -523,7 +534,7 @@ static int prim_string_is_lower(Process* proc) {
 
 static int prim_string_is_upper(Process* proc) {
   oop self =  proc->dp();
-  std::string str = proc->mmobj()->mm_string_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_string_stl_str(proc, self);
   for (int i = 0; i < str.size(); i++) {
     DBG((str[i] < 'A') << (str[i] > 'Z') << endl);
     if (str[i] < 'A' || str[i] > 'Z') {
@@ -588,6 +599,23 @@ static int prim_number_mul(Process* proc) {
   return 0;
 }
 
+static int prim_number_bit_and(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expecting small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expecting small int");
+  }
+
+  number res =  untag_small_int(self) & untag_small_int(other);
+  proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
+  return 0;
+}
+
 static int prim_number_lt(Process* proc) {
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
@@ -642,6 +670,41 @@ static int prim_number_gteq(Process* proc) {
   return 0;
 }
 
+static int prim_number_rshift(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expecting small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expecting small int");
+  }
+
+  number res =  untag_small_int(self) >> untag_small_int(other);
+  proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
+  return 0;
+}
+
+static int prim_number_lshift(Process* proc) {
+  oop self =  proc->dp();
+  oop other = proc->get_arg(0);
+
+  if (!(is_small_int(self))) {
+    proc->raise("TypeError", "Expecting small int");
+  }
+
+  if (!(is_small_int(other))) {
+    proc->raise("TypeError", "Expecting small int");
+  }
+
+  number res =  untag_small_int(self) << untag_small_int(other);
+  proc->stack_push((oop) tag_small_int(res));  //TODO: check for overflow
+  return 0;
+}
+
+
 static int prim_number_neg(Process* proc) {
   oop self =  proc->dp();
 
@@ -659,10 +722,22 @@ static int prim_number_to_string(Process* proc) {
   oop self =  proc->dp();
   std::stringstream s;
   s << untag_small_int(self);
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
+
+static int prim_number_as_char(Process* proc) {
+  oop self =  proc->rp();
+
+  number num = untag_small_int(self);
+  std::string s = "";
+  s += (char) num;
+  oop oop_str = proc->mmobj()->mm_string_new(s);
+  proc->stack_push(oop_str);
+  return 0;
+}
+
 
 static int prim_number_to_source(Process* proc) {
   return prim_number_to_string(proc);
@@ -850,18 +925,21 @@ static int prim_list_join(Process* proc) {
   oop self =  proc->dp();
   oop sep = proc->get_arg(0);
 
-  char* str_sep = "";
+  std::string str_sep = "";
 
   number size = proc->mmobj()->mm_list_size(proc, self);
 
   std::stringstream s;
   for (int i = 0; i < size; i++) {
     oop next = proc->mmobj()->mm_list_entry(proc, self, i);
-    s << str_sep << proc->mmobj()->mm_string_cstr(proc, next);
-    str_sep = proc->mmobj()->mm_string_cstr(proc, sep);
+    s << str_sep << proc->mmobj()->mm_string_stl_str(proc, next);
+    if (proc->mmobj()->mm_is_string(next)) {
+      proc->raise("TypeError", "list should contain only strings");
+    }
+    str_sep = proc->mmobj()->mm_string_stl_str(proc, sep);
   }
 
-  oop res = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop res = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(res);
   return 0;
 }
@@ -990,11 +1068,11 @@ static int prim_list_to_string(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << comma << proc->mmobj()->mm_string_cstr(proc, res);
+    s << comma << proc->mmobj()->mm_string_stl_str(proc, res);
     comma = ", ";
   }
   s << "]";
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
@@ -1012,11 +1090,11 @@ static int prim_list_to_source(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << comma << proc->mmobj()->mm_string_cstr(proc, res);
+    s << comma << proc->mmobj()->mm_string_stl_str(proc, res);
     comma = ", ";
   }
   s << "]";
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
@@ -1062,7 +1140,7 @@ static int prim_dictionary_to_string(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << comma << proc->mmobj()->mm_string_cstr(proc, res) << ": ";
+    s << comma << proc->mmobj()->mm_string_stl_str(proc, res) << ": ";
 
     res = proc->send_0(it->second,
                                 proc->vm()->new_symbol("toString"), &exc);
@@ -1070,11 +1148,11 @@ static int prim_dictionary_to_string(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(proc, res);
+    s << proc->mmobj()->mm_string_stl_str(proc, res);
     comma = ", ";
   }
   s << "}";
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
@@ -1094,7 +1172,7 @@ static int prim_dictionary_to_source(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << comma << proc->mmobj()->mm_string_cstr(proc, res) << ": ";
+    s << comma << proc->mmobj()->mm_string_stl_str(proc, res) << ": ";
 
     res = proc->send_0(it->second,
                                 proc->vm()->new_symbol("toSource"), &exc);
@@ -1102,11 +1180,11 @@ static int prim_dictionary_to_source(Process* proc) {
       proc->stack_push(res);
       return PRIM_RAISED;
     }
-    s << proc->mmobj()->mm_string_cstr(proc, res);
+    s << proc->mmobj()->mm_string_stl_str(proc, res);
     comma = ", ";
   }
   s << "}";
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
@@ -1294,7 +1372,7 @@ static int prim_equal(Process* proc) {
 //   oop self =  proc->rp();
 //   std::stringstream s;
 //   s << self;
-//   proc->stack_push(proc->mmobj()->mm_string_new(s.str().c_str()));
+//   proc->stack_push(proc->mmobj()->mm_string_new(s.str()));
 //   return 0;
 // }
 
@@ -1313,10 +1391,10 @@ static int prim_behavior_to_string(Process* proc) {
 
   oop cclass = proc->mmobj()->mm_class_get_compiled_class(proc, klass);
   oop class_name = proc->mmobj()->mm_compiled_class_name(proc, cclass);
-  char* str_class_name = proc->mmobj()->mm_string_cstr(proc, class_name);
+  std::string str_class_name = proc->mmobj()->mm_string_stl_str(proc, class_name);
   std::stringstream s;
   s << "#<" << str_class_name << " class>";
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
@@ -1331,10 +1409,10 @@ static int prim_object_to_string(Process* proc) {
   oop klass = proc->mmobj()->mm_object_vt(self);
   oop cclass = proc->mmobj()->mm_class_get_compiled_class(proc, klass);
   oop class_name = proc->mmobj()->mm_compiled_class_name(proc, cclass);
-  char* str_class_name = proc->mmobj()->mm_string_cstr(proc, class_name);
+  std::string str_class_name = proc->mmobj()->mm_string_stl_str(proc, class_name);
   std::stringstream s;
   s << "#<" << str_class_name << " instance: " << self << ">";
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
@@ -1377,14 +1455,14 @@ static int prim_object_id(Process* proc) {
   oop self =  proc->rp();
   std::stringstream s;
   s << self;
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
 
 static int prim_symbol_to_string(Process* proc) {
   oop self =  proc->dp();
-  char* str = proc->mmobj()->mm_symbol_cstr(proc, self);
+  std::string str = proc->mmobj()->mm_symbol_cstr(proc, self);
   DBG(self << " str: " << str << endl);
   oop oop_str = proc->mmobj()->mm_string_new(str);
   proc->stack_push(oop_str);
@@ -1397,10 +1475,10 @@ static int prim_module_to_string(Process* proc) {
   oop cmod = proc->mmobj()->mm_module_get_cmod(self);
   // DBG("prim_module_to_string imod: " << self << " cmod: " << cmod << endl);
   oop mod_name = proc->mmobj()->mm_compiled_module_name(proc, cmod);
-  char* str_mod_name = proc->mmobj()->mm_string_cstr(proc, mod_name);
+  std::string str_mod_name = proc->mmobj()->mm_string_stl_str(proc, mod_name);
   std::stringstream s;
   s << "#<" << str_mod_name << " module instance: " << self << ">";
-  oop oop_str = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop oop_str = proc->mmobj()->mm_string_new(s.str());
   proc->stack_push(oop_str);
   return 0;
 }
@@ -1428,7 +1506,7 @@ static int prim_compiled_function_with_env(Process* proc) {
   oop scope_names = proc->get_arg(1);
   oop cmod = proc->get_arg(2);
 
-  // DBG("prim_compiled_function_with_env " << proc->mmobj()->mm_string_cstr(text) << " -- " << cmod << " " << vars << endl);
+  // DBG("prim_compiled_function_with_env " << proc->mmobj()->mm_string_stl_str(text) << " -- " << cmod << " " << vars << endl);
 
   std::list<std::string> lst = proc->mmobj()->mm_sym_list_to_cstring_list(proc, scope_names);
 
@@ -1701,7 +1779,7 @@ static int prim_test_import(Process* proc) {
   oop filepath = proc->get_arg(0);
   oop args = proc->get_arg(1);
 
-  char* str_filepath = proc->mmobj()->mm_string_cstr(proc, filepath);
+  std::string str_filepath = proc->mmobj()->mm_string_stl_str(proc, filepath);
   DBG(str_filepath << endl);
   MMCImage* mmc = new MMCImage(proc, proc->vm()->core(), str_filepath);
   mmc->load();
@@ -1713,7 +1791,7 @@ static int prim_test_import(Process* proc) {
 //   oop name = proc->get_arg(0);
 //   oop imod = proc->get_arg(1);
 
-//   // char* str = proc->mmobj()->mm_symbol_cstr(name);
+//   // char* str = proc->mmobj()->mm_symbol_stl_str(name);
 //   // DBG("XX: " << name << " str: " << str << endl);
 
 //   oop dict = proc->mmobj()->mm_module_dictionary(imod);
@@ -1752,7 +1830,7 @@ static int prim_test_files(Process* proc) {
   oop list = proc->mmobj()-> mm_list_new();
 
   for(std::vector<std::string>::iterator it = ret.begin(); it != ret.end(); it++) {
-    oop str = proc->mmobj()->mm_string_new((*it).c_str());
+    oop str = proc->mmobj()->mm_string_new((*it));
     proc->mmobj()->mm_list_append(proc, list, str);
   }
 
@@ -1950,12 +2028,12 @@ static int prim_exception_constructor(Process* proc) {
 
   oop bp = proc->bp();
   std::stringstream s;
-  s << "Uncaugh exception: " << proc->mmobj()->mm_string_cstr(proc, msg) << endl;
+  s << "Uncaugh exception: " << proc->mmobj()->mm_string_stl_str(proc, msg) << endl;
   s << proc->dump_stack_trace(true);
   // while (bp) {
   //   oop cp = proc->cp_from_base(bp);
   //   if (!cp) break;
-  //   s << proc->mmobj()->mm_string_cstr(proc,
+  //   s << proc->mmobj()->mm_string_stl_str(proc,
   //                                 proc->mmobj()->mm_function_get_name(
   //                                   proc, cp), true);
   //   s << "():" << (proc->mmobj()->mm_function_get_line_for_instruction(
@@ -1963,7 +2041,7 @@ static int prim_exception_constructor(Process* proc) {
   //   bp = *(oop*)bp;
   // }
 
-  oop st = proc->mmobj()->mm_string_new(s.str().c_str());
+  oop st = proc->mmobj()->mm_string_new(s.str());
   proc->mmobj()->mm_exception_set_st(proc, dself, st);
   // std::cerr << "get bp " << proc->mmobj()->mm_exception_get_bp(proc, self);
   proc->stack_push(proc->rp());
@@ -1975,12 +2053,12 @@ static int prim_exception_constructor(Process* proc) {
 //   oop msg = proc->mmobj()->mm_exception_get_message(proc, dself, msg);
 
 //   std::stringstream s;
-//   s << "Uncaugh exception: " << proc->mmobj()->mm_string_cstr(proc, msg) << endl;
+//   s << "Uncaugh exception: " << proc->mmobj()->mm_string_stl_str(proc, msg) << endl;
 
 //   while (bp) {
 //     oop cp = proc->cp_from_base(bp);
 //     if (!cp) break;
-//     s << proc->mmobj()->mm_string_cstr(proc,
+//     s << proc->mmobj()->mm_string_stl_str(proc,
 //                                   proc->mmobj()->mm_function_get_name(
 //                                     proc, cp), true);
 //     s << "():" << (proc->mmobj()->mm_function_get_line_for_instruction(
@@ -2139,11 +2217,17 @@ void init_primitives(VM* vm) {
   vm->register_primitive("number_sum", prim_number_sum);
   vm->register_primitive("number_sub", prim_number_sub);
   vm->register_primitive("number_mul", prim_number_mul);
+  vm->register_primitive("number_bit_and", prim_number_bit_and);
+  vm->register_primitive("number_lshift", prim_number_lshift);
+  vm->register_primitive("number_rshift", prim_number_rshift);
   vm->register_primitive("number_lt", prim_number_lt);
   vm->register_primitive("number_gt", prim_number_gt);
+  vm->register_primitive("number_lshift", prim_number_lshift);
+  vm->register_primitive("number_rshift", prim_number_rshift);
   vm->register_primitive("number_gteq", prim_number_gteq);
   vm->register_primitive("number_neg", prim_number_neg);
   vm->register_primitive("number_to_string", prim_number_to_string);
+  vm->register_primitive("number_as_char", prim_number_as_char);
   vm->register_primitive("number_to_source", prim_number_to_source);
 
   vm->register_primitive("exception_throw", prim_exception_throw);
@@ -2195,7 +2279,8 @@ void init_primitives(VM* vm) {
   vm->register_primitive("dictionary_to_source", prim_dictionary_to_source);
 
   vm->register_primitive("string_to_integer", prim_string_to_integer);
-  vm->register_primitive("string_append", prim_string_append);
+  vm->register_primitive("string_to_byte", prim_string_to_byte);
+  vm->register_primitive("string_concat", prim_string_concat);
   vm->register_primitive("string_equal", prim_string_equal);
   vm->register_primitive("string_count", prim_string_count);
   vm->register_primitive("string_size", prim_string_size);

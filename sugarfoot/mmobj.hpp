@@ -99,7 +99,10 @@ public:
     return *(oop*) obj == _cached_string;
   }
 
+  oop mm_string_new(const std::string& str);
   oop mm_string_new(const char*);
+  number mm_string_size(Process* p, oop str, bool should_assert = false);
+  std::string mm_string_stl_str(Process* p, oop str, bool should_assert = false);
   inline char* mm_string_cstr(Process* p, oop str, bool should_assert = false) {
     // TYPE_CHECK(!( mm_object_vt(str) == _core_image->get_prime("String")),
     //          "TypeError","Expected String")

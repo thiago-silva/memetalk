@@ -459,17 +459,59 @@ oop MMObj::mm_module_get_cmod(oop imodule) {
 
 
 oop MMObj::mm_string_new(const char* str) {
-  number payload = sizeof(oop) + strlen(str) + 1; //size, <str ...>, \0
+  number len = strlen(str);
+  number payload = len + 2; //size, <str ...>, \0
 
   oop oop_str = mm_new(_core_image->get_prime("String"),
                        mm_object_new(), //assuming String < Object
                        payload); //this is going to alloc more than we need as it
-                                 //is payload * sizeof(oop)
-  DBG("string size: " << strlen(str) << " for: [[" << str << "]]" << endl);
-  ((oop*)oop_str)[2] = (oop) strlen(str);
-  strcpy((char*)(oop_str + 3), str);
+                                 //[payload * sizeof(oop)]
+  DBG("string size: " << len << " for: [[" << str << "]]" << endl);
+  ((oop*)oop_str)[2] = (oop)len;
+  char* cstr = (char*) &(((oop*)oop_str)[3]);
+  strcpy(cstr, str);
+  cstr[len] = '\0';
   return oop_str;
 }
+
+oop MMObj::mm_string_new(const std::string& str) {
+  number len = str.length();
+  number payload = len + 2; //size, <str ...>, \0
+
+  oop oop_str = mm_new(_core_image->get_prime("String"),
+                       mm_object_new(), //assuming String < Object
+                       payload); //this is going to alloc more than we need as it
+                                 //[payload * sizeof(oop)]
+  DBG("string size: " << len << " for: [[" << str << "]]" << endl);
+  ((oop*)oop_str)[2] = (oop)len;
+  char* cstr = (char*) &(((oop*)oop_str)[3]);
+  memcpy(cstr, str.c_str(), len); //str may contain \0 in the middle
+  cstr[len] = '\0';
+  return oop_str;
+}
+
+number MMObj::mm_string_size(Process* p, oop str, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(str) == _core_image->get_prime("String")),
+             "TypeError","Expected String")
+  return (number) ((oop*)str)[2];
+}
+
+std::string MMObj::mm_string_stl_str(Process* p, oop str, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(str) == _core_image->get_prime("String")),
+             "TypeError","Expected String")
+    //0: vt
+    //1: delegate
+    //2: size
+    //3: <str> ...
+  std::string ret;
+  number len = (number) ((oop*)str)[2];
+  char *cstr = (char*) &(((oop*)str)[3]);
+  for (number i = 0; i < len; i++) {
+    ret += cstr[i];
+  }
+  return ret;
+}
+
 
 
 // bool MMObj::mm_is_function(oop obj) {

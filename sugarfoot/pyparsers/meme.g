@@ -1,4 +1,4 @@
-alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!'
+alpha =  '+' | '*' | '-' | '/' | '=' | '<' | '>' | '?' | '!' | '&'
 
 keyword = (token("fun") | token("var")) ~letterOrDigit
 
@@ -192,14 +192,17 @@ expr_eq =  !(self.input.position):begin expr_eq:a token("==") expr_rel:b -> self
         | expr_rel
 
 expr_rel =  !(self.input.position):begin expr_rel:a token(">=") expr_add:b -> self.i.ast(begin, ['>=', a, b])
-         |  !(self.input.position):begin expr_rel:a token(">") expr_add:b -> self.i.ast(begin, ['>', a, b])
+         |  !(self.input.position):begin expr_rel:a token(">") ~'>' expr_add:b -> self.i.ast(begin, ['>', a, b])
          |  !(self.input.position):begin expr_rel:a token("<=") expr_add:b -> self.i.ast(begin, ['<=', a, b])
-         |  !(self.input.position):begin expr_rel:a token("<") expr_add:b -> self.i.ast(begin, ['<', a, b])
+         |  !(self.input.position):begin expr_rel:a token("<") ~'<' expr_add:b -> self.i.ast(begin, ['<', a, b])
          | expr_add
 
 expr_add =  !(self.input.position):begin expr_add:a token("++") expr_mul:b -> self.i.ast(begin, ['++', a, b])
          |  !(self.input.position):begin expr_add:a token("+") expr_mul:b -> self.i.ast(begin, ['+', a, b])
          |  !(self.input.position):begin expr_add:a token("-") expr_mul:b -> self.i.ast(begin, ['-', a, b])
+         |  !(self.input.position):begin expr_add:a token("<<") expr_mul:b -> self.i.ast(begin, ['<<', a, b])
+         |  !(self.input.position):begin expr_add:a token(">>") expr_mul:b -> self.i.ast(begin, ['>>', a, b])
+         |  !(self.input.position):begin expr_add:a token("&") expr_mul:b -> self.i.ast(begin, ['&', a, b])
          | expr_mul
 
 expr_mul =  !(self.input.position):begin expr_mul:a token("*") expr_unary:b -> self.i.ast(begin, ['*', a, b])
@@ -278,7 +281,10 @@ cfunliteral_body = funliteral_body:x spaces ~anything -> x
 lit_symbol = spaces !(self.input.position):begin token(":") symbol_name:xs
            -> self.i.ast(begin, ["literal-symbol", xs])
 
-lit_number = spaces !(self.input.position):begin digit+:ds -> self.i.ast(begin, ["literal-number", int(''.join(ds))])
+lit_number = spaces !(self.input.position):begin (base_10 | base_16):x -> self.i.ast(begin, ["literal-number", x])
+
+base_10 = digit+:ds ~letter -> int(''.join(ds))
+base_16 = '0' 'x' (digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F')+:xs ~letter -> int(''.join(xs), 16)
 
 lit_string  = spaces !(self.input.position):begin '"' ( lit_escaped | ~'"' :x)*:xs '"'
                -> self.i.ast(begin, ["literal-string", b''.join(xs).decode("string_escape")])

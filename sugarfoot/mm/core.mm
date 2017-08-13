@@ -265,8 +265,11 @@
   instance_method toSymbol: fun() {
     <primitive "string_to_symbol">
   }
+  instance_method toByte: fun() {
+    <primitive "string_to_byte">
+  }
   instance_method +: fun(other) {
-    <primitive "string_append">
+    <primitive "string_concat">
   }
   instance_method count: fun(other) {
     <primitive "string_count">
@@ -448,11 +451,23 @@
     instance_method >=: fun(arg) {
       <primitive "number_gteq">
     }
+    instance_method >>: fun(arg) {
+      <primitive "number_rshift">
+    }
+    instance_method <<: fun(arg) {
+      <primitive "number_lshift">
+    }
+    instance_method &: fun(arg) {
+      <primitive "number_bit_and">
+    }
     instance_method neg: fun() {
       <primitive "number_neg">
     }
     instance_method toString: fun() {
       <primitive "number_to_string">
+    }
+    instance_method asChar: fun() {
+      <primitive "number_as_char">
     }
     instance_method toSource: fun() {
       <primitive "number_to_source">
