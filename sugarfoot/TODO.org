@@ -1,0 +1,91 @@
+#+TITLE: Memetalk TODO
+
+
+* VM (Major Issues)
+
+** Co-routines, Continuations, Concurrency (e.g. actors)
+** GC
+
+
+* Compilation (Major Issues)
+
+** Compiler written in Memescript (dump python)
+
+*** Likely needs some form of packaging to separate code into different
+*** .mm files (otherwise a "compiler.mm" will be huge and take a long time
+*** to compile; the compiler in python has 9 files!)
+
+** Loader written in MemeScript (dump C++ loader)
+
+*** Implement remote loader, caching of .mmc files and respecting
+*** version information.
+
+
+* Debugger Misc
+
+** rewind-and-go: recompile previous function, rewind to it, execute,
+** and break in the same spot it was before.
+
+** return prematurely from function with a specific value?
+
+
+* Emacs mode
+
+** Some kind of inspector, where we can easily inspect and introspect
+** on values.
+
+** A way to visualize the current stack trace.
+
+
+* Ecosystem
+
+** SDE: revamp the Qt based thing?
+
+** Might depend on first solidify package / module import w/ vesion.
+** (which depends on the loader be written in Memescript)
+
+
+* Library
+
+** Thoughtful implementation of Integers, Floats, Bignums,
+** Strings, Dicts (with hashed keys), ....
+
+** Thoughtful design of mirroring / reflection api.
+
+** "Standard Library": IO, socket, http, signals, threads, etc.
+** might depend on packaging / module w/ versioning being properly
+** implemented.
+
+
+* Other Miscelaneous
+
+** Decide on case style: camel/underline / for what. It's a mess.
+
+** Fix aliasing of module functions: "[print] <= module"; won;t work.
+
+
+** Review imod layout: self referencing vt sounds too fragile?
+
+
+** Implement varargs properly.
+
+
+** Clean up C macros and type checking -- some type checking was
+** disabled/commented out because the functions were moved to .h
+** files and the macros that perform type check were not defined there.
+
+* Optimizations
+
+** Add VM internal bytecodes for all core/prims. Substitute SEND operations
+** to the corresponding internal bytecode during execution (note: these
+** bytecodes should not be known / emitted by the compiler, in which case
+** abstraction is lost, e.g., the ability to overwrite such operations in
+** the high level). Obs: careful with subclasses inheriting prim operation.
+
+
+** Mix the above approach with JIT and evaluate results.
+
+
+* Future
+
+** Play with type systems
