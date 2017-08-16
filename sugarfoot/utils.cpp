@@ -185,6 +185,11 @@ std::string bytecode_to_str(bytecode code) {
     case JMPB:
       s <<"JMPB"<< decode_args(code);
       break;
+    case EX_STRING_INDEX:
+      s <<"EX_STRING_INDEX"<< decode_args(code);
+      break;
+    case EX_LIST_INDEX:
+      s <<"EX_LIST_INDEX"<< decode_args(code);
     default:
       std::cerr << "unknown code " << code << endl;
   }

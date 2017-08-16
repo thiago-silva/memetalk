@@ -68,3 +68,11 @@ typedef int (*prim_function_t) (Process*);
 #define OO_CLASS_LEN 5
 #define OO_CFUN_LEN 28
 #define OO_SYMBOL_LEN 3
+
+//
+#define EX_STRING_INDEX 60
+#define EX_LIST_INDEX   61
+#define EX_DICTIONARY_INDEX   62
+#define EX_DICTIONARY_SET 63
+#define EX_OBJECT_NOT 64
+#define EX_LIST_NEW_FROM_STACK 65

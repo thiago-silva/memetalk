@@ -861,6 +861,27 @@ void Process::fetch_cycle(void* stop_at_bp) {
         // _SUPER_SEND++;
         handle_super_send(arg);
         break;
+      case EX_STRING_INDEX:
+        handle_ex_string_index(arg);
+        break;
+      case EX_LIST_INDEX:
+        handle_ex_list_index(arg);
+        break;
+      case EX_DICTIONARY_SET:
+        handle_ex_dictionary_set(arg);
+        break;
+      case EX_OBJECT_NOT:
+        handle_ex_object_not(arg);
+        break;
+      case EX_LIST_NEW_FROM_STACK:
+        handle_ex_list_new_from_stack(arg);
+        break;
+      // case EX_DICTIONARY_INDEX:
+      //   handle_ex_dictionary_index(arg);
+      //   break;
+      // case EX_DICT_INDEX:
+      //   handle_ex_list_index(arg);
+      //   break;
       // case RETURN_THIS:
       //   break;
       default:
@@ -1113,6 +1134,25 @@ void Process::handle_send(number num_args) {
     return;
   }
 
+  //
+  //call_counter[_ip]++;
+  //if (call_counter[_ip] > 100) {
+//    if (selector == _vm->new_symbol("index")) {
+//       if (vt == _vm->get_prime("String")) {
+//         *(_ip-1) = (bytecode) ((EX_STRING_INDEX << 24) + num_args);
+//       } else if (vt == _vm->get_prime("List")) {
+//         *(_ip-1) = (bytecode) ((EX_LIST_INDEX << 24) + num_args);
+//       }
+//     } else if (selector == _vm->new_symbol("set")) { //Dictionary.set
+//       *(_ip-1) = (bytecode) ((EX_DICTIONARY_SET << 24) + num_args);
+//     } else if (selector == _vm->new_symbol("!")) { //Object.not
+//       *(_ip-1) = (bytecode) ((EX_OBJECT_NOT << 24) + num_args);
+//     } else if (selector == _vm->new_symbol("new_from_stack")) { //List.new_from_stack
+// //      *(_ip-1) = (bytecode) ((EX_LIST_NEW_FROM_STACK << 24) + num_args);
+//     }
+//  }
+
+
   bool vararg = _mmobj->mm_function_get_vararg(this, fun);
   number arity = _mmobj->mm_function_get_num_params(this, fun);
   if (!vararg && num_args != arity) {
@@ -1206,6 +1246,105 @@ void Process::handle_return(oop val) {
   unload_fun_and_return(val);
   maybe_break_on_return();
 }
+
+void Process::handle_ex_string_index(int arg) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+
+  if (_mmobj->mm_object_vt(recv) == _vm->get_prime("String")) {
+    stack_pop(); // selector
+    stack_pop(); //recv
+    oop arg = stack_pop();
+    number idx = untag_small_int(arg);
+
+    std::string str = _mmobj->mm_string_cstr(this, recv);
+    char res[2];
+    res[0] = str[idx];
+    res[1] = '\0';
+    stack_push(_mmobj->mm_string_new(res));
+  } else {
+    handle_send(arg);
+  }
+}
+
+void Process::handle_ex_list_index(int arg) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+
+  if (_mmobj->mm_object_vt(recv) == _vm->get_prime("List")) {
+    stack_pop(); // selector
+    stack_pop(); //recv
+    oop index_oop = stack_pop();
+    number index = untag_small_int(index_oop);
+
+    oop val = _mmobj->mm_list_entry(this, recv, index);
+    DBG("list " << recv << "[" << index << "] = " << val << endl);
+    stack_push(val);
+  } else {
+    handle_send(arg);
+  }
+}
+
+void Process::handle_ex_dictionary_set(int arg) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+
+  if (_mmobj->mm_object_vt(recv) == _vm->get_prime("Dictionary")) {
+    stack_pop(); // selector
+    stack_pop(); //recv
+
+    oop val = stack_pop();
+    oop key = stack_pop();
+
+    _mmobj->mm_dictionary_set(this, recv, key, val);
+    stack_push(recv);
+  } else {
+    handle_send(arg);
+  }
+}
+
+void Process::handle_ex_object_not(int arg) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+
+  stack_pop(); // selector
+  stack_pop(); //recv
+
+  if ((recv == MM_FALSE) || (recv == MM_NULL)) {
+    stack_push(MM_TRUE);
+  } else {
+    stack_push(MM_FALSE);
+  }
+}
+
+void Process::handle_ex_list_new_from_stack(int arg) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+
+  if (recv == _vm->get_prime("List")) {
+    oop self = _mmobj->mm_list_new();
+    DBG("appending " << current_args_number() << " values" << endl);
+    for (number i = 0; i < current_args_number(); i++) {
+      oop element = get_arg(i);
+      DBG("appending " << element << endl);
+      _mmobj->mm_list_append(this, self, element);
+    }
+    // DBG("done new_from_stack" << endl);
+    stack_push(self);
+  } else {
+    handle_send(arg);
+  }
+}
+
+// void Process::handle_ex_dictionary_index(int arg) {
+//   stack_pop(); // selector
+//   oop recv = stack_pop();
+
+//   DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+
+//   oop key = stack_pop();
+//   stack_push(_mmobj->mm_dictionary_get(this, recv, key));
+// }
 
 // void Process::dispatch(int opcode, int arg) {
 //     // DBG(" executing " << opcode << " " << arg << endl);
@@ -1338,6 +1477,10 @@ oop Process::stack_pop() {
   _sp--;
   DBG("POP " << val << " >> " << _sp << endl);
   return val;
+}
+
+oop Process::stack_top(int x) {
+  return * (((oop*)_sp)-x);
 }
 
 // void Process::stack_push(oop data) {
@@ -1763,8 +1906,11 @@ std::string Process::log_label() {
   }
 }
 
-
 void Process::report_profile() {
+  // std::map<bytecode*, int>::iterator it;
+  // for (it = call_counter.begin(); it != call_counter.end(); it++) {
+  //   std::cerr << TO_C_STR(_mmobj->mm_function_get_name(this, it->first, true)) << " = " << it->second << endl;
+  // }
   std::cerr << "_PUSH_LOCAL: " << _PUSH_LOCAL << endl;
   std::cerr << "_PUSH_LITERAL: " << _PUSH_LITERAL << endl;
   std::cerr << "_PUSH_MODULE: " << _PUSH_MODULE << endl;

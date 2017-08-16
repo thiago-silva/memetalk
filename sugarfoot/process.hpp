@@ -159,6 +159,7 @@ private:
 
 
   oop stack_pop();
+  oop stack_top(int);
   int execute_primitive(oop);
   void fetch_cycle(void*);
 
@@ -185,6 +186,13 @@ private:
   void maybe_break_on_call();
   void maybe_break_on_return();
   void maybe_break_on_exception();
+
+  void handle_ex_list_index(int arg);
+  void handle_ex_string_index(int arg);
+  void handle_ex_dictionary_index(int arg);
+  void handle_ex_dictionary_set(int arg);
+  void handle_ex_object_not(int arg);
+  void handle_ex_list_new_from_stack(int arg);
 
   MMLog _log;
   MMLog _log_registers;
@@ -223,7 +231,8 @@ private:
   oop _current_exception;
   bool _online;
 
-//profiling
+  //profiling
+  std::map<bytecode*, int> call_counter;
   long _PUSH_LOCAL;
   long _PUSH_LITERAL;
   long _PUSH_MODULE;
