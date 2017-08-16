@@ -9,7 +9,7 @@
     (define-key map (kbd "s-d") 'memetalk-do-it)
     (define-key map (kbd "s-p") 'memetalk-print-it)
     (define-key map (kbd "s-i") 'memetalk-step-into)
-    (define-key map (kbd "s-o") 'memetalk-step-over)
+    (define-key map (kbd "s-q") 'memetalk-step-over)
     (define-key map (kbd "s-u") 'memetalk-step-out)
     (define-key map (kbd "s-l") 'memetalk-step-line)
     (define-key map (kbd "s-c") 'memetalk-continue)
