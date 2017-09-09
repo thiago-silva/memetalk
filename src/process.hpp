@@ -8,6 +8,7 @@
 
 #include "defs.hpp"
 #include "log.hpp"
+#include <boost/unordered_map.hpp>
 
 class VM;
 class MMObj;
@@ -60,6 +61,7 @@ public:
 
   inline oop rp() { return * (oop*) (_fp + _ss ); }
   inline oop dp() { return * (oop*) (_fp + _ss + 1); }
+  oop rp_vt();
 
   oop set_rp(oop);
   oop set_dp(oop);
@@ -89,6 +91,11 @@ public:
     _sp++;
   * (word*) _sp = (word) data;
   }
+
+  inline oop stack_top(int x) {
+    return * (((oop*)_sp)-x);
+  }
+
 
   oop current_exception() { return _current_exception; }
 
@@ -151,6 +158,17 @@ public:
   void report_profile();
 
   bool running_online() { return _online; }
+
+//opt
+  class call_counter_t {
+  public:
+    call_counter_t() : vt(MM_NULL), count(0) {}
+      oop vt;
+      int count;
+  };
+
+  boost::unordered_map<bytecode*, call_counter_t > ex_call_counter;
+
 private:
   std::string log_label();
   const char* meme_curr_fname();
@@ -180,6 +198,18 @@ private:
   void handle_call(number);
   void handle_return(oop);
   void basic_new_and_load(oop);
+
+  void handle_ex_equal(number num_args);
+  void handle_ex_object_send(number num_args);
+  void handle_ex_dictionary_index(int num_args);
+  void handle_ex_dictionary_set(int num_args);
+  void handle_ex_object_not(number num_args);
+  void handle_ex_string_concat(number num_args);
+  void handle_ex_dictionary_has(number num_args);
+  void handle_ex_numeric_as_char(number num_args);
+  void handle_ex_numeric_sum(number num_args);
+  void handle_ex_numeric_mul(number num_args);
+  void handle_ex_list_each(number num_args);
 
   bool exception_has_handler(oop e, oop cp, bytecode* ip, oop bp);
 
@@ -226,7 +256,10 @@ private:
   oop _last_retval;
   bool _breaking_on_return;
   bool _online;
+
 //profiling
+  boost::unordered_map<oop, std::pair<std::string, long> > _profiling_calls;
+
   long _PUSH_LOCAL;
   long _PUSH_LITERAL;
   long _PUSH_MODULE;

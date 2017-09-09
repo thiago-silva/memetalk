@@ -26,6 +26,20 @@ namespace fs = ::boost::filesystem;
 #define ERROR() MMLog::error() << "[prim|" << __FUNCTION__ << "] " << _log.normal
 
 
+#define SPECIALIZE_BYTECODE(code, limit)                        \
+  bytecode* _b_send = proc->ip()-1;                             \
+  Process::call_counter_t& c = proc->ex_call_counter[_b_send];  \
+  if (c.vt == MM_NULL) {                                        \
+    c.vt = proc->rp_vt();                                       \
+  }                                                             \
+  if (c.vt == proc->rp_vt() && ++c.count > limit) {             \
+    if (decode_opcode(*_b_send) == SEND) {                      \
+        int _args = decode_args(*_b_send);                      \
+        *_b_send = (code << 24) + _args;                        \
+    }                                                           \
+  }
+
+
 static MMLog _log(LOG_PRIMS);
 
 static int prim_remote_repl_compile_module(Process* proc) {
@@ -143,6 +157,8 @@ static int prim_io_close(Process* proc) {
 
 
 static int prim_string_concat(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_STRING_CONCAT, EX_SEND_LIMIT);
+
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -696,18 +712,10 @@ static inline bool is_numeric(Process* proc, oop o) {
   return is_small_int(o) || proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum");
 }
 
-static inline number extract_number(Process* proc, oop o) {
-  if (is_small_int(o)) {
-    return untag_small_int(o);
-  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum")) {
-    return proc->mmobj()->mm_longnum_get(proc, o);
-  } else {
-    proc->raise("TypeError", "Expecting numeric value");
-  }
-  return 0; // unreachable
-}
 
 static int prim_numeric_sum(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_NUMERIC_SUM, EX_SEND_LIMIT);
+
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -742,6 +750,8 @@ static int prim_numeric_sub(Process* proc) {
 }
 
 static int prim_numeric_mul(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_NUMERIC_MUL, EX_SEND_LIMIT);
+
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -900,6 +910,8 @@ static int prim_numeric_to_string(Process* proc) {
 }
 
 static int prim_numeric_as_char(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_NUMERIC_AS_CHAR, EX_SEND_LIMIT);
+
   oop self =  proc->rp();
 
   unsigned long n_self = extract_number(proc, self);
@@ -1037,6 +1049,8 @@ static int prim_list_pos(Process* proc) {
 }
 
 static int prim_list_each(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_LIST_EACH, EX_SEND_LIMIT);
+
   oop self =  proc->dp();
   oop fun = proc->get_arg(0);
 
@@ -1547,6 +1561,9 @@ static int prim_dictionary_new(Process* proc) {
 }
 
 static int prim_dictionary_set(Process* proc) {
+  // std::cerr << "prim_dictionary_set: rp: " << proc->rp() << " dp: " << proc->dp() << " code:" << decode_opcode(*(proc->ip()-1)) << endl;
+  SPECIALIZE_BYTECODE(EX_DICTIONARY_SET, EX_SEND_LIMIT);
+
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
   oop val = proc->get_arg(1);
@@ -1557,6 +1574,8 @@ static int prim_dictionary_set(Process* proc) {
 }
 
 static int prim_dictionary_index(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_DICTIONARY_INDEX, EX_SEND_LIMIT);
+
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
 
@@ -1650,6 +1669,8 @@ static int prim_dictionary_plus(Process* proc) {
 }
 
 static int prim_dictionary_has(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_DICTIONARY_HAS, EX_SEND_LIMIT);
+
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
   if (proc->mmobj()->mm_dictionary_has_key(proc, self, key)) {
@@ -1885,6 +1906,7 @@ static int prim_mirror_is_subclass(Process* proc) {
 
 
 static int prim_equal(Process* proc) {
+  // SPECIALIZE_BYTECODE(EX_EQUAL, EX_SEND_LIMIT);
   oop self =  proc->rp();
   oop other = proc->get_arg(0);
   DBG(self << " == " << other << "?" << (self == other ? MM_TRUE : MM_FALSE) << endl);
@@ -1901,6 +1923,19 @@ static int prim_equal(Process* proc) {
 // }
 
 static int prim_object_not(Process* proc) {
+  //SPECIALIZE_BYTECODE:
+  bytecode* _b_send = proc->ip()-1;
+  Process::call_counter_t& c = proc->ex_call_counter[_b_send];
+  if (++c.count > EX_SEND_LIMIT) {
+    if (decode_opcode(*_b_send) == SEND) {
+      int _args = decode_args(*_b_send);
+      *_b_send = (EX_OBJECT_NOT << 24) + _args;
+    }
+  }
+
+
+
+  // std::cerr << "prim_object_not\n";
   oop self =  proc->dp();
   if ((self == MM_FALSE) || (self == MM_NULL)) {
     proc->stack_push(MM_TRUE);
@@ -1946,6 +1981,8 @@ static int prim_object_to_source(Process* proc) {
 }
 
 static int prim_object_send(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_OBJECT_SEND, EX_SEND_LIMIT);
+
   oop self =  proc->rp();
   oop name = proc->get_arg(0);
   oop args_list = proc->get_arg(1);
