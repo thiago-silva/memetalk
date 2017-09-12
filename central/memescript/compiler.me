@@ -21,14 +21,16 @@ init new: fun(cmodule) {
 }
 instance_method name_ptr_for: fun(name, mec) {
   var acc = 0;
-  mec[:names].each(fun(_, pair) {
+  var names = mec[:names];
+  for (var i = 0; i < names.size; i += 1) {
+    var pair = names[i];
     var entry_name_t = pair[0];
     var bsize = pair[1];
     if (entry_name_t == name + "\0") {
-      ^ @HEADER_SIZE + acc;
+      return @HEADER_SIZE + acc;
     }
     acc = acc + bsize;
-  });
+  }
   Exception.throw("entry " + name.toString + " not found in NAMES");
 }
 instance_method create_mec_struct: fun(vmem) {
@@ -62,17 +64,21 @@ instance_method create_mec_struct: fun(vmem) {
 
   mec[:header][:ot_size] = mec[:object_table].size;
 
-  vmem.external_references().each(fun(_,pair) {
+  var ext_refs = vmem.external_references();
+  for (var i = 0; i < ext_refs.size; i += 1) {
+    var pair = ext_refs[i];
     mec[:external_references].append(this.name_ptr_for(pair[0], mec));
     mec[:external_references].append(pair[1]);
-  });
+  }
 
   mec[:header][:er_size] = mec[:external_references].size * bits.WSIZE;
 
-  vmem.symbols_references.each(fun(_, p2) {
+  var sref = vmem.symbols_references;
+  for (i = 0; i < sref.size; i += 1) {
+   var p2 = sref[i];
     mec[:symbol_table].append(this.name_ptr_for(p2[0], mec));
     mec[:symbol_table].append(p2[1]);
-  });
+  }
 
   mec[:header][:st_size] = mec[:symbol_table].size * bits.WSIZE;
 
@@ -93,32 +99,38 @@ instance_method dump: fun(filepath) {
     write(bits.pack(mec[:header][:names_size]));
 
     //names
-    mec[:names].each(fun(_, entry) {
+    var names = mec[:names];
+    for (var i = 0; i < names.size; i += 1) {
+      var entry = names[i];
       var name = entry[0];
       var chunk_size = entry[1];
       var text = name + "\0".times(chunk_size - name.size);
       write(text);
-    });
+    }
 
     //object table
-    mec[:object_table].each(fun(_, v) {
-      write(bits.pack_byte(v));
-    });
+    var objt = mec[:object_table];
+    for (i = 0; i < objt.size; i += 1) {
+      write(bits.pack_byte(objt[i]));
+    }
 
     //external references
-    mec[:external_references].each(fun(_, v) {
-      write(bits.pack(v));
-    });
+    var extref = mec[:external_references];
+    for (i = 0; i < extref.size; i += 1) {
+      write(bits.pack(extref[i]));
+    }
 
     //symbols
-    mec[:symbol_table].each(fun(_, v) {
-      write(bits.pack(v));
-    });
+    var symt = mec[:symbol_table];
+    for (i = 0; i < symt.size; i += 1) {
+      write(bits.pack(symt[i]));
+    }
 
     //reloc table
-    mec[:reloc_table].each(fun(_, word) {
-      write(bits.pack(word));
-    });
+    var relt = mec[:reloc_table];
+    for (i = 0; i < relt.size; i += 1) {
+      write(bits.pack(relt[i]));
+    }
   });
 }
 end

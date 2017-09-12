@@ -16,29 +16,29 @@ class_method check: fun(pred, message) {
 end
 
 unpack: fun(str) {
-   //FormatException.check(str.size == 8, "unpack requires string of length 8");
-   var res = 0;
-   str.each(fun(idx, chr) {
-     res = res + (chr.toByte << (idx * 8));
-   });
-   return res;
+  //FormatException.check(str.size == 8, "unpack requires string of length 8");
+  var res = 0;
+  for (var i = 0; i < str.size; i += 1) {
+    res = res + (str[i].toByte << (i * 8));
+  }
+  return res;
 }
 
 pack: fun(num) {
   var res = "";
-  [0,1,2,3,4,5,6,7].each(fun(_, i) {
+  for (var i = 0; i < 8; i += 1) {
     var n = (num >> (i * 8)) & 0xFF;
     res = res + n.asChar;
-  });
+  }
   return res;
 }
 
 pack32: fun(num) {
   var res = "";
-  [0,1,2,3].each(fun(_, i) {
+  for (var i = 0; i < 4; i += 1) {
     var n = (num >> (i * 8)) & 0xFF;
     res = res + n.asChar;
-  });
+  }
   return res;
 }
 

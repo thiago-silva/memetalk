@@ -84,5 +84,5 @@ endef
 ##     bindgen_tr.me: bindgen_tr.g; $(call RUN_VM_CMD,$(PWD)/gen.mec)
 ##
 define RUN_VM_CMD
- MEME_PATH=$(MM_PATH) $(VM_CMD) $(1)
+ $(VM_CMD) $(1)
 endef

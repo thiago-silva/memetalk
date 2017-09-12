@@ -132,6 +132,8 @@ stm :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | 'while' !(fnobj.current_label(False)):lbcond
                    expr(fnobj)
                    !(fnobj.emit_jz()):lbend [expr(fnobj)*] !(fnobj.emit_jmp_back(lbcond.as_current())) -> lbend.as_current()
+               | 'for' expr(fnobj) !(fnobj.current_label(False)):lbcond expr(fnobj)
+                   !(fnobj.emit_jz()):lbend [expr(fnobj)*] expr(fnobj) !(fnobj.emit_jmp_back(lbcond.as_current())) -> lbend.as_current()
                | 'try'
                   !(fnobj.current_label()):label_begin_try
                     [expr(fnobj)*]

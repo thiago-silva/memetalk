@@ -219,16 +219,16 @@ instance_method object_table: fun() {
   // });
 
 //  return bench("vmemory:object_table", fun() {
-    var res = [null].times(@total_size);
-    var i = 0;
-    @cells.each(fun(_, e) {
-      var sub = e.value(null);
-      sub.each(fun(_, v) {
-        res[i] = v;
-        i = i + 1;
-      });
-    });
-    return res;
+  var res = [null].times(@total_size);
+  var x = 0;
+  for (var i = 0; i < @cells.size; i += 1) {
+    var sub = @cells[i].value(null);
+    for (var j = 0; j < sub.size; j += 1) {
+      res[x] = sub[j];
+      x = x + 1;
+    }
+  }
+  return res;
 //  });
 }
 instance_method reloc_table: fun() {
@@ -242,13 +242,17 @@ instance_method reloc_table: fun() {
 instance_method symbols_references: fun() {
 //  return bench("vmemory:symbols_references", fun() {
     var sr = [];
-    this.symbol_table.each(fun(_,entry) {
+    var st = this.symbol_table;
+    for (var i = 0; i < st.size; i += 1) {
+      var entry = st[i];
       var text = entry[0];
       var ptr = entry[1];
-      @opt_ptr_cells.filter(fun(x) { x.target_cell == ptr }).each(fun(_, referer) {
-        sr.append([text, this.physical_address(referer)])
-      });
-    });
+      var filtered = @opt_ptr_cells.filter(fun(x) { x.target_cell == ptr });
+      for (var j = 0; j < filtered.size; j += 1) {
+        var referer = filtered[j];
+        sr.append([text, this.physical_address(referer)]);
+      }
+    }
     return sr;
 //  });
 }

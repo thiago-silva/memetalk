@@ -606,7 +606,7 @@ instance_method non_control_expr: fun() {
   }, fun() {
     this._apply(:expr_non_local_ret);
   }, fun() {
-    this._apply(:expr_attr);
+    this._apply(:expr_assign);
   }, fun() {
     e = this._apply(:expr);
     return [:expression, e];
@@ -641,15 +641,31 @@ instance_method expr_decl: fun() {
   e = this._apply(:expr);
   return [:var-def, name, e].at(this, _pos);
 }
-instance_method expr_attr: fun() {
+instance_method expr_assign: fun() {
   var a = null;
   var b = null;
-  this._apply(:spaces);
-  var _pos = this.input.idx();
-  a = this._apply(:lhs);
-  this._apply_with_args(:token, ["="]);
-  b = this._apply(:expr);
-  return [:=, a, b].at(this, _pos);
+  return this._or([fun() {
+    this._apply(:spaces);
+    var _pos = this.input.idx();
+    a = this._apply(:lhs);
+    this._apply_with_args(:token, ["="]);
+    b = this._apply(:expr);
+    return [:=, a, b].at(this, _pos);
+  }, fun() {
+    this._apply(:spaces);
+    var _pos = this.input.idx();
+    a = this._apply(:lhs);
+    this._apply_with_args(:token, ["+="]);
+    b = this._apply(:expr);
+    return [:=, a, [:+, a, b]].at(this, _pos);
+  }, fun() {
+    this._apply(:spaces);
+    var _pos = this.input.idx();
+    a = this._apply(:lhs);
+    this._apply_with_args(:token, ["-="]);
+    b = this._apply(:expr);
+    return [:=, a, [:-, a, b]].at(this, _pos);
+  }]);
 }
 instance_method lhs: fun() {
   var r = null;
@@ -677,7 +693,33 @@ instance_method control_expr: fun() {
     this._apply(:expr_while);
   }, fun() {
     this._apply(:expr_try);
+  }, fun() {
+    this._apply(:expr_for);
   }]);
+}
+instance_method expr_for: fun() {
+  var v = null;
+  var c = null;
+  var n = null;
+  var st = null;
+  this._apply(:spaces);
+  var _pos = this.input.idx();
+  this._apply_with_args(:keyword,["for"]);
+  this._apply_with_args(:token, ["("]);
+  v = this._or([fun() {
+    this._apply(:expr_decl);
+  }, fun() {
+    this._apply(:expr_assign);
+  }]);
+  this._apply_with_args(:token, [";"]);
+  c = this._apply(:expr);
+  this._apply_with_args(:token, [";"]);
+  n = this._apply(:expr_assign);
+  this._apply_with_args(:token, [")"]);
+  this._apply_with_args(:token, ["{"]);
+  st = this._apply(:stmts);
+  this._apply_with_args(:token, ["}"]);
+  return [:for, v, c, st, n];
 }
 instance_method expr_if: fun() {
   var e = null;

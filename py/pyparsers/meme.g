@@ -138,7 +138,7 @@ stmt = control_expr
 
 non_control_expr = expr_ret
                  | expr_non_local_ret
-                 | expr_attr
+                 | expr_assign
                  | expr:e -> ['expression', e]
                  | expr_decl
 
@@ -148,7 +148,9 @@ expr_non_local_ret = spaces !(self.input.position):begin token("^") expr:e -> se
 expr_decl =  spaces !(self.input.position):begin token("var")
               id:name token("=") expr:e -> self.i.ast(begin,["var-def", name, e])
 
-expr_attr =  spaces !(self.input.position):begin lhs:a token("=") expr:b -> self.i.ast(begin,["=", a, b])
+expr_assign =  spaces !(self.input.position):begin lhs:a token("=") expr:b -> self.i.ast(begin,["=", a, b])
+            |  spaces !(self.input.position):begin lhs:a token("+=") expr:b -> self.i.ast(begin,["=", a, ['+', a, b]])
+            |  spaces !(self.input.position):begin lhs:a token("-=") expr:b -> self.i.ast(begin,["=", a, ['-', a, b]])
 
 lhs = !(self.input.position):begin expr:r ?(len(r)>0 and r[0] == 'index') -> self.i.ast(begin, r)
     | !(self.input.position):begin alpha_name:x -> self.i.ast(begin, ["id", x])
@@ -157,6 +159,7 @@ lhs = !(self.input.position):begin expr:r ?(len(r)>0 and r[0] == 'index') -> sel
 control_expr = expr_if
              | expr_while
              | expr_try
+             | expr_for
 
 expr_if = spaces !(self.input.position):begin token("if") token("(") expr:e token(")") token("{")
            stmts:body
@@ -168,6 +171,11 @@ expr_elif = !(self.input.position):begin token("elif") token("(") expr:e token("
 
 expr_else = !(self.input.position):begin token("else") token("{") stmts:body token("}") -> body
 
+
+expr_for = spaces !(self.input.position):begin token("for") token("(") (expr_decl | expr_assign):v token(";") expr:c token(";") expr_assign:n token(")") token("{")
+             stmts:st
+           token("}")
+           -> self.i.ast(begin,['for', v, c, st, n])
 
 expr_while = spaces !(self.input.position):begin token("while") token("(") expr:e token(")") token("{")
              stmts:xs

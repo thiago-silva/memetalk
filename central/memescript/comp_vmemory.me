@@ -73,12 +73,14 @@ instance_method append_string_instance: fun(string) {
 }
 instance_method append_sym_to_string_dict: fun(mdict) {
   var pairs_oop = [];
-  mdict.keys.sorted.each(fun(_, key) {
+  var keys = mdict.keys.sorted;
+  for (var i = 0; i < keys.size; i += 1) {
+    var key = keys[i];
     var val = mdict[key];
     var key_oop = this.append_string_instance(key);
     var val_oop = this.append_symbol_instance(val);
     pairs_oop.append([key_oop, val_oop]);
-  });
+  }
   return pairs_oop.append_dict_with_pairs(pairs_oop);
 }
 instance_method append_dict_prologue: fun(size, frame_oop) {
@@ -117,9 +119,9 @@ instance_method append_list_of_strings: fun(lst){
     this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
-    oops_elements.each(fun(_,oop_element) {
-      oops.append(this.append_pointer_to(oop_element, null));
-    });
+    for (var i = 0; i < oops_elements.size; i += 1) {
+      oops.append(this.append_pointer_to(oops_elements[i], null));
+    }
   }
 
   this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);
@@ -143,9 +145,9 @@ instance_method append_list_of_symbols: fun(lst) {
     this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
-    oops_elements.each(fun(_,oop_element) {
-      oops.append(this.append_pointer_to(oop_element, null));
-    });
+    for (var i = 0; i < oops_elements.size; i += 1) {
+      oops.append(this.append_pointer_to(oops_elements[i], null));
+    }
   }
 
   this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);
@@ -170,9 +172,9 @@ instance_method append_list_of_ints: fun(lst) {
     this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
-    lst.each(fun(_,oop_element) {
-      oops.append(this.append_tagged_int(oop_element, null));
-    });
+    for (var i = 0; i < lst.size; i += 1) {
+      oops.append(this.append_tagged_int(lst[i], null));
+    }
   }
 
   this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);
@@ -195,9 +197,9 @@ instance_method append_list_of_oops_for_labels: fun(lst) {
     this.append_int(mec.FRAME_TYPE_ELEMENTS, null);
     this.append_int(lst.size * bits.WSIZE, null);
     var oops = [];
-    lst.each(fun(_, label) {
-      oops.append(this.append_label_ref(label, null));
-    });
+    for (var i = 0; i < lst.size; i += 1) {
+      oops.append(this.append_label_ref(lst[i], null));
+    }
   }
 
   this.append_int(mec.FRAME_TYPE_LIST_OBJECT, null);

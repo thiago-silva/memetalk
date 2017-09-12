@@ -155,9 +155,14 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                | :== _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "==")
                | :!= _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "!=")
                | :if expr(fnobj) !{fnobj.emit_jz(null)}:lb_next [expr(fnobj)* !{fnobj.emit_jmp(null)}:lb_end] !{lb_next.as_current()} [expr_elif(fnobj)*:lbs_end] [expr(fnobj)*] !{lb_end.as_current()} !{lbs_end.map(fun(x) { x.as_current()})}
+
                | :while !{fnobj.current_label(false)}:lbcond
                    expr(fnobj)
                    !{fnobj.emit_jz(null)}:lbend [expr(fnobj)*] !{fnobj.emit_jmp_back(lbcond.as_current())} => lbend.as_current()
+
+               | :for expr(fnobj) !{fnobj.current_label(false)}:lbcond expr(fnobj)
+                   !{fnobj.emit_jz(null)}:lbend [expr(fnobj)*] expr(fnobj) !{fnobj.emit_jmp_back(lbcond.as_current())} => lbend.as_current()
+
                | :try
                   !{fnobj.current_label(true)}:label_begin_try
                     [expr(fnobj)*]

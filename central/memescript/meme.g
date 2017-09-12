@@ -217,7 +217,7 @@ stmt = control_expr
 
 non_control_expr = expr_ret
                  | expr_non_local_ret
-                 | expr_attr
+                 | expr_assign
                  | expr:e => [:expression, e]
                  | expr_decl;
 
@@ -227,7 +227,10 @@ expr_non_local_ret =  # "^" expr:e => #[:non-local-return, e];
 
 expr_decl =  # ``var`` id:name "=" expr:e => #[:var-def, name, e];
 
-expr_attr =  # lhs:a "=" expr:b => #[:=, a, b];
+expr_assign =  # lhs:a "=" expr:b => #[:=, a, b]
+            |  # lhs:a "+=" expr:b => #[:=, a, [:+, a, b]]
+            |  # lhs:a "-=" expr:b => #[:=, a, [:-, a, b]]
+            ;
 
 lhs =  expr:r ?{r.size > 0 and r[0] == :index} => r
     |  # alpha_name:x => #[:id, x]
@@ -236,7 +239,14 @@ lhs =  expr:r ?{r.size > 0 and r[0] == :index} => r
 control_expr = expr_if
              | expr_while
              | expr_try
+             | expr_for
              ;
+
+expr_for = # ``for`` "(" {expr_decl | expr_assign}:v ";" expr:c ";" expr_assign:n ")" "{"
+               stmts:st
+             "}"
+           => [:for, v, c, st, n]
+         ;
 
 expr_if = # ``if`` "(" expr:e ")" "{"
            stmts:body

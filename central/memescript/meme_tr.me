@@ -649,6 +649,18 @@ instance_method stm: fun() {
     fnobj.emit_jmp_back(lbcond.as_current());
     return lbend.as_current();
   }, fun() {
+    this._apply_with_args(:exactly, [:for]);
+    this._apply_with_args(:expr, [fnobj]);
+    lbcond = fnobj.current_label(false);
+    this._apply_with_args(:expr, [fnobj]);
+    lbend = fnobj.emit_jz(null);
+    this._form(fun() {
+      this._many(fun() {
+        this._apply_with_args(:expr, [fnobj]);}, null);});
+    this._apply_with_args(:expr, [fnobj]);
+    fnobj.emit_jmp_back(lbcond.as_current());
+    return lbend.as_current();
+  }, fun() {
     this._apply_with_args(:exactly, [:try]);
     label_begin_try = fnobj.current_label(true);
     this._form(fun() {
