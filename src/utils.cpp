@@ -153,6 +153,12 @@ std::string bytecode_to_str(bytecode code) {
     case PUSH_CONTEXT:
       s <<"PUSH_CONTEXT"<< decode_args(code);
       break;
+    case PUSH_ARGC:
+      s <<"PUSH_ARGC"<< decode_args(code);
+      break;
+    case LOAD_ARGV:
+      s <<"LOAD_ARGV"<< decode_args(code);
+      break;
     case POP_LOCAL:
       s <<"POP_LOCAL"<< decode_args(code);
       break;
@@ -190,7 +196,7 @@ std::string bytecode_to_str(bytecode code) {
       s <<"JMPB"<< decode_args(code);
       break;
     default:
-      std::cerr << "unknown code " << code << endl;
+      std::cerr << "unknown code " << decode_opcode(code) << endl;
   }
   return s.str();
 }

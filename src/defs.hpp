@@ -45,6 +45,9 @@ typedef int (*prim_function_t) (Process*);
 #define PUSH_FP 9
 #define PUSH_CONTEXT 10
 
+#define PUSH_ARGC 11
+#define LOAD_ARGV 12
+
 #define POP_LOCAL 21
 #define POP_FIELD 22
 #define POP 24

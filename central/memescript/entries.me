@@ -166,7 +166,7 @@ instance_method new_ctor: fun(name) {
   dslot[:value][name] = fn;
   return fn;
 }
-instance_method new_function: fun(name, params) {
+instance_method new_function: fun(name) {
   var owner = this.imod.object_by_name("Object_CompiledClass");
   var d = this.slots.filter(fun(s) { s[:type] == :dict });
   var dslot = null;
@@ -176,7 +176,7 @@ instance_method new_function: fun(name, params) {
   } else {
     dslot = d[0];
   }
-  var fn = CompiledFunction.new(this.imod.cmod, owner, name, params,
+  var fn = CompiledFunction.new(this.imod.cmod, owner, name, [],
       false, null, true, null, null);
   dslot[:value][name] = fn;
   return fn;
@@ -184,7 +184,7 @@ instance_method new_function: fun(name, params) {
 end
 
 class Object_Object < MMObject
-instance_method new_function: fun(name, params) {
+instance_method new_function: fun(name) {
   var owner = this.imod.object_by_name("Object_CompiledClass");
   var d = this.slots.filter(fun (s) { s[:type] == :dict });
   var dslot = null;
@@ -194,7 +194,7 @@ instance_method new_function: fun(name, params) {
   } else {
     dslot = d[0];
   }
-  var fn = CompiledFunction.new(this.imod.cmod, this, name, params,
+  var fn = CompiledFunction.new(this.imod.cmod, this, name, [],
       false, null, true, null, null);
   dslot[:value][name] = fn;
   return fn;
@@ -627,7 +627,7 @@ instance_method encode_header: fun() {
 
   var flags = bits.encode_bits([@is_top_level, @var_arg, @has_env, @is_prim, @is_ctor]);
 
-  return (@var_declarations.env_offset(this) << 15) + (@params.size << 10) + (@var_declarations.total << 5) + flags;
+  return (@var_declarations.env_offset(this) << 15) + (@params.size << 10) + ((@var_declarations.total - @params.size) << 5) + flags;
   //vmem.append_int(@is_ctor, null);
   //vmem.append_int(@is_prim, null);
   //vmem.append_int(@has_env, null);
@@ -1261,8 +1261,8 @@ instance_method label: fun() {
   return mec.cmod_label(@name);
 }
 
-instance_method new_function: fun(name, params) {
-  var fn = CompiledFunction.new(this, this, name, params,
+instance_method new_function: fun(name) {
+  var fn = CompiledFunction.new(this, this, name, [],
       false, null, true, null, null);
   @functions[name] = fn;
   return fn;
@@ -1394,8 +1394,8 @@ instance_method label: fun() {
 instance_method entry_labels: fun() {
   return this.imod.entry_labels();
 }
-instance_method new_function: fun(name, params) {
-  var cfun = super(name, params);
+instance_method new_function: fun(name) {
+  var cfun = super(name);
   var fn = Function.new(@imod, cfun);
   @imod.append_function(name, fn);
   return fn;

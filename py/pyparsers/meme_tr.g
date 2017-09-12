@@ -30,7 +30,7 @@ definition :modobj =  function_definition(modobj)
                    |  object_definition(modobj)
 
 function_definition :modobj =  !(self.input.head()[0]):ast
-                               ['fun' :name params:p  !(modobj.new_function(name, p)):fnobj
+                               ['fun' :name  !(modobj.new_function(name)):fnobj fparams(fnobj):p !(fnobj.set_params(p))
                                      !(fnobj.set_line(ast))
                                      :uses_env !(fnobj.uses_env(uses_env))
                                      ['body' body(fnobj.body_processor())]] !(fnobj.set_text(ast.text))
@@ -64,13 +64,9 @@ class_method :klass = !(self.input.head()[0]):ast
                           ['body' body(fnobj.body_processor())]]  !(fnobj.set_text(ast.text))
 
 fparams :obj = ['params' [fparam(obj)*:x]] -> x
-fparam :obj  = ['var-arg' :x !(obj.set_vararg(x))] -> x
+fparam :obj  = ['var-arg' !(obj.set_vararg())] -> "*"
                | :x
 
-params = ['params' [param*:x]] -> x
-
-param = ['var-arg' :x] -> x
-        | :x
 
 object_definition :modobj = ['object' :name !(modobj.new_object(name)):obj
                           [obj_slot(obj)+] [obj_function(obj)*]]
@@ -110,6 +106,7 @@ stm :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | 'expression' expr(fnobj) -> fnobj.emit_pop(ast)
                | 'not' expr(fnobj) -> fnobj.emit_unary(ast, '!')
                | 'negative' expr(fnobj) -> fnobj.emit_unary(ast, 'neg')
+               | 'get-var-arg' expr(fnobj) -> fnobj.emit_push_var_arg(ast)
                | 'bit-neg' expr(fnobj) -> fnobj.emit_unary(ast, '~')
                | 'and' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, 'and')
                | 'or' :e expr(fnobj) apply('expr' fnobj e) -> fnobj.emit_binary(ast, 'or')
@@ -154,6 +151,7 @@ stm :fnobj :ast = 'var-def' :id expr(fnobj) ->  fnobj.emit_var_decl(ast, id)
                | 'literal' 'false'      -> fnobj.emit_push_false(ast)
                | 'literal' 'module'     -> fnobj.emit_push_module(ast)
                | 'literal' 'context'    -> fnobj.emit_push_context(ast)
+               | 'literal' 'argc'    -> fnobj.emit_push_argc(ast)
                | 'id' :name             -> fnobj.emit_push_var(ast, name)
                | 'field' :name          -> fnobj.emit_push_field(ast, name)
                | 'literal-array'  :e apply('exprs' fnobj e)      -> fnobj.emit_push_list(ast, len(e))
@@ -169,8 +167,7 @@ catch_decl = ['catch' ['id' :type] :id]  -> (type, id)
 
 dict_pairs :fnobj = (['pair' expr(fnobj) expr(fnobj)])*:e -> e
 
-funliteral :fnobj = !(self.input.head()[0]):ast ['fun-literal'  params:p
-                       !(fnobj.new_closure(p)):fn
+funliteral :fnobj = !(self.input.head()[0]):ast ['fun-literal'  !(fnobj.new_closure()):fn fparams(fn):p !(fn.set_params(p))
                        !(fn.set_line(ast))
                        ['body' [expr(fn)*]]]:ast
                      !(fn.set_text(ast.text))

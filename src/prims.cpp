@@ -963,8 +963,8 @@ static int prim_list_new_from_stack(Process* proc) {
   // oop self = proc->mmobj()->mm_list_new();
   // number length = proc->mmobj(length_oo);
 
-  DBG("appending " << proc->current_args_number() << " values" << endl);
-  for (number i = 0; i < proc->current_args_number(); i++) {
+  DBG("appending " << proc->argc() << " values" << endl);
+  for (number i = 0; i < proc->argc(); i++) {
     oop element = proc->get_arg(i);
     DBG("appending " << element << endl);
     proc->mmobj()->mm_list_append(proc, self, element);
@@ -1567,8 +1567,8 @@ static int prim_dictionary_new_from_stack(Process* proc) {
   // oop self = proc->mmobj()->mm_list_new();
   // number length = proc->mmobj(length_oo);
 
-  DBG("appending " << proc->current_args_number() << " values" << endl);
-  for (number i = 0; i < proc->current_args_number(); i+=2) {
+  DBG("appending " << proc->argc() << " values" << endl);
+  for (number i = 0; i < proc->argc(); i+=2) {
     oop key = proc->get_arg(i);
     oop val = proc->get_arg(i+1);
     DBG("set " << key << " " << val << endl);
@@ -2849,6 +2849,7 @@ static int prim_bench(Process* proc) {
     return 0;
   }
 }
+
 
 void init_primitives(VM* vm) {
   vm->register_primitive("io_print", prim_io_print);

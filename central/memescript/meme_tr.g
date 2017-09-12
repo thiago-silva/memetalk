@@ -45,7 +45,7 @@ definition :modobj =  function_definition(modobj)
                    ;
 
 function_definition :modobj =  !{this.input.head()}:ast
-                               [:fun _:name params:p  !{modobj.new_function(name, p)}:fnobj
+                               [:fun _:name  !{modobj.new_function(name)}:fnobj fparams(fobj):p !{fnobj.set_params(p)}
                                      !{fnobj.set_line(ast)}
                                      _:uses_env !{fnobj.uses_env(uses_env)}
                                      !{fnobj.body_processor}:bproc

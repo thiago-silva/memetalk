@@ -363,7 +363,7 @@ meme central:memescript/compiler
   init new: fun() {
     <primitive "dictionary_new">
   }
-  init new_from_stack: fun(*args) {
+  init new_from_stack: fun(*) {
     <primitive "dictionary_new_from_stack">
   }
   instance_method toString: fun() {
@@ -406,7 +406,7 @@ meme central:memescript/compiler
   init new: fun() {
     <primitive "list_new">
   }
-  init new_from_stack: fun(*args) {
+  init new_from_stack: fun(*) {
     <primitive "list_new_from_stack">
   }
   instance_method append: fun(x) {

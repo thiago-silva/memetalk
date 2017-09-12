@@ -142,7 +142,7 @@ class Object_ObjectBehavior(Object):
         dslot['value'][name] = fn
         return fn
 
-    def new_function(self, name, params):
+    def new_function(self, name):
         owner = self.imod.object_by_name('Object_CompiledClass')
         d = [s for s in self.slots if s['type'] == 'dict']
         if len(d) == 0:
@@ -151,12 +151,12 @@ class Object_ObjectBehavior(Object):
         else:
             dslot = d[0]
 
-        fn = CompiledFunction(self.imod.cmod, owner, name, params)
+        fn = CompiledFunction(self.imod.cmod, owner, name)
         dslot['value'][name] = fn
         return fn
 
 class Object_Object(Object):
-    def new_function(self, name, params):
+    def new_function(self, name):
         owner = self.imod.object_by_name('Object_CompiledClass')
         d = [s for s in self.slots if s['type'] == 'dict']
         if len(d) == 0:
@@ -165,7 +165,7 @@ class Object_Object(Object):
         else:
             dslot = d[0]
 
-        fn = CompiledFunction(self.imod.cmod, self, name, params)
+        fn = CompiledFunction(self.imod.cmod, self, name)
         dslot['value'][name] = fn
         return fn
 
@@ -436,7 +436,7 @@ class CompiledFunction(Entry):
         self.params = params
         self.var_declarations.add_names(self, params)
 
-    def set_vararg(self, name):
+    def set_vararg(self):
         self.var_arg = True
 
     def declare_var(self, name):
@@ -577,7 +577,9 @@ class CompiledFunction(Entry):
         flags = (int(self.is_top_level) << 4) + (int(self.var_arg) << 3) + (int(self.has_env) << 2) + \
                 (int(self.is_prim) << 1) + int(self.is_ctor)
 
-        header = (self.var_declarations.env_offset(self) << 15) + (len(self.params) << 10) + (self.var_declarations.total() << 5) + flags
+        print self.name
+        import pdb;pdb.set_trace()
+        header = (self.var_declarations.env_offset(self) << 15) + (len(self.params) << 10) + ((self.var_declarations.total()-len(self.params)) << 5) + flags
         return header
 
     def fill(self, vmem):
@@ -667,14 +669,14 @@ class CompiledFunction(Entry):
 
     #############
 
-    def new_closure(self, params):
+    def new_closure(self):
         self.has_env = True
         if self.is_top_level:
             top_level_cfun = self
         else:
             top_level_cfun = self.top_level_cfun
 
-        cfun = CompiledFunction(self.cmod, self.owner, closure_name(self.owner.label_counter()), params,
+        cfun = CompiledFunction(self.cmod, self.owner, closure_name(self.owner.label_counter()), [],
                                 env_storage=self.var_declarations,
                                 is_top_level=False, outer_cfun=self,
                                 top_level_cfun=top_level_cfun)
@@ -765,6 +767,14 @@ class CompiledFunction(Entry):
             self.bytecodes.append('push_module', 0)
             self.bytecodes.append('push_literal', idx)
             self.bytecodes.append('send', 0)
+
+    @emitter
+    def emit_push_argc(self, _):
+        self.bytecodes.append("push_argc", 0)
+
+    @emitter
+    def emit_push_var_arg(self, _):
+        self.bytecodes.append("load_argv", 0)
 
     @emitter
     def emit_local_assignment(self, _, name):
@@ -1085,8 +1095,8 @@ class Function(Entry):
         self.imod = imod
         self.cfun = cfun
 
-    def set_vararg(self, name):
-        self.cfun.set_vararg(name)
+    def set_vararg(self):
+        self.cfun.set_vararg()
 
     def set_params(self, params):
         self.cfun.set_params(params)
@@ -1166,8 +1176,8 @@ class CompiledModule(Entry):
     def label(self):
         return cmod_label(self.name)
 
-    def new_function(self, name, params):
-        fn = CompiledFunction(self, self, name, params)
+    def new_function(self, name):
+        fn = CompiledFunction(self, self, name)
         self.functions[name] = fn
         return fn
 
@@ -1295,8 +1305,8 @@ class CoreCompiledModule(CompiledModule):
     def entry_labels(self):
         return self.imod.entry_labels()
 
-    def new_function(self, name, params):
-        cfun = super(CoreCompiledModule, self).new_function(name, params)
+    def new_function(self, name):
+        cfun = super(CoreCompiledModule, self).new_function(name)
         fn = Function(self.imod, cfun)
         self.imod.append_function(name, fn)
         return fn

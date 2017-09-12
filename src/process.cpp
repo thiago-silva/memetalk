@@ -34,6 +34,7 @@
                                       << _log_registers.yellow << "         IP: " << _ip << endl \
                                       << _log_registers.yellow << "         MP: " << _mp << endl \
                                       << _log_registers.yellow << "         CP: " << _cp << endl \
+                                      << _log_registers.yellow << "         ARGC: " << _argc << endl \
                                       << _log_registers.normal; }
 
 #define LOG_STACK() if (_log_stack._enabled) { LOG_HEAD(_log_stack) << "state: " << _state << " - stack:" << endl \
@@ -188,14 +189,13 @@ std::string Process::dump_stack_top(bool enabled) {
 
   word* sp = _sp;
   oop bp = _bp;
-  // oop cp = _cp;
-  // oop fp = _fp;
-  // oop mp = _mp;
+  oop cur_fp = _fp;
+
   while (sp >= _stack) {
     if (bp == sp) {
       s <<  sp << " [BP] " << *(oop*)sp << "\n";
-      number ss = *(number*)(sp-1);
-      s << (sp-1) << " [SS] " << ss << "\n";
+      number argc = *(number*)(sp-2);
+      s << (sp-1) << " [ARGC] " << argc << "\n";
       s << (sp-2) << " [IP] " << *(bytecode*)(sp-2) << "\n";
       s << (sp-3) << " [CP] " << *(oop*)(sp-3);
       if (*(oop*)(sp-3)) {
@@ -203,17 +203,19 @@ std::string Process::dump_stack_top(bool enabled) {
       } else {
         s << "\n";
       }
+      oop fp = sp-4;
       s << (sp-4) << " [FP] " << *(oop*)(sp-4) << "\n";
-      s << (sp-5) << " [DP] " << *(oop*)(sp-5) << "\n";
-      s << (sp-6) << " [RP] " << *(oop*)(sp-6) << "\n";
-      // number j = 7;
-      // for (; j < (ss+7); j++) {
-      //   s << (sp-j) << " [LOCAL] " << *(oop*)(sp-j) << "\n";
-      // }
-      bp = *(oop*)bp;
-      sp = sp-6;
+      sp -= 5;
+      for(int i = 0; sp != cur_fp; i++) {
+        s << sp << "[LOCAL " << i << "] " << *(oop*)sp << "\n";
+        sp--;
+      }
+      cur_fp = fp;
+      s << sp << " [DP] " << *(oop*)(sp) << "\n";
+      s << (sp-1) << " [RP] " << *(oop*)(sp-1) << "\n";
+      sp = sp-2;
     } else {
-      s << sp << " " << *(oop*)sp << "\n";
+      s << "[DATA] " << sp << " " << *(oop*)sp << "\n";
       sp--;
     }
   }
@@ -241,7 +243,8 @@ void Process::init() {
   _ip = NULL; //instruction
   _mp = NULL; //module
   _cp = NULL; //context
-  _ss = 0; //local storage
+  _ss = 0;    //local storage
+  _argc = 0;
 }
 
 // oop Process::get_arg(number idx) {
@@ -265,74 +268,72 @@ oop Process::set_dp(oop dp) {
 // }
 
 oop Process::cp_from_base(oop bp) {
-  return * ((oop*)bp - 3);
-}
-
-oop Process::fp_from_base(oop bp) {
   return * ((oop*)bp - 4);
 }
 
+oop Process::fp_from_base(oop bp) {
+  return * ((oop*)bp - 5);
+}
+
 bytecode* Process::ip_from_base(oop bp) {
-  return (bytecode*) * ((oop*)bp - 2);
+  return (bytecode*) * ((oop*)bp - 3);
 }
 
 oop Process::rp_vt() {
   return _mmobj->mm_object_vt(rp());
 }
 
-void Process::push_frame(oop recv, oop drecv, number arity, number storage_size) {
-  DBG(" recv: " << recv << ", drecv: " << drecv << ", arity: " << arity << ", storage_size: " << storage_size << endl);
+void Process::push_frame(oop recv, oop drecv, number num_args, number local_storage_size) {
+  DBG(" recv: " << recv << ", drecv: " << drecv << ", num_args: " << num_args << ", storage_size: " << local_storage_size << endl);
 
-  // oop curr_sp = _sp;
 
   //BEGIN stack frame layout
   //---- if you change this, change pop_frame() and the frame accessor methods
   //---- as well!!
 
   oop fp = _fp;
-  _fp = _sp - (arity - 1);  // _sp points to the last arg pushed
+  _fp = _sp;
 
   DBG("before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl);
-
-  for (int i = 0; i < storage_size - arity; i++) {
-    stack_push(MM_NULL);
-  }
-
 
   stack_push(recv);
   stack_push(drecv);
 
+  for (int i = 0; i < local_storage_size; i++) {
+    stack_push(MM_NULL);
+  }
+
   stack_push(fp);
   stack_push(_cp);
   stack_push(_ip);
-  stack_push(_ss); //storage size
+  stack_push(_argc);
   stack_push(_bp);
-
-  //END of frame layout
 
   _bp = _sp;
 
-  _ss = storage_size;
+  _argc = num_args;
 
   LOG_ENTER_FRAME();
 }
 
 void Process::pop_frame() {
-  number storage_size = _ss;
-
   DBG("pop_frame begin SP: " << _sp << endl);
 
 
-  _sp = _bp; //restore sp, ignoring frame data. push_frame/pop_frame are always in sync.
+  oop fp = _fp;
+  number argc = _argc;
+
+  _sp = _bp; //restore sp, ignoring frame data
 
   _bp = stack_pop();
-  _ss = (number) stack_pop();
+  _argc = (number) stack_pop();
   _ip = (bytecode*) stack_pop();
   _cp = stack_pop();
   _fp = stack_pop();
 
-  DBG("restoring _sp to: " << _sp - (storage_size + 2) << " bp: " << _bp << endl);
-  _sp = _sp - (storage_size + 2); //2: rp, dp
+
+  DBG("restoring _sp to: " << _sp - (fp - argc) << " bp: " << _bp << endl);
+  _sp = _sp - (fp - (word*) argc);
 
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
@@ -385,23 +386,25 @@ void Process::basic_new_and_load(oop klass) {
   set_dp(dp);
 }
 
-void Process::setup_fp(number params, number storage_size) {
-  //ideally this should be a calloc followed by memcpy
-  oop fp = (oop) GC_MALLOC(sizeof(oop) * (storage_size + 2)); //+2: space for rp, dp
-  DBG("allocated fp: " << fp << " - " << " params: " << params
-      << " storage_size: " << storage_size << endl);
+void Process::setup_fp(number num_args, number local_storage_size) {
+  //TODO? this could be a calloc followed by memcpy
+  oop env = (oop) GC_MALLOC(sizeof(oop) * (local_storage_size + num_args + 2)); //+2: space for rp, dp
+  DBG("allocated fp: " << env << " - " << " num_args: " << num_args
+      << " local_storage_size: " << local_storage_size << endl);
 
-  for (int i = 0; i < storage_size + 2; i++) {
-    DBG("new_fp[" << i << " - " << (oop*)fp << "]  " << *((oop*)_fp + i) << endl);
-    ((oop*)fp)[i] = *((oop*)_fp + i);
+  oop it = env;
+  oop base = _fp - num_args - 1;
+  for (int i = 0; i < num_args; i++, it++) {
+    DBG("new_fp[" << i << " - " << (oop*)base << "]  " << (oop*)base[i] << endl);
+    *(oop*)it = (oop*)base[i];
   }
+  oop fp = it + num_args - 1; // points to topmost arg
 
-  // for (int j = 0, i = params; i > 0; i--, j++) { //copying parameters
-  //   ((oop*)fp)[j] = *((oop*)_fp - 2 - i); //-2: rp,dp
-  // }
-  // ((oop*)fp)[storage_size] =  *((oop*)_fp + storage_size); //rp
-  // ((oop*)fp)[storage_size+1] =*((oop*)_fp + storage_size + 1); //dp
-  // ((oop*)fp)[storage_size+2] = (oop) params;
+  base = base + num_args;
+  for (int i = 0; i < local_storage_size + 2; i++, it++) { //+2: rp, dp
+    DBG("new_fp[" << i << " - " << (oop*)base << "]  " << (oop*)base[i] << endl);
+    *(oop*)it = (oop*)base[i];
+  }
 
   _fp = fp;
 }
@@ -416,7 +419,7 @@ void Process::restore_fp(oop fp, number params, number env_offset) {
   _fp = fp;
 }
 
-bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, number arity) {
+bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, number num_args) {
   if (!(_mmobj->mm_is_function(fun) || _mmobj->mm_is_context(fun))) {
     WARNING() << "Will raise TypeError: Expecting function or context" << endl;
     raise("TypeError", "Expecting function or context");
@@ -434,14 +437,13 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
     return false;
   }
 
-  number org_num_params = CFUN_NUM_PARAMS(header);
-  number num_params = arity != -1? arity : org_num_params;
-  _current_args_number = num_params;
-  number storage_size = CFUN_STORAGE_SIZE(header);
-  push_frame(recv, drecv, num_params, arity != -1? storage_size + (arity-org_num_params) : storage_size);
+  number num_params = CFUN_NUM_PARAMS(header);
+  number arity =  num_args != -1 ? num_args : num_params;
+  number local_storage_size = CFUN_STORAGE_SIZE(header);
+  push_frame(recv, drecv, arity, local_storage_size);
 
 
-  DBG("storage: " << _ss << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl);
+  DBG("storage: " << local_storage << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl);
 
   // DBG("line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl);
   // oop mapping = _mmobj->mm_function_get_line_mapping(fun);
@@ -465,8 +467,8 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   if (_mmobj->mm_is_context(fun)) {
     restore_fp(_mmobj->mm_context_get_env(this, fun, true), num_params, CFUN_ENV_OFFSET(header));
   } else {
-    if (CFUN_HAS_ENV(header)) {
-      setup_fp(num_params, storage_size);
+    if (CFUN_HAS_ENV(header)) { //create new frame for function containing closures
+      setup_fp(arity, local_storage_size);
     }
   }
 
@@ -803,7 +805,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
         stack_push(*(dp() + arg + 2));
         break;
       case NEW_CONTEXT:
-        stack_push(_mmobj->mm_context_new(this, _mp, _fp, _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true)));
+        stack_push(_mmobj->mm_context_new(this, _mp, _fp - _argc, _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true)));
         break;
       case PUSH_THIS:
         // _PUSH_THIS++;
@@ -819,6 +821,12 @@ void Process::fetch_cycle(void* stop_at_bp) {
         // _PUSH_CONTEXT++;
         DBG("PUSH_CONTEXT " << arg << endl);
         stack_push(_cp);
+        break;
+      case PUSH_ARGC:
+        stack_push(tag_small_int(_argc));
+        break;
+      case LOAD_ARGV:
+        stack_push(get_arg(untag_small_int(stack_pop())));
         break;
       case PUSH_BIN:
         // _PUSH_BIN++;
@@ -1389,7 +1397,7 @@ void Process::handle_ex_lt(number num_args) {
     oop res =  n_self < n_other ? MM_TRUE : MM_FALSE;
     stack_push(res);
   } else {
-    std::cerr << meme_curr_fname() << endl;
+    // std::cerr << meme_curr_fname() << endl;
     handle_send(num_args);
   }
 }
@@ -1469,6 +1477,7 @@ void Process::handle_send(number num_args) {
   long header = _mmobj->mm_function_get_header(this, fun);
   bool vararg = CFUN_HAS_VAR_ARG(header);
   number arity = CFUN_NUM_PARAMS(header);
+  // std::cerr << FULL_NAME(fun) << " vararg: " << vararg << " arity: " << arity << " args: " << num_args << endl;
   if (!vararg && num_args != arity) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;

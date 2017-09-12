@@ -34,6 +34,9 @@ opcode_mapping = {
 
     "push_context": 10,
 
+    "push_argc": 11,
+    "load_argv": 12,
+
     # pop
     # "pop_param": 20,
     "pop_local": 21,

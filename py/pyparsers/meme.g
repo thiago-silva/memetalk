@@ -117,7 +117,7 @@ class_method_decl = spaces !(self.has_fun_literal(False))
 params = token("(") idlist:xs token(")") -> xs
 
 fparams = token("(") token(")") -> []
-        | token("(")  token("*") id:x token(")") -> [['var-arg', x]]
+        | token("(")  token("*") token(")") -> [['var-arg']]
         | token("(")  id:x (token(",") id)*:xs token(")") -> [x]+xs
         | token("(")  id:x (token(",") id)*:xs pvar:y token(")") -> [x]+xs+[y]
 
@@ -229,6 +229,7 @@ expr_mul =  !(self.input.position):begin expr_mul:a token("*") spaces expr_unary
 expr_unary =   spaces !(self.input.position):begin token("+") spaces prim_expr:a  -> self.i.ast(begin, ['positive', a])
             |  spaces !(self.input.position):begin token("-") spaces prim_expr:a  -> self.i.ast(begin, ['negative', a])
             |  spaces !(self.input.position):begin token("!") spaces expr_unary:a -> self.i.ast(begin, ['not', a])
+            |  spaces !(self.input.position):begin token("*") spaces expr_unary:a -> self.i.ast(begin, ['get-var-arg', a])
             |  spaces !(self.input.position):begin token("~") spaces expr_unary:a -> self.i.ast(begin, ['bit-neg', a])
             |  suffix_expr
 
@@ -276,6 +277,7 @@ literal = lit_number
         | spaces !(self.input.position):begin token("null")   -> self.i.ast(begin, ['literal', 'null'])
         | spaces !(self.input.position):begin token("true")   -> self.i.ast(begin,['literal', 'true'])
         | spaces !(self.input.position):begin token("false")  -> self.i.ast(begin, ['literal', 'false'])
+        | spaces !(self.input.position):begin token("*#")  -> self.i.ast(begin, ['literal', 'argc'])
         | funliteral:x !(self.has_fun_literal(True)) -> x
 
 funliteral = spaces !(self.input.position):begin token("fun") params:p token("{")
