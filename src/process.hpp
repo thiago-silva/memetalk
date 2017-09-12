@@ -8,6 +8,7 @@
 
 #include "defs.hpp"
 #include "log.hpp"
+#include <boost/unordered_map.hpp>
 
 class VM;
 class MMObj;
@@ -226,28 +227,9 @@ private:
   oop _last_retval;
   bool _breaking_on_return;
   bool _online;
-//profiling
-  long _PUSH_LOCAL;
-  long _PUSH_LITERAL;
-  long _PUSH_MODULE;
-  long _PUSH_FIELD;
-  long _PUSH_THIS;
-  long _PUSH_FP;
-  long _PUSH_CONTEXT;
-  long _PUSH_BIN;
-  long _RETURN_TOP;
-  long _RETURN_THIS;
-  long _POP;
-  long _POP_LOCAL;
-  long _POP_FIELD;
-  long _SEND;
-  long _SUPER_CTOR_SEND;
-  long _CALL;
-  long _JMP;
-  long _JMPB;
-  long _JZ;
-  long _SUPER_SEND;
 
+  boost::unordered_map<std::string, long> _call_count; //map<fun, count>
+  boost::unordered_map<std::pair<std::string, std::string>, long> _call_site_count; //map< [caller,callee], count>
 };
 
 #endif
