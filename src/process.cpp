@@ -1151,12 +1151,71 @@ void Process::handle_send(number num_args) {
 //  _call_site_count[std::pair<std::string,std::string>(FULL_NAME(_cp), FULL_NAME(fun))]++;
 
   std::pair<oop, oop> p(_cp, fun);
-  if (_tf_calls[p]++ > 1) {
-    //std::cerr << "adding " << CTXNAME(_cp) << " to recompile" << std::endl;
-    _tf_funs.push_back(p);
+  if (_tf_calls[p] >= 0 and _tf_calls[p]++ > 1) {
+    _tf_calls[p] = -1;
+    recompile(_cp, fun);
   }
 
   load_fun(recv, drecv, fun, true, num_args);
+}
+
+void Process::recompile(oop callsite, oop callee) {
+  //std::cerr << "CHECK " << CTXNAME(callsite) << " - " << CTXNAME(callee) << endl;
+  if (_mmobj->mm_is_context(callsite) or _mmobj->mm_is_context(callee) or
+      _mmobj->mm_function_is_prim(this, callsite, true) or
+      _mmobj->mm_function_is_prim(this, callee, true) or
+      _mmobj->mm_function_is_getter(this, callsite, true) or
+      _mmobj->mm_function_is_getter(this, callee, true) or
+      _mmobj->mm_function_is_ctor(this, callee, true) or
+      _mmobj->mm_function_exception_frames_count(this, callsite, true) > 0 or
+      _mmobj->mm_function_exception_frames_count(this, callee, true) > 0) {
+    // std::cerr << "don't recompile callsite " << CTXNAME(callsite) << endl;
+    return;
+  }
+  // std::cerr << "recompiling " << CTXNAME(callsite) << endl;
+
+  bytecode* send_pos = _ip - 1;
+
+  //** creating new bytecode string
+  bytecode* callsite_code = _mmobj->mm_compiled_function_get_code(this, callsite, true);
+  number callsite_code_size = _mmobj->mm_compiled_function_get_code_size(this, callsite, true);
+  bytecode* callee_code = _mmobj->mm_compiled_function_get_code(this, callee, true);
+  number callee_code_size = _mmobj->mm_compiled_function_get_code_size(this, callee, true);
+
+  bytecode* new_code = GC_MALLOC(callsite_code_size + callee_code_size); //TODO: align with word size
+
+  bytecode* callee_begin = new_code + send_pos-callsite_code;
+  bytecode* callee_end   = callee_begin + callee_code_size;
+
+  memcpy(new_code, callsite_code, send_pos - callsite_code); //just until callsite.SEND
+  memcpy(new_code + send_pos - callsite_code, callee_code, callee_code_size); //all of callee code
+  memcpy(new_code + send_pos - callsite_code + callee_code_size, send_pos + 1 , send_pos - callsite_cide - callsite_code_size); //all remaining callsite code post-SEND
+
+  //** extend local storage
+  number callsite_storage = _mmobj->mm_compiled_function_get_num_locals_or_env(this, callsite, true);
+  number callee_site_storage = _mmobj->mm_compiled_function_get_num_locals_or_env(this, callee, true);
+  _mmobj->mm_compiled_function_set_num_locals_or_env(this, callsite_storage + callee_site_storage, true);
+
+  //** substitute all *_LOCAL idx for *_LOCAL idx + callsite_storage inside the callee section
+  for (bytecode* i = callee_begin; i < callee_end; i++) {
+    if (decode(*i) == PUSH_LOCAL) {
+      *i = encode(PUSH_LOCAL, decode_arg(*i) + callsite_storage);
+    } else if (decode(*i) == POP_LOCAL) {
+      *i = encode(POP_LOCAL, decode_arg(*i) + callsite_storage);
+    }
+  }
+
+  //** substitute all RETURNS in callee section for jumps
+
+  //** concat literal-tables
+  number frame_size_1 = _mmobj->mm_compiled_function_get_literal_frame_size(this, callsite, true);
+  number frame_size_2 = _mmobj->mm_compiled_function_get_literal_frame_size(this, callsite, true);
+  oop* literal_frame_1 = _mmobj->mm_compiled_function_get_literal_frame(this, callsite, true);
+  oop* literal_frame_2 = _mmobj->mm_compiled_function_get_literal_frame(this, callee, true);
+  _mmobj->mm_compiled_function_set_literal_frame(this, callsite, concat_literal_frames(literal_frame_1, literal_frame_2, frame_size_1, frame_size_2));
+
+  //** substitute all PUSH_LITERAL idx for PUSH_LITERAL idx+frame_size_1
+
 }
 
 void Process::handle_super_ctor_send(number num_args) {
@@ -1815,26 +1874,4 @@ void Process::report_profile() {
   // for (it2 = v.begin(); it2 != v.end(); it2++) {
   //   std::cerr << it2->first << ": " << it2->second << std::endl;
   // }
-
-
-  std::cerr << "_PUSH_LOCAL: " << _PUSH_LOCAL << endl;
-  std::cerr << "_PUSH_LITERAL: " << _PUSH_LITERAL << endl;
-  std::cerr << "_PUSH_MODULE: " << _PUSH_MODULE << endl;
-  std::cerr << "_PUSH_FIELD: " << _PUSH_FIELD << endl;
-  std::cerr << "_PUSH_THIS: " << _PUSH_THIS << endl;
-  std::cerr << "_PUSH_FP: " << _PUSH_FP << endl;
-  std::cerr << "_PUSH_CONTEXT: " << _PUSH_CONTEXT << endl;
-  std::cerr << "_PUSH_BIN: " << _PUSH_BIN << endl;
-  std::cerr << "_RETURN_TOP: " << _RETURN_TOP << endl;
-  std::cerr << "_RETURN_THIS: " << _RETURN_THIS << endl;
-  std::cerr << "_POP: " << _POP << endl;
-  std::cerr << "_POP_LOCAL: " << _POP_LOCAL << endl;
-  std::cerr << "_POP_FIELD: " << _POP_FIELD << endl;
-  std::cerr << "_SEND: " << _SEND << endl;
-  std::cerr << "_SUPER_CTOR_SEND: " << _SUPER_CTOR_SEND << endl;
-  std::cerr << "_CALL: " << _CALL << endl;
-  std::cerr << "_JMP: " << _JMP << endl;
-  std::cerr << "_JMPB: " << _JMPB << endl;
-  std::cerr << "_JZ: " << _JZ << endl;
-  std::cerr << "_SUPER_SEND: " << _SUPER_SEND << endl;
 }

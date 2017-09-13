@@ -239,6 +239,7 @@ private:
 
   // boost::unordered_map<std::string, long> _call_count; //map<fun, count>
   // boost::unordered_map<std::pair<std::string, std::string>, long> _call_site_count; //map< [caller,callee], count>
+  void recompile(oop callsite, oop callee);
 
   call_map_t _tf_calls;
   std::list<std::pair<oop, oop>> _tf_funs;
