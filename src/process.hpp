@@ -9,12 +9,20 @@
 #include "defs.hpp"
 #include "log.hpp"
 #include <boost/unordered_map.hpp>
+#include "gc/gc_allocator.h"
 
 class VM;
 class MMObj;
 class ProcessControl;
 
 typedef std::pair<bytecode*,bytecode*> bytecode_range_t;
+
+typedef boost::unordered_map<std::pair<oop, oop>, long, boost::hash<std::pair<oop,oop> >,
+                             std::equal_to<std::pair<oop,oop>>,
+                             gc_allocator<std::pair<oop,oop> > >
+                            call_map_t;
+
+
 
 class mm_exception_rewind {
 public:
@@ -228,8 +236,12 @@ private:
   bool _breaking_on_return;
   bool _online;
 
-  boost::unordered_map<std::string, long> _call_count; //map<fun, count>
-  boost::unordered_map<std::pair<std::string, std::string>, long> _call_site_count; //map< [caller,callee], count>
+
+  // boost::unordered_map<std::string, long> _call_count; //map<fun, count>
+  // boost::unordered_map<std::pair<std::string, std::string>, long> _call_site_count; //map< [caller,callee], count>
+
+  call_map_t _tf_calls;
+  std::list<std::pair<oop, oop>> _tf_funs;
 };
 
 #endif

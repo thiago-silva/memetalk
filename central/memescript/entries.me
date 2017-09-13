@@ -1098,7 +1098,7 @@ instance_method emit_push_list: fun(ast, length) {
   var idx_new_from_stack = this.create_and_register_symbol_literal("new_from_stack");
 
   @bytecodes.append(:push_module, 0);
-  @bytecodes.append(:push_literal, idx_klass); //unusually reusing literal_frame to store core object reference
+  @bytecodes.append(:push_literal, idx_klass);
   @bytecodes.append(:send, 0);
 
   @bytecodes.append(:push_literal, idx_new_from_stack);
