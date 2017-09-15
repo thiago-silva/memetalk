@@ -10,6 +10,11 @@
 #include <cstdlib>
 #include <boost/filesystem.hpp>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <dlfcn.h>
+
 #include <gc_cpp.h>
 #include "gc/gc_allocator.h"
 
@@ -399,6 +404,7 @@ char* VM::fetch_module(const std::string& mod_path, int* file_size) {
     if (mod_path.find(it->first) == 0) {
       std::string local_path =it->second + mod_path.substr(it->first.length());
       DBG("translating " << mod_path << " to local path " << local_path << std::endl);
+      maybe_load_primitives_file(local_path);
       return read_mec_file(local_path + ".mec", file_size);
     }
   }
@@ -410,6 +416,36 @@ char* VM::fetch_module(const std::string& mod_path, int* file_size) {
   }
   bail(std::string("fatal error:\n\tmodule not found: ") + mod_path);
   return 0;
+}
+
+void VM::maybe_load_primitives_file(const std::string& file_path_without_extension) {
+  struct stat st;
+
+  std::string file_name = file_path_without_extension + "_prims.so";
+  DBG("Looking for prim file " << file_name << std::endl);
+
+  if (stat(file_name.c_str(), &st) == -1) {
+    // Can't access the file. Get out.
+    DBG("No sign of primitives file " << file_name << std::endl);
+    return;
+  }
+
+  void *handle = dlopen(file_name.c_str(), RTLD_LAZY);
+  if (!handle) {
+    // Can't open up dynamically linked library
+    ERROR() << dlerror() << endl;
+    return;
+  }
+
+  // Find and execute func that inits primitives from the .so in VM
+  void (*init)(VM*);
+  *(void **) (&init) = dlsym(handle, "init_primitives");
+  if (init == NULL) {
+    ERROR() << dlerror() << endl;
+  } else {
+    DBG("Register primitives in file " << file_name << std::endl);
+    init(this);
+  }
 }
 
 bool VM::is_mec_file_older_then_source(std::string src_file_path) {

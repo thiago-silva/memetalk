@@ -91,6 +91,7 @@ private:
   // void dump_prime_info();
   // void dictionary_dump(oop dict);
   // void parse_repository_path();
+  void maybe_load_primitives_file(const std::string& file_path_without_extension);
   oop maybe_compile_local_source(Process* proc, std::string filepath);
   bool is_mec_file_older_then_source(std::string src_file_path);
   void maybe_load_config();

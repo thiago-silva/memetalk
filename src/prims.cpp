@@ -5,7 +5,6 @@
 #include "utils.hpp"
 #include "mmobj.hpp"
 #include "mec_image.hpp"
-#include "qt_prims.hpp"
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -3001,6 +3000,4 @@ void init_primitives(VM* vm) {
   vm->register_primitive("exit", prim_exit);
   vm->register_primitive("basename", prim_basename);
   vm->register_primitive("bench", prim_bench);
-
-  qt_init_primitives(vm);
 }

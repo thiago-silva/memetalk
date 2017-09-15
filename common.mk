@@ -25,6 +25,15 @@ PY_PATH := $(ROOT_DIR)/py
 # Python command used to compile .me into .mec
 PY_COMPILER_CMD := python -m pycompiler.compiler
 
+# Flags for compilation
+
+## Qt:
+QT_INC_DIRS = /usr/include /usr/local/include
+QT_INC_QSCI ?= $(dir $(foreach i,$(QT_INC_DIRS),$(shell find -L $(i) -name qscicommandset.h)))
+QT_PKGLIBS = QtCore QtGui QtScript QtWebKit QtNetwork
+QT_CXXFLAGS = $(shell pkg-config --cflags $(QT_PKGLIBS)) -I$(QT_INC_QSCI)
+QT_LIBS = $(shell pkg-config --libs $(QT_PKGLIBS)) -lqscintilla2
+
 ## Macro GEN_MEC_RULE: Creates Make rule to compile .me files
 ##
 ##   This macro comes in handy for directories full of .me source

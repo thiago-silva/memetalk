@@ -2,7 +2,6 @@
 #include "process.hpp"
 Q_DECLARE_METATYPE (Process*);
 
-#include "qt_prims.hpp"
 #include "vm.hpp"
 #include "log.hpp"
 #include "mmobj.hpp"
@@ -38,7 +37,6 @@ Q_DECLARE_METATYPE (Process*);
 #include <QPushButton>
 #include <QTcpServer>
 #include <QTcpSocket>
-#include "log.hpp"
 
 
 #define DBG() _log << _log.yellow + _log.bold + "[prim|" << __FUNCTION__ << "] " << _log.normal
@@ -1981,7 +1979,7 @@ static int prim_qt_maybe_construct_qapp(Process* proc) {
 //   return 0;
 // }
 
-void qt_init_primitives(VM* vm) {
+extern "C" void init_primitives(VM* vm) {
   vm->register_primitive("qt_qapplication_new", prim_qapplication_new);
   vm->register_primitive("qt_qapplication_exec", prim_qapplication_exec);
   vm->register_primitive("qt_qapplication_exit", prim_qapplication_exit);
