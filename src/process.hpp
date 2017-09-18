@@ -8,6 +8,7 @@
 
 #include "defs.hpp"
 #include "log.hpp"
+#include <boost/unordered_map.hpp>
 
 class VM;
 class MMObj;
@@ -61,6 +62,8 @@ public:
   inline oop rp() { return * (oop*) (_fp + _ss ); }
   inline oop dp() { return * (oop*) (_fp + _ss + 1); }
 
+  oop rp_vt();
+
   oop set_rp(oop);
   oop set_dp(oop);
 
@@ -76,6 +79,11 @@ public:
   // oop get_dp() { return _dp; };
 
   inline MMObj* mmobj() { return _mmobj; }
+
+  inline oop stack_top(int x) {
+    return * (((oop*)_sp)-x);
+  }
+
 
   inline void stack_push(oop data) {
       _sp++;
@@ -151,6 +159,8 @@ public:
   void report_profile();
 
   bool running_online() { return _online; }
+
+  bool caller_is_prim();
 private:
   std::string log_label();
   const char* meme_curr_fname();
@@ -180,6 +190,11 @@ private:
   void handle_call(number);
   void handle_return(oop);
   void basic_new_and_load(oop);
+
+  void handle_ex_equal(number num_args);
+  void handle_ex_sum(number num_args);
+  void handle_ex_lt(number num_args);
+  void handle_ex_index(number num_args);
 
   bool exception_has_handler(oop e, oop cp, bytecode* ip, oop bp);
 
@@ -247,7 +262,6 @@ private:
   long _JMPB;
   long _JZ;
   long _SUPER_SEND;
-
 };
 
 #endif

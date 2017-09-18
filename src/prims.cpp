@@ -25,6 +25,23 @@ namespace fs = ::boost::filesystem;
 #define WARNING() MMLog::warning() << "[prim|" << __FUNCTION__ << "] " << _log.normal
 #define ERROR() MMLog::error() << "[prim|" << __FUNCTION__ << "] " << _log.normal
 
+//TODO:
+// we can't assume ip()-1 is the SEND that executed the prim we are processing
+// -> it might be another prim that is calling ->send on this prim.
+//    so the code below would overwrite that SEND. (e.g. prim_list_sorted calling :<).
+//    perhaps checking if the caller is a primitive might fix this.
+
+//This is trivial if the receiver is of constant type. However, some prims
+//have polimorphic receivers (e.g. Behavior.==, numeric.+). So the ex_opcode
+//handler has to be aware of all possible types, just as the prim would.
+#define SPECIALIZE_BYTECODE(code)                                       \
+  bytecode* _b_send = proc->ip()-1;                                     \
+  if (decode_opcode(*_b_send) == SEND && !proc->caller_is_prim()) {     \
+    int _args = decode_args(*_b_send);                                  \
+    *_b_send = (code << 24) + _args;                                    \
+  }
+
+
 
 static MMLog _log(LOG_PRIMS);
 
@@ -203,6 +220,7 @@ static int prim_string_as_hex(Process* proc) {
 
 
 static int prim_string_equal(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_EQUAL)
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -291,6 +309,7 @@ static int prim_string_rindex(Process* proc) {
 }
 
 static int prim_string_index(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_INDEX)
   oop self =  proc->dp();
   oop arg = proc->get_arg(0);
   number idx = untag_small_int(arg);
@@ -696,18 +715,9 @@ static inline bool is_numeric(Process* proc, oop o) {
   return is_small_int(o) || proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum");
 }
 
-static inline number extract_number(Process* proc, oop o) {
-  if (is_small_int(o)) {
-    return untag_small_int(o);
-  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum")) {
-    return proc->mmobj()->mm_longnum_get(proc, o);
-  } else {
-    proc->raise("TypeError", "Expecting numeric value");
-  }
-  return 0; // unreachable
-}
 
 static int prim_numeric_sum(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_SUM);
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -794,6 +804,7 @@ static int prim_numeric_bit_or(Process* proc) {
 }
 
 static int prim_numeric_lt(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_LT);
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -986,6 +997,7 @@ static int prim_list_prepend(Process* proc) {
 }
 
 static int prim_list_index(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_INDEX)
   oop self =  proc->dp();
   oop index_oop = proc->get_arg(0);
   number index = untag_small_int(index_oop);
@@ -1365,6 +1377,9 @@ static int prim_list_plus(Process* proc) {
 }
 
 static int prim_list_equals(Process* proc) {
+  //bellow we use proc->send(), so we can't have it
+  //as bytecode at the moment
+  //SPECIALIZE_BYTECODE(EX_EQUAL)
   //shallow equals (for now, we are just comparing the oop of each element)
 
   oop self =  proc->dp();
@@ -1557,6 +1572,7 @@ static int prim_dictionary_set(Process* proc) {
 }
 
 static int prim_dictionary_index(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_INDEX)
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
 
@@ -1699,6 +1715,9 @@ static int prim_dictionary_size(Process* proc) {
 }
 
 static int prim_dictionary_equals(Process* proc) {
+  //bellow we use proc->send(), so we can't have it
+  //as bytecode at the moment
+  //SPECIALIZE_BYTECODE(EX_EQUAL)
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -1885,12 +1904,21 @@ static int prim_mirror_is_subclass(Process* proc) {
 
 
 static int prim_equal(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_EQUAL)
   oop self =  proc->rp();
   oop other = proc->get_arg(0);
   DBG(self << " == " << other << "?" << (self == other ? MM_TRUE : MM_FALSE) << endl);
   proc->stack_push(self == other ? MM_TRUE : MM_FALSE);
   return 0;
 }
+// static int prim_notequal(Process* proc) {
+//   oop self =  proc->rp();
+//   oop other = proc->get_arg(0);
+//   DBG(self << " != " << other << "?" << (self != other ? MM_TRUE : MM_FALSE) << endl);
+//   std::cerr << "NOT " << endl;
+//   proc->stack_push(self != other ? MM_TRUE : MM_FALSE);
+//   return 0;
+// }
 
 // static int prim_id(Process* proc) {
 //   oop self =  proc->rp();
@@ -2837,6 +2865,7 @@ void init_primitives(VM* vm) {
   vm->register_primitive("exception_throw", prim_exception_throw);
 
   vm->register_primitive("equal", prim_equal);
+  // vm->register_primitive("notequal", prim_notequal);
   // vm->register_primitive("id", prim_id);
 
   vm->register_primitive("object_not", prim_object_not);
