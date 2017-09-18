@@ -203,8 +203,15 @@ oop MMObj::mm_object_vt(oop obj) {
 }
 
 oop MMObj::mm_object_delegate(oop obj) {
+  //any change here should probably sync with delegates_to() et al.
+  //btw, we can't have mm_object_delegate(false) == <object instance> since
+  //such would break comparisons elsewhere that would otherwise evaluate to false
+  //ditto for mm_object_delegate(true) == false|null
+  //* the current problem I'm facing involves !(x == y). Here, returning a synthetic delegate for a boolean value, say false, would invoke, false.!(). Since !() is defined in Object,
+  //the dp would go up the chain to the synthetic object, which would itself evaluate to true instead of the expected false. So, to expand the delegates of true,false & null into
+  //object instances does not work with generic ==,!=,! methods in super classes/behaviors.
   if (is_small_int(obj) || (obj == MM_TRUE) || (obj == MM_FALSE) || (obj == MM_NULL)) {
-    return obj; //mm_object_new(); //TODO: this should probably be a dummy static object
+    return obj;
   } else {
     return ((oop*) obj)[1];
   }
@@ -1187,15 +1194,22 @@ number MMObj::mm_behavior_size(Process* p, oop behavior, bool should_assert) {
   }
 }
 
-bool MMObj::delegates_to(oop sub_type, oop super_type) {
+bool MMObj::delegates_to(oop sub, oop super) {
   DBG("delegates_to? " << sub_type << " " << super_type << endl);
-  if (sub_type == NULL) {
-    return false;
-  }
-  if (sub_type == super_type) {
-    return true;
-  } else {
-    return delegates_to(mm_object_delegate(sub_type), super_type);
+  while (true) {
+    if (sub == MM_NULL) {
+      return false;
+    }
+    if (sub == super) {
+      return true;
+    } else {
+      oop next = mm_object_delegate(sub);
+      if (next == sub) {
+        return false;
+      } else {
+        sub = next;
+      }
+    }
   }
 }
 
