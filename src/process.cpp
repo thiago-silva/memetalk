@@ -78,6 +78,9 @@
     }                                                                   \
   }                                                                     \
 
+static  long hit = 0;
+static  long miss = 0;
+
 
 
 Process::Process(VM* vm, int debugger_id, bool online)
@@ -122,6 +125,15 @@ std::string Process::dump_stack_trace(bool enabled) {
     bp = *(oop*)bp;
   }
   return s.str();
+}
+
+bool Process::caller_is_prim() {
+  oop cp = cp_from_base(_bp);
+  if (!cp) {
+    return false;
+  }
+  long header = _mmobj->mm_function_get_header(this, cp);
+  return CFUN_IS_PRIM(header);
 }
 
 std::string Process::dump_code_body(bool enabled) {
@@ -258,6 +270,10 @@ oop Process::fp_from_base(oop bp) {
 
 bytecode* Process::ip_from_base(oop bp) {
   return (bytecode*) * ((oop*)bp - 2);
+}
+
+oop Process::rp_vt() {
+  return _mmobj->mm_object_vt(rp());
 }
 
 void Process::push_frame(oop recv, oop drecv, number arity, number storage_size) {
@@ -856,7 +872,18 @@ void Process::fetch_cycle(void* stop_at_bp) {
         DBG("JMPB " << arg << " " << endl);
         _ip -= (arg+1); //_ip already suffered a ++ in dispatch
         break;
-
+      case EX_SUM:
+        handle_ex_sum(arg);
+        break;
+      case EX_LT:
+        handle_ex_lt(arg);
+        break;
+      case EX_EQUAL:
+        handle_ex_equal(arg);
+        break;
+      case EX_INDEX:
+        handle_ex_index(arg);
+        break;
       case JZ:
         // _JZ++;
         val = stack_pop();
@@ -1056,6 +1083,144 @@ void Process::reload_frame() {
   DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
 }
 
+void Process::handle_ex_equal(number num_args) {
+  //hit: 94 141 miss: 1 052 816
+  //hit: 120 853 miss: 1 025 938
+
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+  oop vt = _mmobj->mm_object_vt(recv);
+
+  static oop Object = _vm->get_prime("Object");
+  static oop Object_Behavior = _vm->get_prime("Object_Behavior");
+  static oop String = _vm->get_prime("String");
+  // static oop List = _vm->get_prime("List");
+  //static oop Dictionary = _vm->get_prime("Dictionary");
+
+  if (_mmobj->delegates_to(vt, String)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, String);
+    stack_pop(); //:==
+    stack_pop(); //recv
+    oop other = stack_pop();
+
+    if (_mmobj->mm_is_string(other)) {
+      std::string str_1 = _mmobj->mm_string_stl_str(this, dself);
+      std::string str_2 = _mmobj->mm_string_stl_str(this, other);
+      if (str_1 == str_2) {
+        stack_push(MM_TRUE);
+      } else {
+        stack_push(MM_FALSE);
+      }
+    } else {
+      stack_push(MM_FALSE);
+    }
+  } else if (_mmobj->delegates_to(recv, Object) ||  //recv is an instance of some subclass of Object
+      _mmobj->delegates_to(recv, Object_Behavior)) { //recv is a class whose vt delegates to Object_Behavior
+    //std::cerr << " HA" << std::endl;
+    stack_pop(); //:==
+    stack_pop(); //recv
+    oop other = stack_pop();
+    stack_push(recv == other ? MM_TRUE : MM_FALSE);
+  } else {
+    // std::cerr << "FALLBACK " << endl;
+    handle_send(num_args);
+  }
+}
+
+
+void Process::handle_ex_sum(number num_args) {
+  //std::cerr << "++!!!" << endl;
+
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+  // call_counter_t counter = ex_call_counter[_ip-1];
+  // if (counter.vt == _mmobj->mm_object_vt(recv)) {
+  if (is_small_int(recv)) { //counter.vt == _mmobj->mm_object_vt(recv)) {
+    //std::cerr << "YAY ++!!!" << endl;
+    // oop other = *(oop*) (_sp-2);
+    // _sp -= 3;
+    stack_pop(); //:+
+    stack_pop(); //recv
+    oop other = stack_pop();
+
+    //TODO: make it work with Integer/LongNum subclasses
+    unsigned long n_self = untag_small_int(recv);
+    number n_other = untag_small_int(other);
+    number n_res;
+
+    if (__builtin_add_overflow(n_self, n_other, &n_res)) {
+      raise("Overflow", "result of + overflows");
+    } else {
+      stack_push(tag_small_int(n_res));//_mmobj->mm_integer_or_longnum_new(this, n_res));
+    }
+  } else {
+    handle_send(num_args);
+  }
+}
+
+void Process::handle_ex_index(number num_args) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+
+  static oop Dictionary = _vm->get_prime("Dictionary");
+  static oop String = _vm->get_prime("String");
+  static oop List = _vm->get_prime("List");
+  oop vt = _mmobj->mm_object_vt(recv);
+
+  if (_mmobj->delegates_to(vt, Dictionary)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, Dictionary);
+    stack_pop(); //:index
+    stack_pop(); //recv
+    oop key = stack_pop();
+    stack_push(_mmobj->mm_dictionary_get(this, dself, key));
+  } else if (_mmobj->delegates_to(vt, String)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, String);
+    stack_pop(); //:index
+    stack_pop(); //recv
+    oop arg = stack_pop();
+    number idx = untag_small_int(arg);
+
+    std::string str = _mmobj->mm_string_stl_str(this, dself);
+    char res[2];
+    res[0] = str[idx];
+    res[1] = '\0';
+    stack_push(_mmobj->mm_string_new(res));
+  } else if (_mmobj->delegates_to(vt, List)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, List);
+    stack_pop(); //:index
+    stack_pop(); //recv
+    oop index_oop = stack_pop();
+    number index = untag_small_int(index_oop);
+
+    oop val = _mmobj->mm_list_entry(this, dself, index);
+    stack_push(val);
+  } else {
+    handle_send(num_args);
+  }
+}
+
+void Process::handle_ex_lt(number num_args) {
+  //std::cerr << "<<<!!!" << endl;
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+  //call_counter_t counter = ex_call_counter[_ip-1];
+  if (is_small_int(recv)) {
+    //std::cerr << "YAY <<<!!!" << endl;
+    stack_pop(); //:<
+    stack_pop(); //recv
+    oop other = stack_pop();
+
+    //TODO: make it work with Integer/LongNum subclasses
+    unsigned long n_self = untag_small_int(recv);
+    number n_other = untag_small_int(other);
+
+    oop res =  n_self < n_other ? MM_TRUE : MM_FALSE;
+    stack_push(res);
+  } else {
+    std::cerr << meme_curr_fname() << endl;
+    handle_send(num_args);
+  }
+}
 void Process::handle_super_send(number num_args) {
   oop recv = rp();
   oop selector = _vm->new_symbol(this, _mmobj->mm_function_get_name(this, _cp));
@@ -1784,6 +1949,7 @@ std::string Process::log_label() {
 
 
 void Process::report_profile() {
+  std::cerr << "hit: " << hit << " miss: " << miss << endl;
   std::cerr << "_PUSH_LOCAL: " << _PUSH_LOCAL << endl;
   std::cerr << "_PUSH_LITERAL: " << _PUSH_LITERAL << endl;
   std::cerr << "_PUSH_MODULE: " << _PUSH_MODULE << endl;

@@ -61,6 +61,11 @@ typedef int (*prim_function_t) (Process*);
 #define JMPB 52
 
 //
+#define EX_SUM 61
+#define EX_LT 62
+#define EX_EQUAL 63
+#define EX_INDEX 64
+//
 #define OO_OBJECT_LEN 2 //vt, delegate
 #define OO_MODULE_LEN 4 //vt, delegate, dict, cmod
 #define OO_LIST_LEN 4   //vt, delegate, size, elements frame
