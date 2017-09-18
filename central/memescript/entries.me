@@ -508,7 +508,7 @@ instance_method top_level_cfun: fun() {
 
 instance_method label: fun() {
   if (@label == null) {
-    @label = mec.cfun_label(@owner.label_counter, @owner.label, @name, Mirror.vtFor(@owner) == CompiledClass);
+    @label = mec.cfun_label(@owner.label_counter, @owner.label, @name, CompiledClass == Mirror.vtFor(@owner));
   }
   return @label;
 }

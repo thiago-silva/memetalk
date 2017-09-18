@@ -103,11 +103,11 @@ init new: fun(val) {
   @val = val;
 }
 instance_method value: fun() {
-  if (Mirror.vtFor(@val) == Integer) {
+  if (Integer == Mirror.vtFor(@val)) {
     return @val;
-  } elif (Mirror.vtFor(@val) == Context) {
+  } elif (Context == Mirror.vtFor(@val)) {
     return @val();
-  } elif (Mirror.vtFor(@val) == Label) {
+  } elif (Label == Mirror.vtFor(@val)) {
     return @val.value;
   } else {
     Exception.throw("Unsupported type");

@@ -77,7 +77,7 @@ instance_method last_parsed_token: fun() {
     if (st.memo.size > 0) {
       ret = null;
 
-      if (Mirror.vtFor(st) == OMetaStreamEnd) {
+      if (OMetaStreamEnd == Mirror.vtFor(st)) {
         return {:line : line, :col : col, :token: prev};
       }
     } elif (!ret) {
@@ -90,7 +90,7 @@ instance_method format_error: fun() {
   var last = this.last_parsed_token();
   var line = last[:line];
   var col = last[:col];
-  if (Mirror.vtFor(@data) == String) {
+  if (String == Mirror.vtFor(@data)) {
 //    var lines = @data.split("\n");
     return ["parse error: ", (line + 1).toString, ":", col.toString, "\n"].join("");
             // lines[line],"\n",
@@ -378,25 +378,25 @@ instance_method exactly: fun() {
 instance_method number: fun() {
   var r = this.anything;
   var vt = Mirror.vtFor(r);
-  this._pred(vt == Integer or vt == LongNum);
+  this._pred(Integer == vt or LongNum == vt);
   return r;
 }
 
 instance_method string: fun() {
   var r = this.anything;
-  this._pred(Mirror.vtFor(r) == String);
+  this._pred(String == Mirror.vtFor(r));
   return r;
 }
 
 instance_method symbol: fun() {
   var r = this.anything;
-  this._pred(Mirror.vtFor(r) == Symbol);
+  this._pred(Symbol == Mirror.vtFor(r));
   return r;
 }
 
 instance_method char: fun() {
   var r = this.anything;
-  this._pred(Mirror.vtFor(r) == String and r.size() == 1);
+  this._pred(String == Mirror.vtFor(r) and r.size() == 1);
   return r;
 }
 

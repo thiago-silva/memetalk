@@ -156,7 +156,7 @@ instance_method _append_cell: fun(cell, label) {
   @opt_physical_addresses[cell] = @total_size;
   @total_size = @total_size + cell.size;
   @opt_cell_indexes[cell] = @cells.size -1; // subst @cells.index(cell)
-  if (Mirror.vtFor(cell) == PointerCell) {
+  if (PointerCell == Mirror.vtFor(cell)) {
     @opt_ptr_cells.append(cell);
   }
 }
@@ -305,12 +305,12 @@ instance_method _append_dict_frame: fun(pairs) {
   pairs.each(fun(_, entry) {
     var key = entry[0];
     var val = entry[1];
-    if (Mirror.vtFor(key) == Integer or Mirror.vtFor(key) == LongNum) {
+    if (Integer == Mirror.vtFor(key) or LongNum == Mirror.vtFor(key)) {
       oops.append(this.append_tagged_int(key, null));
     } else {
       oops.append(this.append_pointer_to(key, null));
     }
-    if (Mirror.vtFor(val) == Integer or Mirror.vtFor(val) == LongNum) {
+    if (Integer == Mirror.vtFor(val) or LongNum == Mirror.vtFor(val)) {
       this.append_tagged_int(val, null);
     } else {
       this.append_pointer_to(val, null);
