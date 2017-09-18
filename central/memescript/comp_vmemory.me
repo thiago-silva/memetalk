@@ -28,7 +28,7 @@ instance_method external_names: fun() {
   return (@ext_ref_table.map(fun(x) { x[0] }) + @symb_table.map(fun(x) { x[0] })).unique.sorted;
 }
 instance_method reloc_table: fun() {
-  return this.cells.filter(fun(entry) { Mirror.vtFor(entry) == vmemory.PointerCell}).map(fun(entry) { this.physical_address(entry) });
+  return this.cells.filter(fun(entry) { vmemory.PointerCell == Mirror.vtFor(entry)}).map(fun(entry) { this.physical_address(entry) });
 }
 instance_method append_external_ref: fun(name, label) { //label defaults to null
   var oop = this.append_int(0xAAAA, label);
