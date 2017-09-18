@@ -6,7 +6,7 @@ RUN apt-get -qy update && apt-get -qy --fix-missing install \
     build-essential git pkg-config xvfb libgc-dev libatomic-ops-dev \
     libqt4-dev libqtwebkit-dev libqscintilla2-dev \
     libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev \
-    python-pip
+    python-pip gdb
 
 RUN mkdir /build
 
