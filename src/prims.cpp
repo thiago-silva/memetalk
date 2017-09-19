@@ -1669,6 +1669,7 @@ static int prim_dictionary_plus(Process* proc) {
 }
 
 static int prim_dictionary_has(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_HAS)
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
   if (proc->mmobj()->mm_dictionary_has_key(proc, self, key)) {
