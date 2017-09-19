@@ -1007,6 +1007,7 @@ static int prim_list_index(Process* proc) {
 }
 
 static int prim_list_set(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_SET)
   oop self =  proc->dp();
   oop index_oop = proc->get_arg(0);
   oop val_oop = proc->get_arg(1);
@@ -1169,7 +1170,7 @@ static int prim_list_times(Process* proc) {
   number val = extract_number(proc, proc->get_arg(0));
 
   number size = proc->mmobj()->mm_list_size(proc, self);
-  oop ret = proc->mmobj()->mm_list_new();
+  oop ret = proc->mmobj()->mm_list_new(); //TODO: use std::vector::assign?
   for (number i = 0; i < val; i++) {
     for (number j = 0; j < size; j++) {
       oop next = proc->mmobj()->mm_list_entry(proc, self, j);
@@ -1560,6 +1561,7 @@ static int prim_dictionary_new(Process* proc) {
 }
 
 static int prim_dictionary_set(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_SET)
   oop self =  proc->dp();
   oop key = proc->get_arg(0);
   oop val = proc->get_arg(1);
