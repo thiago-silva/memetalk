@@ -66,21 +66,21 @@ oop MECImage::instantiate_class(oop class_name, oop cclass, oop cclass_dict, std
   if (mod_classes.find(super_name_str) != mod_classes.end()) {
     DBG("Super class already instantiated" << endl);
     super_class = mod_classes.at(super_name_str);
-  } else if (_mmobj->mm_dictionary_has_key(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)) &&
+  } else if (_mmobj->mm_dictionary_has_key(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)) && //super class is in this module
              strcmp(cname, super_name_str) != 0) { //avoid loop when Foo < Foo
     DBG("Super class not instantiated. recursively instantiate it" << endl);
     super_class = instantiate_class(super_name, _mmobj->mm_dictionary_get(_proc, cclass_dict, _proc->vm()->new_symbol(super_name_str)), cclass_dict, mod_classes, imodule);
-  } else if(_mmobj->mm_dictionary_has_key(_proc, cmod_imports_dict, _proc->vm()->new_symbol(super_name_str))) {
+  } else if(_mmobj->mm_dictionary_has_key(_proc, cmod_imports_dict, _proc->vm()->new_symbol(super_name_str))) { //super class is imported
     //when loading the imports, have a _import_idx_map<oop[string], int> to indicate where it will be in the imod
     super_class = _mmobj->mm_module_get_param(
       imodule, _import_idx_map[_proc->vm()->new_symbol(super_name_str)]); //_mmobj->mm_dictionary_index_of(cmod_imports_dict, super_name) + num_params
     DBG("Super class is imported name: " << super_class << endl);
-  } else  if (_mmobj->mm_list_index_of(_proc, cmod_params_list, super_name) != -1) {
+  } else  if (_mmobj->mm_list_index_of(_proc, cmod_params_list, super_name) != -1) { //super class is a module parameter
     super_class = _mmobj->mm_module_get_param(
       imodule, _mmobj->mm_list_index_of(_proc, cmod_params_list, super_name));
     DBG("Super class is module parameter: " << super_class << endl);
   }
-  else if (_core_image->has_class(super_name_str)) {
+  else if (_core_image->has_class(super_name_str)) { //superclass in core
     DBG("Super class got from super module (core)" << endl);
     super_class = _core_image->get_prime(super_name_str);
   } else {
