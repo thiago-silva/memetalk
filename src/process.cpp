@@ -57,6 +57,10 @@
 #define TO_C_STR(str) _mmobj->mm_string_cstr(this, str, true)
 #define SYM_TO_STR(sym) _mmobj->mm_symbol_cstr(this, sym, true)
 
+#define SYM_TO_STL_STR(sym) std::string(_mmobj->mm_symbol_cstr(this, sym, true))
+
+#define FULL_NAME(ctx) SYM_TO_STL_STR(_mmobj->mm_cclass_or_cmodule_name(this, _mmobj->mm_function_get_owner(this, ctx))) + std::string(".") + CTXNAME(ctx)
+
 //#include <boost/unordered_map.hpp>
 //typedef boost::unordered_map<unsigned long, entry_t> cache_t;
 
@@ -1475,6 +1479,9 @@ void Process::handle_send(number num_args) {
     }
     return;
   }
+  //_call_count[FULL_NAME(fun)]++;
+  //_call_site_count[std::pair<std::string,std::string>(FULL_NAME(_cp), FULL_NAME(fun))]++;
+
   load_fun(recv, drecv, fun, true, num_args);
 }
 
@@ -2111,27 +2118,29 @@ std::string Process::log_label() {
   }
 }
 
+template<class T>
+struct gtr {
+  bool operator()(const std::pair<T,long> &left, const std::pair<T,long> &right) {
+      return left.second > right.second;
+  }
+};
 
 void Process::report_profile() {
+  std::cerr << " ======== Call site count ========= " << std::endl;
+  std::vector<std::pair<std::pair<std::string, std::string>, long> > v2(_call_site_count.begin(), _call_site_count.end());
+  std::sort(v2.begin(), v2.end(), gtr<std::pair<std::string, std::string> >());
+  std::vector<std::pair<std::pair<std::string, std::string>, long> >::iterator it;
+  for (it = v2.begin(); it != v2.end(); it++) {
+    std::cerr << it->first.first << " -> " << it->first.second << " = " << it->second << std::endl;
+  }
+
+  std::cerr << " ======== Call count ========= " << std::endl;
+  std::vector<std::pair<std::string, long> > v(_call_count.begin(), _call_count.end());
+  std::sort(v.begin(), v.end(), gtr<std::string>());
+  std::vector<std::pair<std::string, long> >::iterator it2;
+  for (it2 = v.begin(); it2 != v.end(); it2++) {
+    std::cerr << it2->first << ": " << it2->second << std::endl;
+  }
+
   std::cerr << "hit: " << hit << " miss: " << miss << endl;
-  std::cerr << "_PUSH_LOCAL: " << _PUSH_LOCAL << endl;
-  std::cerr << "_PUSH_LITERAL: " << _PUSH_LITERAL << endl;
-  std::cerr << "_PUSH_MODULE: " << _PUSH_MODULE << endl;
-  std::cerr << "_PUSH_FIELD: " << _PUSH_FIELD << endl;
-  std::cerr << "_PUSH_THIS: " << _PUSH_THIS << endl;
-  std::cerr << "_PUSH_FP: " << _PUSH_FP << endl;
-  std::cerr << "_PUSH_CONTEXT: " << _PUSH_CONTEXT << endl;
-  std::cerr << "_PUSH_BIN: " << _PUSH_BIN << endl;
-  std::cerr << "_RETURN_TOP: " << _RETURN_TOP << endl;
-  std::cerr << "_RETURN_THIS: " << _RETURN_THIS << endl;
-  std::cerr << "_POP: " << _POP << endl;
-  std::cerr << "_POP_LOCAL: " << _POP_LOCAL << endl;
-  std::cerr << "_POP_FIELD: " << _POP_FIELD << endl;
-  std::cerr << "_SEND: " << _SEND << endl;
-  std::cerr << "_SUPER_CTOR_SEND: " << _SUPER_CTOR_SEND << endl;
-  std::cerr << "_CALL: " << _CALL << endl;
-  std::cerr << "_JMP: " << _JMP << endl;
-  std::cerr << "_JMPB: " << _JMPB << endl;
-  std::cerr << "_JZ: " << _JZ << endl;
-  std::cerr << "_SUPER_SEND: " << _SUPER_SEND << endl;
 }
