@@ -160,6 +160,7 @@ static int prim_io_close(Process* proc) {
 
 
 static int prim_string_concat(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_SUM)
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -1324,6 +1325,7 @@ static int prim_list_join(Process* proc) {
 }
 
 static int prim_list_plus(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_SUM)
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -1645,6 +1647,7 @@ static int prim_dictionary_to_source(Process* proc) {
 }
 
 static int prim_dictionary_plus(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_SUM)
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
