@@ -67,6 +67,7 @@ typedef int (*prim_function_t) (Process*);
 #define EX_INDEX 64
 #define EX_SET 65
 #define EX_NOT 66
+#define EX_HAS 67
 //
 #define OO_OBJECT_LEN 2 //vt, delegate
 #define OO_MODULE_LEN 4 //vt, delegate, dict, cmod

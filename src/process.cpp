@@ -890,6 +890,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case EX_NOT:
         handle_ex_not(arg);
         break;
+      case EX_HAS:
+        handle_ex_has(arg);
+        break;
       case JZ:
         // _JZ++;
         val = stack_pop();
@@ -1089,6 +1092,10 @@ void Process::reload_frame() {
   DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
 }
 
+//TODO:
+//  -either check vt == <Class> specifically;
+//  -or, after matching with delegates_to(), check if the method was overriden as well.
+//   before proceeding.
 void Process::handle_ex_set(number num_args) {
   oop recv = stack_top(1);
   DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
@@ -1133,6 +1140,28 @@ void Process::handle_ex_not(number num_args) {
     stack_pop(); //recv
 
     if ((dself == MM_FALSE) || (dself == MM_NULL)) {
+      stack_push(MM_TRUE);
+    } else {
+      stack_push(MM_FALSE);
+    }
+  } else {
+    handle_send(num_args);
+  }
+}
+
+void Process::handle_ex_has(number num_args) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+  oop vt = _mmobj->mm_object_vt(recv);
+
+  static oop Dictionary = _vm->get_prime("Dictionary");
+  if (_mmobj->delegates_to(vt, Dictionary)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, Dictionary);
+    stack_pop(); //:has
+    stack_pop(); //recv
+    oop key = stack_pop();
+
+    if (_mmobj->mm_dictionary_has_key(this, dself, key)) {
       stack_push(MM_TRUE);
     } else {
       stack_push(MM_FALSE);
