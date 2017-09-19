@@ -891,7 +891,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
       arg = decode_args(*_ip);
       _ip++;
       _tcode++;
-      handle_new_context();
+      stack_push(_mmobj->mm_context_new(this, _mp, _fp, _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true)));
       goto_ptr = *_tcode;
       goto *goto_ptr;
   LB_PUSH_THIS:
@@ -1250,6 +1250,13 @@ void Process::reload_frame() {
   _tcode = _mmobj->mm_function_get_thread_code(this, _cp, true);
 
   DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
+}
+
+void Process::handle_new_context() {
+  oop c_imod = stack_pop();
+  oop c_fp = stack_pop();
+  oop c_fun = stack_pop();
+  stack_push(_mmobj->mm_context_new(this, c_imod, c_fp, c_fun));
 }
 
 //TODO:

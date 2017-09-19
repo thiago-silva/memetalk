@@ -2318,9 +2318,11 @@ static int prim_function_get_env(Process* proc) {
 
 static int prim_context_new(Process* proc) {
   oop self = proc->dp();
-  oop cfun = proc->get_arg(0);
-  oop env = proc->get_arg(1);
-  oop imod = proc->get_arg(2);
+  oop cfun = proc->get_arg(0); //PUSH_MODULE
+  oop env = proc->get_arg(1); // PUSH_FP
+  oop imod = proc->get_arg(2); //CFUN
+
+  DBG("self: " << self << ", cfun: " << cfun << ", env: " << env << ", imod: " << imod << endl);
 
   proc->mmobj()->mm_context_set_cfun(proc, self, cfun);
   proc->mmobj()->mm_context_set_env(proc, self, env);

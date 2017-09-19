@@ -171,6 +171,7 @@ public:
     return *(oop*) obj == _cached_context;
   }
 
+  oop mm_context_new(Process* p, oop cfun, oop imod, oop env, bool should_assert = false);
   void mm_context_set_cfun(Process*, oop, oop, bool should_assert = false);
   void mm_context_set_env(Process*, oop, oop, bool should_assert = false);
   void mm_context_set_module(Process*, oop, oop, bool should_assert = false);
