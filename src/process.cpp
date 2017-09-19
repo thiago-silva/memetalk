@@ -887,9 +887,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case EX_SET:
         handle_ex_set(arg);
         break;
-      case EX_NOT:
-        handle_ex_not(arg);
-        break;
+      // case EX_NOT:
+      //   handle_ex_not(arg);
+      //   break;
       case EX_HAS:
         handle_ex_has(arg);
         break;
@@ -1104,16 +1104,14 @@ void Process::handle_ex_set(number num_args) {
   static oop List = _vm->get_prime("List");
   oop vt = _mmobj->mm_object_vt(recv);
 
-  if (_mmobj->delegates_to(vt, Dictionary)) {
-    oop dself = _mmobj->delegate_for_vt(this, recv, Dictionary);
+  if (vt == Dictionary) {
     stack_pop(); //:set
     stack_pop(); //recv
     oop val = stack_pop();
     oop key = stack_pop();
-    _mmobj->mm_dictionary_set(this, dself, key, val);
+    _mmobj->mm_dictionary_set(this, recv, key, val);
     stack_push(recv);
-  } else if (_mmobj->delegates_to(vt, List)) {
-    oop dself = _mmobj->delegate_for_vt(this, recv, List);
+  } else if (vt == List) {
     stack_pop(); //:set
     stack_pop(); //recv
     oop val = stack_pop();
@@ -1121,33 +1119,33 @@ void Process::handle_ex_set(number num_args) {
 
     number index = untag_small_int(index_oop);
 
-    _mmobj->mm_list_set(this, dself, index, val);
+    _mmobj->mm_list_set(this, recv, index, val);
     stack_push(recv);
   } else {
     handle_send(num_args);
   }
 }
 
-void Process::handle_ex_not(number num_args) {
-  oop recv = stack_top(1);
-  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
-  oop vt = _mmobj->mm_object_vt(recv);
+// void Process::handle_ex_not(number num_args) {
+//   oop recv = stack_top(1);
+//   DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+//   oop vt = _mmobj->mm_object_vt(recv);
 
-  static oop Object = _vm->get_prime("Object");
-  if (_mmobj->delegates_to(vt, Object)) {
-    oop dself = _mmobj->delegate_for_vt(this, recv, Object);
-    stack_pop(); //:!
-    stack_pop(); //recv
+//   static oop Object = _vm->get_prime("Object");
+//   if (_mmobj->delegates_to(vt, Object)) {
+//     oop dself = _mmobj->delegate_for_vt(this, recv, Object);
+//     stack_pop(); //:!
+//     stack_pop(); //recv
 
-    if ((dself == MM_FALSE) || (dself == MM_NULL)) {
-      stack_push(MM_TRUE);
-    } else {
-      stack_push(MM_FALSE);
-    }
-  } else {
-    handle_send(num_args);
-  }
-}
+//     if ((dself == MM_FALSE) || (dself == MM_NULL)) {
+//       stack_push(MM_TRUE);
+//     } else {
+//       stack_push(MM_FALSE);
+//     }
+//   } else {
+//     handle_send(num_args);
+//   }
+// }
 
 void Process::handle_ex_has(number num_args) {
   oop recv = stack_top(1);
@@ -1155,13 +1153,12 @@ void Process::handle_ex_has(number num_args) {
   oop vt = _mmobj->mm_object_vt(recv);
 
   static oop Dictionary = _vm->get_prime("Dictionary");
-  if (_mmobj->delegates_to(vt, Dictionary)) {
-    oop dself = _mmobj->delegate_for_vt(this, recv, Dictionary);
+  if (vt == Dictionary) {
     stack_pop(); //:has
     stack_pop(); //recv
     oop key = stack_pop();
 
-    if (_mmobj->mm_dictionary_has_key(this, dself, key)) {
+    if (_mmobj->mm_dictionary_has_key(this, recv, key)) {
       stack_push(MM_TRUE);
     } else {
       stack_push(MM_FALSE);
@@ -1187,20 +1184,19 @@ void Process::handle_ex_equal(number num_args) {
 
   //order of checks here is important!
 
-  if (_mmobj->delegates_to(vt, Dictionary) || //Dictionary & List have their own complex ==
-      _mmobj->delegates_to(vt, List)) {       //this `if` prevents the next one from
-    //miss++;                                   //matching if recv is a list or dict
-    handle_send(num_args);
-  //next we check the core classes we know of
-  } else  if (_mmobj->delegates_to(vt, String)) {
+  // if (_mmobj->delegates_to(vt, Dictionary) || //Dictionary & List have their own complex ==
+  //     _mmobj->delegates_to(vt, List)) {       //this `if` prevents the next one from
+  //   //miss++;                                   //matching if recv is a list or dict
+  //   handle_send(num_args);
+  // //next we check the core classes we know of
+  if (vt == String) {
     //hit++;
-    oop dself = _mmobj->delegate_for_vt(this, recv, String);
     stack_pop(); //:==
     stack_pop(); //recv
     oop other = stack_pop();
 
     if (_mmobj->mm_is_string(other)) {
-      std::string str_1 = _mmobj->mm_string_stl_str(this, dself);
+      std::string str_1 = _mmobj->mm_string_stl_str(this, recv);
       std::string str_2 = _mmobj->mm_string_stl_str(this, other);
       if (str_1 == str_2) {
         stack_push(MM_TRUE);
@@ -1223,35 +1219,34 @@ void Process::handle_ex_equal(number num_args) {
     } else {
       stack_push(MM_FALSE);
     }
-  } else  if (_mmobj->delegates_to(vt, LongNum)) {
+  } else  if (vt == LongNum) {
     //hit++;
-    oop dself = _mmobj->delegate_for_vt(this, recv, LongNum);
     stack_pop(); //:==
     stack_pop(); //recv
     oop other = stack_pop();
 
     if (is_numeric(this, other)) {
-      number n_self = extract_number(this, dself);
+      number n_self = extract_number(this, recv);
       number n_other = extract_number(this, other);
       stack_push(n_self == n_other ? MM_TRUE : MM_FALSE);
     } else {
       stack_push(MM_FALSE);
     }
   //now we check the most generic objects lacking a ==() method
-  } else if (_mmobj->delegates_to(vt, Object) ||  //recv is an instance of some subclass of Object
-      _mmobj->delegates_to(vt, Object_Behavior)) { //recv is a class whose vt delegates to Object_Behavior
-    //hit++;
+  // } else if (_mmobj->delegates_to(vt, Object) ||  //recv is an instance of some subclass of Object
+  //     _mmobj->delegates_to(vt, Object_Behavior)) { //recv is a class whose vt delegates to Object_Behavior
+  //   //hit++;
 
-    stack_pop(); //:==
-    stack_pop(); //recv
-    oop other = stack_pop();
-    stack_push(recv == other ? MM_TRUE : MM_FALSE);
-  // } else if (recv == MM_NULL) { //Argh: delegates_to(null, Object) is returning false.
-  //   hit++;
   //   stack_pop(); //:==
   //   stack_pop(); //recv
   //   oop other = stack_pop();
-  //   stack_push(other == MM_NULL);
+  //   stack_push(recv == other ? MM_TRUE : MM_FALSE);
+  // // } else if (recv == MM_NULL) { //Argh: delegates_to(null, Object) is returning false.
+  // //   hit++;
+  // //   stack_pop(); //:==
+  // //   stack_pop(); //recv
+  // //   oop other = stack_pop();
+  // //   stack_push(other == MM_NULL);
   } else {
     // std::cerr << "FALLBACK " << endl;
     // miss++;
@@ -1265,7 +1260,6 @@ void Process::handle_ex_sum(number num_args) {
   //std::cerr << "++!!!" << endl;
 
   static oop String = _vm->get_prime("String");
-  static oop Integer = _vm->get_prime("Integer");
   static oop List = _vm->get_prime("List");
   //static oop Dictionary = _vm->get_prime("Dictionary");
   oop recv = stack_top(1);
@@ -1296,17 +1290,16 @@ void Process::handle_ex_sum(number num_args) {
     if (_mmobj->mm_object_vt(other) != List) { //slower concatenation
       handle_send(num_args);
     } else { //fast concatenation?
-      oop dself = _mmobj->delegate_for_vt(this, recv, List);
       stack_pop(); //:+
       stack_pop(); //recv
       stack_pop(); //other
-      number this_size = _mmobj->mm_list_size(this, dself);
+      number this_size = _mmobj->mm_list_size(this, recv);
       oop res = _mmobj->mm_list_new();
       number other_size = _mmobj->mm_list_size(this, other);
 
       std::stringstream s;
       for (int i = 0; i < this_size; i++) {
-        oop next = _mmobj->mm_list_entry(this, dself, i);
+        oop next = _mmobj->mm_list_entry(this, recv, i);
         _mmobj->mm_list_append(this, res, next);
       }
 
@@ -1316,13 +1309,12 @@ void Process::handle_ex_sum(number num_args) {
       }
       stack_push(res);
     }
-  } else if (_mmobj->delegates_to(vt, String)) {
-    oop dself = _mmobj->delegate_for_vt(this, recv, String);
+  } else if (vt == String) {
     stack_pop(); //:+
     stack_pop(); //recv
     oop other = stack_pop();
 
-    std::string str_1 = _mmobj->mm_string_stl_str(this, dself);
+    std::string str_1 = _mmobj->mm_string_stl_str(this, recv);
     std::string str_2 = _mmobj->mm_string_stl_str(this, other);
 
     std::string ret(str_1 + str_2);
@@ -1342,32 +1334,29 @@ void Process::handle_ex_index(number num_args) {
   static oop List = _vm->get_prime("List");
   oop vt = _mmobj->mm_object_vt(recv);
 
-  if (_mmobj->delegates_to(vt, Dictionary)) {
-    oop dself = _mmobj->delegate_for_vt(this, recv, Dictionary);
+  if (vt == Dictionary) {
     stack_pop(); //:index
     stack_pop(); //recv
     oop key = stack_pop();
-    stack_push(_mmobj->mm_dictionary_get(this, dself, key));
-  } else if (_mmobj->delegates_to(vt, String)) {
-    oop dself = _mmobj->delegate_for_vt(this, recv, String);
+    stack_push(_mmobj->mm_dictionary_get(this, recv, key));
+  } else if (vt == String) {
     stack_pop(); //:index
     stack_pop(); //recv
     oop arg = stack_pop();
     number idx = untag_small_int(arg);
 
-    std::string str = _mmobj->mm_string_stl_str(this, dself);
+    std::string str = _mmobj->mm_string_stl_str(this, recv);
     char res[2];
     res[0] = str[idx];
     res[1] = '\0';
     stack_push(_mmobj->mm_string_new(res));
-  } else if (_mmobj->delegates_to(vt, List)) {
-    oop dself = _mmobj->delegate_for_vt(this, recv, List);
+  } else if (vt == List) {
     stack_pop(); //:index
     stack_pop(); //recv
     oop index_oop = stack_pop();
     number index = untag_small_int(index_oop);
 
-    oop val = _mmobj->mm_list_entry(this, dself, index);
+    oop val = _mmobj->mm_list_entry(this, recv, index);
     stack_push(val);
   } else {
     handle_send(num_args);
