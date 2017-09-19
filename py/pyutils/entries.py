@@ -1045,21 +1045,21 @@ class CompiledFunction(Entry):
 
     @emitter
     def emit_push_dict(self, _, length):
-        idx_length = self.create_and_register_number_literal(length)
-        idx_selector = self.create_and_register_symbol_literal("new")
-        idx_set = self.create_and_register_symbol_literal("set")
+        #idx_length = self.create_and_register_number_literal(length)
+        idx_new_from_stack = self.create_and_register_symbol_literal("new_from_stack")
+        #idx_set = self.create_and_register_symbol_literal("set")
         idx_klass = self.create_and_register_symbol_literal("Dictionary")
 
         self.bytecodes.append("push_module", 0)
         self.bytecodes.append('push_literal', idx_klass)
         self.bytecodes.append('send', 0)
 
-        self.bytecodes.append('push_literal', idx_selector)
-        self.bytecodes.append('send', 0)
+        self.bytecodes.append('push_literal', idx_new_from_stack)
+        self.bytecodes.append('send', length*2)
 
-        for i in range(0, length):
-            self.bytecodes.append('push_literal', idx_set)
-            self.bytecodes.append('send', 2)
+        # for i in range(0, length):
+        #     self.bytecodes.append('push_literal', idx_set)
+        #     self.bytecodes.append('send', 2)
 
     @emitter
     def emit_push_index(self, _):

@@ -363,6 +363,9 @@ meme central:memescript/compiler
   init new: fun() {
     <primitive "dictionary_new">
   }
+  init new_from_stack: fun(*args) {
+    <primitive "dictionary_new_from_stack">
+  }
   instance_method toString: fun() {
     <primitive "dictionary_to_string">
   }

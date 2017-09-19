@@ -1126,22 +1126,22 @@ instance_method emit_push_list: fun(ast, length) {
 }
 instance_method emit_push_dict: fun(ast, length) {
   var bpos = this.current_bytecode_pos();
-  var idx_length = this.create_and_register_number_literal(length);
-  var idx_selector = this.create_and_register_symbol_literal("new");
-  var idx_set = this.create_and_register_symbol_literal("set");
+  //var idx_length = this.create_and_register_number_literal(length);
+  var idx_new_from_stack = this.create_and_register_symbol_literal("new_from_stack");
+  //var idx_set = this.create_and_register_symbol_literal("set");
   var idx_klass = this.create_and_register_symbol_literal("Dictionary");
 
   @bytecodes.append(:push_module, 0);
   @bytecodes.append(:push_literal, idx_klass);
   @bytecodes.append(:send, 0);
 
-  @bytecodes.append(:push_literal, idx_selector);
-  @bytecodes.append(:send, 0);
+  @bytecodes.append(:push_literal, idx_new_from_stack);
+  @bytecodes.append(:send, length);
 
-  [0].times(length).each(fun(_,__) { //we need better loops :)
-    @bytecodes.append(:push_literal, idx_set);
-    @bytecodes.append(:send, 2);
-  });
+  // [0].times(length).each(fun(_,__) { //we need better loops :)
+  //   @bytecodes.append(:push_literal, idx_set);
+  //   @bytecodes.append(:send, 2);
+  // });
   this.update_line_mapping(bpos, ast);
 }
 instance_method emit_push_index: fun(ast) {
