@@ -802,6 +802,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
         DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
         stack_push(*(dp() + arg + 2));
         break;
+      case NEW_CONTEXT:
+        handle_new_context();
+        break;
       case PUSH_THIS:
         // _PUSH_THIS++;
         DBG("PUSH_THIS " << rp() << endl);
@@ -1094,6 +1097,13 @@ void Process::reload_frame() {
   _ip = _mmobj->mm_function_get_code(this, _cp, true);
 
   DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
+}
+
+void Process::handle_new_context() {
+  oop c_imod = stack_pop();
+  oop c_fp = stack_pop();
+  oop c_fun = stack_pop();
+  stack_push(_mmobj->mm_context_new(this, c_imod, c_fp, c_fun));
 }
 
 //TODO:

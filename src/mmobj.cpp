@@ -540,6 +540,19 @@ std::string MMObj::mm_string_stl_str(Process* p, oop str, bool should_assert) {
 //   return *(oop*) obj == _core_image->get_prime("Function");
 // }
 
+oop MMObj::mm_context_new(Process* p, oop imod, oop env, oop cfun, bool should_assert) {
+  oop ctx = (oop) GC_MALLOC(sizeof(word) * OO_CTX_LEN);
+
+  DBG("cfun: " << cfun << ", imod: " << imod << ", env: " << env << endl);
+
+  * (oop*) ctx = _core_image->get_prime("Context");
+  * (oop*) &ctx[1] = mm_object_new();
+  * (oop*) &ctx[2] = cfun;
+  * (oop*) &ctx[3] = imod;
+  * (oop*) &ctx[4] = env;
+  return ctx;
+}
+
 void MMObj::mm_context_set_cfun(Process* p, oop ctx, oop cfun, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(ctx) == _core_image->get_prime("Context")),
              "TypeError","Expected Context")
