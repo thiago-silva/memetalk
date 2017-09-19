@@ -1562,6 +1562,24 @@ static int prim_dictionary_new(Process* proc) {
   return 0;
 }
 
+static int prim_dictionary_new_from_stack(Process* proc) {
+  oop self =  proc->dp();
+  // oop self = proc->mmobj()->mm_list_new();
+  // number length = proc->mmobj(length_oo);
+
+  DBG("appending " << proc->current_args_number() << " values" << endl);
+  for (number i = 0; i < proc->current_args_number(); i+=2) {
+    oop key = proc->get_arg(i);
+    oop val = proc->get_arg(i+1);
+    DBG("set " << key << " " << val << endl);
+    proc->mmobj()->mm_dictionary_set(proc, self, key, val);
+  }
+
+  // DBG("done new_from_stack" << endl);
+  proc->stack_push(proc->rp());
+  return 0;
+}
+
 static int prim_dictionary_set(Process* proc) {
   SPECIALIZE_BYTECODE(EX_SET)
   oop self =  proc->dp();
@@ -2915,6 +2933,7 @@ void init_primitives(VM* vm) {
 
 
   vm->register_primitive("dictionary_new", prim_dictionary_new);
+  vm->register_primitive("dictionary_new_from_stack", prim_dictionary_new_from_stack);
   vm->register_primitive("dictionary_set", prim_dictionary_set);
   vm->register_primitive("dictionary_index", prim_dictionary_index);
   vm->register_primitive("dictionary_plus", prim_dictionary_plus);
