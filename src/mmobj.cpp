@@ -1235,8 +1235,8 @@ oop MMObj::delegate_for_vt(Process* p, oop obj, oop vt) {
     return obj;
   }
   oop delegate = mm_object_delegate(obj);
-  if (obj == MM_NULL || obj == delegate) {
-    p->raise("Exception", "Could not find vt for delegate");
+  if (obj == delegate) {
+    return obj; //p->raise("Exception", "Could not find vt for delegate");
   }
   return delegate_for_vt(p, delegate, vt);
 }

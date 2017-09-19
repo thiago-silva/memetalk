@@ -887,6 +887,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case EX_SET:
         handle_ex_set(arg);
         break;
+      case EX_NOT:
+        handle_ex_not(arg);
+        break;
       case JZ:
         // _JZ++;
         val = stack_pop();
@@ -1118,9 +1121,28 @@ void Process::handle_ex_set(number num_args) {
   }
 }
 
+void Process::handle_ex_not(number num_args) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+  oop vt = _mmobj->mm_object_vt(recv);
+
+  static oop Object = _vm->get_prime("Object");
+  if (_mmobj->delegates_to(vt, Object)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, Object);
+    stack_pop(); //:!
+    stack_pop(); //recv
+
+    if ((dself == MM_FALSE) || (dself == MM_NULL)) {
+      stack_push(MM_TRUE);
+    } else {
+      stack_push(MM_FALSE);
+    }
+  } else {
+    handle_send(num_args);
+  }
+}
+
 void Process::handle_ex_equal(number num_args) {
-  //hit: 94 141 miss: 1 052 816
-  //hit: 120 853 miss: 1 025 938
 
   oop recv = stack_top(1);
   DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
