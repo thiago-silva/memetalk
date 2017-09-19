@@ -884,6 +884,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case EX_INDEX:
         handle_ex_index(arg);
         break;
+      case EX_SET:
+        handle_ex_set(arg);
+        break;
       case JZ:
         // _JZ++;
         val = stack_pop();
@@ -1081,6 +1084,38 @@ void Process::reload_frame() {
   _ip = _mmobj->mm_function_get_code(this, _cp, true);
 
   DBG(" reloading frame back to " << _bp << ", IP: " << _ip << endl);
+}
+
+void Process::handle_ex_set(number num_args) {
+  oop recv = stack_top(1);
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+
+  static oop Dictionary = _vm->get_prime("Dictionary");
+  static oop List = _vm->get_prime("List");
+  oop vt = _mmobj->mm_object_vt(recv);
+
+  if (_mmobj->delegates_to(vt, Dictionary)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, Dictionary);
+    stack_pop(); //:set
+    stack_pop(); //recv
+    oop val = stack_pop();
+    oop key = stack_pop();
+    _mmobj->mm_dictionary_set(this, dself, key, val);
+    stack_push(recv);
+  } else if (_mmobj->delegates_to(vt, List)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, List);
+    stack_pop(); //:set
+    stack_pop(); //recv
+    oop val = stack_pop();
+    oop index_oop = stack_pop();
+
+    number index = untag_small_int(index_oop);
+
+    _mmobj->mm_list_set(this, dself, index, val);
+    stack_push(recv);
+  } else {
+    handle_send(num_args);
+  }
 }
 
 void Process::handle_ex_equal(number num_args) {
