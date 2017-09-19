@@ -37,6 +37,7 @@ typedef int (*prim_function_t) (Process*);
 #define PUSH_LOCAL 2
 #define PUSH_LITERAL 3
 #define PUSH_FIELD 4
+#define NEW_CONTEXT 5
 
 #define PUSH_THIS 6
 #define PUSH_MODULE 7
@@ -74,6 +75,7 @@ typedef int (*prim_function_t) (Process*);
 #define OO_LIST_LEN 4   //vt, delegate, size, elements frame
 #define OO_DICT_LEN 4   //vt, delegate, size, frame
 #define OO_FUN_LEN 4    //vt, delegate, cfun, module
+#define OO_CTX_LEN 5    //vt, delegate, cfun, module, env
 #define OO_CLASS_BEHAVIOR_LEN 4
 #define OO_CLASS_LEN 5
 #define OO_CFUN_LEN 28
