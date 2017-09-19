@@ -1235,7 +1235,12 @@ void Process::handle_ex_equal(number num_args) {
 void Process::handle_ex_sum(number num_args) {
   //std::cerr << "++!!!" << endl;
 
+  static oop String = _vm->get_prime("String");
+  static oop Integer = _vm->get_prime("Integer");
+  static oop List = _vm->get_prime("List");
+  //static oop Dictionary = _vm->get_prime("Dictionary");
   oop recv = stack_top(1);
+  oop vt = _mmobj->mm_object_vt(recv);
   DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
   // call_counter_t counter = ex_call_counter[_ip-1];
   // if (counter.vt == _mmobj->mm_object_vt(recv)) {
@@ -1257,6 +1262,43 @@ void Process::handle_ex_sum(number num_args) {
     } else {
       stack_push(tag_small_int(n_res));//_mmobj->mm_integer_or_longnum_new(this, n_res));
     }
+  } else if (vt == List) {
+    oop other = stack_top(2);
+    if (_mmobj->mm_object_vt(other) != List) { //slower concatenation
+      handle_send(num_args);
+    } else { //fast concatenation?
+      oop dself = _mmobj->delegate_for_vt(this, recv, List);
+      stack_pop(); //:+
+      stack_pop(); //recv
+      stack_pop(); //other
+      number this_size = _mmobj->mm_list_size(this, dself);
+      oop res = _mmobj->mm_list_new();
+      number other_size = _mmobj->mm_list_size(this, other);
+
+      std::stringstream s;
+      for (int i = 0; i < this_size; i++) {
+        oop next = _mmobj->mm_list_entry(this, dself, i);
+        _mmobj->mm_list_append(this, res, next);
+      }
+
+      for (int i = 0; i < other_size; i++) {
+        oop next = _mmobj->mm_list_entry(this, other, i);
+        _mmobj->mm_list_append(this, res, next);
+      }
+      stack_push(res);
+    }
+  } else if (_mmobj->delegates_to(vt, String)) {
+    oop dself = _mmobj->delegate_for_vt(this, recv, String);
+    stack_pop(); //:+
+    stack_pop(); //recv
+    oop other = stack_pop();
+
+    std::string str_1 = _mmobj->mm_string_stl_str(this, dself);
+    std::string str_2 = _mmobj->mm_string_stl_str(this, other);
+
+    std::string ret(str_1 + str_2);
+    oop oop_str = _mmobj->mm_string_new(ret);
+    stack_push(oop_str);
   } else {
     handle_send(num_args);
   }
