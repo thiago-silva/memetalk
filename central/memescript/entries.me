@@ -1091,10 +1091,7 @@ instance_method emit_push_closure: fun(ast, fn) {
   // var idx_klass = this.create_and_register_symbol_literal("Context");
   // var idx_new = this.create_and_register_symbol_literal("new");
 
-  @bytecodes.append(:push_literal, idx_cfun);
-  @bytecodes.append(:push_fp, 0);
-  @bytecodes.append(:push_module, 0);
-  @bytecodes.append(:new_context, 0);
+  @bytecodes.append(:new_context, idx_cfun);
 
   // @bytecodes.append(:push_module, 0);
   // @bytecodes.append(:push_literal, idx_klass);

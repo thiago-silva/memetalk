@@ -184,7 +184,7 @@ private:
   void restore_fp(oop, number, number);
 
   void dispatch(int, int);
-  void handle_new_context();
+  //void handle_new_context(number);
   void handle_send(number);
   void handle_super_send(number num_arg);
   void handle_super_ctor_send(number);

@@ -983,10 +983,7 @@ class CompiledFunction(Entry):
         #idx_new = self.create_and_register_symbol_literal("new")
 
 
-        self.bytecodes.append('push_literal', idx_cfun)
-        self.bytecodes.append("push_fp", 0)
-        self.bytecodes.append("push_module", 0)
-        self.bytecodes.append("new_context", 0)
+        self.bytecodes.append("new_context", idx_cfun)
 
         # self.bytecodes.append('push_module', 0)
         # self.bytecodes.append('push_literal', idx_klass)
