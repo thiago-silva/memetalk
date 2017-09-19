@@ -1358,3 +1358,11 @@ float MMObj::mm_float_get(Process* p, oop n, bool should_assert) {
 //              "TypeError","Expected Exception")
 //     return ((oop*)ex)[3];
 // }
+
+oop MMObj::mm_cclass_or_cmodule_name(Process* p, oop obj, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(obj) == _core_image->get_prime("CompiledClass") ||
+                mm_object_vt(obj) == _core_image->get_prime("CompiledModule")),
+                "TypeError","Expected CompiledClass or CompiledModule")
+
+    return ((oop*)obj)[2];
+}
