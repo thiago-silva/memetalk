@@ -972,13 +972,27 @@ class CompiledFunction(Entry):
 
     @emitter
     def emit_push_closure(self, _, fn):
+        # idx_selector = self.create_and_register_symbol_literal("new_context")
+        # self.bytecodes.append("push_fp", 0)
+        # self.bytecodes.append("push_module", 0)
+        # self.bytecodes.append('push_literal', idx_cfun)
+        # self.bytecodes.append('push_literal', idx_selector)
+        # self.bytecodes.append('send', 2)
         idx_cfun = self.create_and_register_closure_literal(fn)
-        idx_selector = self.create_and_register_symbol_literal("new_context")
+        idx_klass = self.create_and_register_symbol_literal("Context")
+        idx_new = self.create_and_register_symbol_literal("new")
+
+
+        self.bytecodes.append('push_literal', idx_cfun)
         self.bytecodes.append("push_fp", 0)
         self.bytecodes.append("push_module", 0)
-        self.bytecodes.append('push_literal', idx_cfun)
-        self.bytecodes.append('push_literal', idx_selector)
-        self.bytecodes.append('send', 2)
+
+        self.bytecodes.append('push_module', 0)
+        self.bytecodes.append('push_literal', idx_klass)
+        self.bytecodes.append('send', 0)
+
+        self.bytecodes.append('push_literal', idx_new)
+        self.bytecodes.append('send', 3)
 
 
     @emitter
