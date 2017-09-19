@@ -1195,7 +1195,7 @@ number MMObj::mm_behavior_size(Process* p, oop behavior, bool should_assert) {
 }
 
 bool MMObj::delegates_to(oop sub, oop super) {
-  DBG("delegates_to? " << sub_type << " " << super_type << endl);
+  DBG("delegates_to? " << sub << " " << super << endl);
   while (true) {
     if (sub == MM_NULL) {
       return false;
