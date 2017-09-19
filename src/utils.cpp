@@ -205,3 +205,7 @@ number extract_number(Process* proc, oop o) {
   }
   return 0; // unreachable
 }
+
+bool is_numeric(Process* proc, oop o) {
+  return is_small_int(o) || proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum");
+}

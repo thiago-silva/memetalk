@@ -195,6 +195,7 @@ private:
   void handle_ex_sum(number num_args);
   void handle_ex_lt(number num_args);
   void handle_ex_index(number num_args);
+  // void handle_ex_set(number num_args);
 
   bool exception_has_handler(oop e, oop cp, bytecode* ip, oop bp);
 

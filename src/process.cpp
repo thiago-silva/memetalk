@@ -1094,10 +1094,20 @@ void Process::handle_ex_equal(number num_args) {
   static oop Object = _vm->get_prime("Object");
   static oop Object_Behavior = _vm->get_prime("Object_Behavior");
   static oop String = _vm->get_prime("String");
-  // static oop List = _vm->get_prime("List");
-  //static oop Dictionary = _vm->get_prime("Dictionary");
+  static oop Integer = _vm->get_prime("Integer");
+  static oop LongNum = _vm->get_prime("LongNum");
+  static oop List = _vm->get_prime("List");
+  static oop Dictionary = _vm->get_prime("Dictionary");
 
-  if (_mmobj->delegates_to(vt, String)) {
+  //order of checks here is important!
+
+  if (_mmobj->delegates_to(vt, Dictionary) || //Dictionary & List have their own complex ==
+      _mmobj->delegates_to(vt, List)) {       //this `if` prevents the next one from
+    //miss++;                                   //matching if recv is a list or dict
+    handle_send(num_args);
+  //next we check the core classes we know of
+  } else  if (_mmobj->delegates_to(vt, String)) {
+    //hit++;
     oop dself = _mmobj->delegate_for_vt(this, recv, String);
     stack_pop(); //:==
     stack_pop(); //recv
@@ -1114,15 +1124,52 @@ void Process::handle_ex_equal(number num_args) {
     } else {
       stack_push(MM_FALSE);
     }
-  } else if (_mmobj->delegates_to(recv, Object) ||  //recv is an instance of some subclass of Object
-      _mmobj->delegates_to(recv, Object_Behavior)) { //recv is a class whose vt delegates to Object_Behavior
-    //std::cerr << " HA" << std::endl;
+  } else if (is_small_int(recv)) {
+    //hit++;
+    stack_pop(); //:==
+    stack_pop(); //recv
+    oop other = stack_pop();
+
+    if (is_numeric(this, other)) {
+      number n_self = untag_small_int(recv);
+      number n_other = extract_number(this, other);
+      stack_push(n_self == n_other ? MM_TRUE : MM_FALSE);
+    } else {
+      stack_push(MM_FALSE);
+    }
+  } else  if (_mmobj->delegates_to(vt, LongNum)) {
+    //hit++;
+    oop dself = _mmobj->delegate_for_vt(this, recv, LongNum);
+    stack_pop(); //:==
+    stack_pop(); //recv
+    oop other = stack_pop();
+
+    if (is_numeric(this, other)) {
+      number n_self = extract_number(this, dself);
+      number n_other = extract_number(this, other);
+      stack_push(n_self == n_other ? MM_TRUE : MM_FALSE);
+    } else {
+      stack_push(MM_FALSE);
+    }
+  //now we check the most generic objects lacking a ==() method
+  } else if (_mmobj->delegates_to(vt, Object) ||  //recv is an instance of some subclass of Object
+      _mmobj->delegates_to(vt, Object_Behavior)) { //recv is a class whose vt delegates to Object_Behavior
+    //hit++;
+
     stack_pop(); //:==
     stack_pop(); //recv
     oop other = stack_pop();
     stack_push(recv == other ? MM_TRUE : MM_FALSE);
+  // } else if (recv == MM_NULL) { //Argh: delegates_to(null, Object) is returning false.
+  //   hit++;
+  //   stack_pop(); //:==
+  //   stack_pop(); //recv
+  //   oop other = stack_pop();
+  //   stack_push(other == MM_NULL);
   } else {
     // std::cerr << "FALLBACK " << endl;
+    // miss++;
+    // std::cerr << TO_C_STR(_mmobj->mm_class_name(this, vt)) << endl;
     handle_send(num_args);
   }
 }
