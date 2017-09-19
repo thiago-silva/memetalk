@@ -1933,7 +1933,7 @@ static int prim_equal(Process* proc) {
 // }
 
 static int prim_object_not(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_NOT)
+  //SPECIALIZE_BYTECODE(EX_NOT)
 
   oop self =  proc->dp();
   if ((self == MM_FALSE) || (self == MM_NULL)) {
