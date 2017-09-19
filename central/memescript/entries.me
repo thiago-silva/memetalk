@@ -1323,7 +1323,7 @@ instance_method label: fun() {
   return "@core_module";
 }
 instance_method create_getter: fun(name, idx, vmem) {
-  var cfun = CompiledFunction.new(@cmod, @cmod, "get_" + name, [],
+  var cfun = CompiledFunction.new(@cmod, @cmod, name, [],
       false, null, true, null, null);
   cfun.set_getter(idx);
   cfun.fill(vmem);

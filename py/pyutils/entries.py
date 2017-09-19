@@ -1226,7 +1226,7 @@ class CoreModule(Entry):
 
 
     def create_getter(self, name, idx, vmem):
-        cfun = CompiledFunction(self.cmod, self.cmod, 'get_' + name, [])
+        cfun = CompiledFunction(self.cmod, self.cmod, name, [])
         cfun.set_getter(idx)
         cfun.fill(vmem)
         return Function(self, cfun)
