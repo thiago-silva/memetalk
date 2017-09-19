@@ -711,9 +711,6 @@ static int prim_string_is_upper(Process* proc) {
 
 /// numeric
 
-static inline bool is_numeric(Process* proc, oop o) {
-  return is_small_int(o) || proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum");
-}
 
 
 static int prim_numeric_sum(Process* proc) {
@@ -850,6 +847,7 @@ static int prim_numeric_lteq(Process* proc) {
 
 
 static int prim_numeric_eq(Process* proc) {
+  SPECIALIZE_BYTECODE(EX_EQUAL)
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
