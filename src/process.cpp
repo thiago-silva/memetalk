@@ -348,7 +348,7 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
-  _sp = fp - ss - argc;
+  _sp -= 2 + ss + argc; // 2: rp, dp
 
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
