@@ -1495,8 +1495,7 @@ void Process::handle_send(number num_args) {
   long header = _mmobj->mm_function_get_header(this, fun);
   bool vararg = CFUN_HAS_VAR_ARG(header);
   number arity = CFUN_NUM_PARAMS(header);
-  // std::cerr << FULL_NAME(fun) << " vararg: " << vararg << " arity: " << arity << " args: " << num_args << endl;
-  if (!vararg && num_args != arity) {
+  if ((!vararg && num_args != arity) or (vararg && num_args < arity)) {
     std::stringstream s;
     s << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun)) << ": expects " <<  arity << " but got " << num_args;
     DBG(s.str() << endl);

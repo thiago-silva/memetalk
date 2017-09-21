@@ -121,7 +121,7 @@ fparams = token("(") token(")") -> []
         | token("(")  id:x (token(",") id)*:xs token(")") -> [x]+xs
         | token("(")  id:x (token(",") id)*:xs pvar:y token(")") -> [x]+xs+[y]
 
-pvar = token(",") token("*") id:x -> ['var-arg', x]
+pvar = token(",") token("*") -> ['var-arg']
 
 idlist = id:x (token(",") id)*:xs -> [x]+xs
           | -> []

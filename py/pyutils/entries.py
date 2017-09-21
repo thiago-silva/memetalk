@@ -440,7 +440,10 @@ class CompiledFunction(Entry):
         self.start_line = head.start_line
 
     def set_params(self, params):
-        self.params = params
+        if len(params) > 0 and params[-1] == "*":
+            self.params = params[:-1]
+        else:
+            self.params = params
         self.var_declarations.set_params(self, params)
 
     def set_vararg(self):
