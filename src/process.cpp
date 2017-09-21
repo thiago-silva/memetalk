@@ -33,7 +33,8 @@
                                       << _log_registers.yellow << "         BP: " << _bp << endl \
                                       << _log_registers.yellow << "         IP: " << _ip << endl \
                                       << _log_registers.yellow << "         MP: " << _mp << endl \
-                                      << _log_registers.yellow << "         CP: " << _cp << endl \
+                                      << _log_registers.yellow << "         CP: " << _cp << "     -- [" << (_cp ? CTXNAME(_cp) : "") << "]" << endl \
+                                      << _log_registers.yellow << "         SS: " << _ss << endl \
                                       << _log_registers.yellow << "         ARGC: " << _argc << endl \
                                       << _log_registers.normal; }
 
@@ -189,33 +190,46 @@ std::string Process::dump_stack_top(bool enabled) {
 
   word* sp = _sp;
   oop bp = _bp;
-  oop cur_fp = _fp;
+  oop fp = _fp;
+  oop new_fp = _fp;
+  number ss = _ss;
 
   while (sp >= _stack) {
     if (bp == sp) {
+      bp = *(oop*)sp;
       s <<  sp << " [BP] " << *(oop*)sp << "\n";
-      number argc = *(number*)(sp-2);
+      number argc = *(number*)(sp-1);
       s << (sp-1) << " [ARGC] " << argc << "\n";
-      s << (sp-2) << " [IP] " << *(bytecode*)(sp-2) << "\n";
-      s << (sp-3) << " [CP] " << *(oop*)(sp-3);
-      if (*(oop*)(sp-3)) {
-        s << " - " << CTXNAME(*(oop*)(sp-3)) << "()\n";
+      s << (sp-2) << " [SS] " << *(number*)(sp-2) << "\n";
+      s << (sp-3) << " [IP] " << *(bytecode*)(sp-3) << "\n";
+      s << (sp-4) << " [CP] " << *(oop*)(sp-4);
+      if (*(oop*)(sp-4)) {
+        s << "    - [" << CTXNAME(*(oop*)(sp-4)) << "()]\n";
       } else {
         s << "\n";
       }
-      oop fp = sp-4;
-      s << (sp-4) << " [FP] " << *(oop*)(sp-4) << "\n";
-      sp -= 5;
-      for(int i = 0; sp != cur_fp; i++) {
-        s << sp << "[LOCAL " << i << "] " << *(oop*)sp << "\n";
+      new_fp = *(oop*)(sp-5);
+      s << (sp-5) << " [FP] " << *(oop*)(sp-5) << "\n";
+      s << (sp-6) << " [DP] " << *(oop*)(sp-6) << "\n";
+      s << (sp-7) << " [RP] " << *(oop*)(sp-7) << "\n";
+      sp -= 8;
+      for(int i = 0; i < ss; i++) {
+        if (sp == fp) {
+          s << sp << " [LOCAL " << i << "] " << *(oop*)sp << "    --- [FP]\n";
+          fp = new_fp;
+        } else {
+          s << sp << " [LOCAL " << i << "] " << *(oop*)sp << "\n";
+        }
         sp--;
       }
-      cur_fp = fp;
-      s << sp << " [DP] " << *(oop*)(sp) << "\n";
-      s << (sp-1) << " [RP] " << *(oop*)(sp-1) << "\n";
-      sp = sp-2;
+      ss = *(number*)(sp-2);
     } else {
-      s << "[DATA] " << sp << " " << *(oop*)sp << "\n";
+      if (sp == fp) {
+        s << "[DATA] " << sp << " " << *(oop*)sp << "       -- [FP]\n";
+        fp = new_fp;
+      } else {
+        s << "[DATA] " << sp << " " << *(oop*)sp << "\n";
+      }
       sp--;
     }
   }
@@ -252,11 +266,11 @@ void Process::init() {
 // };
 
 oop Process::set_rp(oop rp) {
-  return * (oop*) (_fp + _ss) = rp;
+  return * (oop*) (_fp + 1) = rp;
 }
 
 oop Process::set_dp(oop dp) {
-  return * (oop*) (_fp + _ss + 1) = dp;
+  return * (oop*) (_fp + 2) = dp;
 }
 
 // oop Process::rp() {
@@ -291,6 +305,10 @@ void Process::push_frame(oop recv, oop drecv, number num_args, number local_stor
   //---- if you change this, change pop_frame() and the frame accessor methods
   //---- as well!!
 
+  for (int i = 0; i < local_storage_size; i++) {
+    stack_push(MM_NULL);
+  }
+
   oop fp = _fp;
   _fp = _sp;
 
@@ -298,20 +316,17 @@ void Process::push_frame(oop recv, oop drecv, number num_args, number local_stor
 
   stack_push(recv);
   stack_push(drecv);
-
-  for (int i = 0; i < local_storage_size; i++) {
-    stack_push(MM_NULL);
-  }
-
   stack_push(fp);
   stack_push(_cp);
   stack_push(_ip);
+  stack_push(_ss);
   stack_push(_argc);
   stack_push(_bp);
 
   _bp = _sp;
 
   _argc = num_args;
+  _ss = local_storage_size;
 
   LOG_ENTER_FRAME();
 }
@@ -322,18 +337,18 @@ void Process::pop_frame() {
 
   oop fp = _fp;
   number argc = _argc;
+  number ss = _ss;
 
-  _sp = _bp; //restore sp, ignoring frame data
+  _sp = _bp; //kill frame data
 
   _bp = stack_pop();
   _argc = (number) stack_pop();
+  _ss = (number) stack_pop();
   _ip = (bytecode*) stack_pop();
   _cp = stack_pop();
   _fp = stack_pop();
 
-
-  DBG("restoring _sp to: " << _sp - (fp - argc) << " bp: " << _bp << endl);
-  _sp = _sp - (fp - (word*) argc);
+  _sp = fp - ss - argc;
 
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
@@ -386,35 +401,38 @@ void Process::basic_new_and_load(oop klass) {
   set_dp(dp);
 }
 
-void Process::setup_fp(number num_args, number local_storage_size) {
+void Process::setup_fp(number num_params, number local_storage_size) {
   //TODO? this could be a calloc followed by memcpy
-  oop env = (oop) GC_MALLOC(sizeof(oop) * (local_storage_size + num_args + 2)); //+2: space for rp, dp
-  DBG("allocated fp: " << env << " - " << " num_args: " << num_args
-      << " local_storage_size: " << local_storage_size << endl);
+  oop env = (oop) GC_MALLOC(sizeof(oop) * (local_storage_size + num_params + 2)); //+2: space for rp, dp
+  DBG("allocated env: " << env << " - " << " local_storage: " << local_storage_size
+      << " num_params (top level): " << num_params << " total: " << (local_storage_size + num_params + 2) << endl);
 
   oop it = env;
-  oop base = _fp - num_args - 1;
-  for (int i = 0; i < num_args; i++, it++) {
-    DBG("new_fp[" << i << " - " << (oop*)base << "]  " << (oop*)base[i] << endl);
-    *(oop*)it = (oop*)base[i];
-  }
-  oop fp = it + num_args - 1; // points to topmost arg
-
-  base = base + num_args;
-  for (int i = 0; i < local_storage_size + 2; i++, it++) { //+2: rp, dp
-    DBG("new_fp[" << i << " - " << (oop*)base << "]  " << (oop*)base[i] << endl);
-    *(oop*)it = (oop*)base[i];
+  oop base = _fp - _ss - num_params + 1;
+  for (int i = 0; i < num_params; i++, it++) { //copy arguments
+    //DBG("new_fp[" << i << " - " << (oop*)base << "]  " << (oop*)base[i] << endl);
+    DBG("env " << it << " = " << (oop*)base[i] << endl);
+    *(oop*)it = ((oop*)base)[i];
   }
 
-  _fp = fp;
+  //copy rp/dp
+  it += local_storage_size;
+  *(oop*)it = rp();
+  DBG("env rp: " << it << " = " << rp() << endl);
+  *(oop*)(it+1) = dp();
+  DBG("env dp: " << (it+1) << " = " << dp() << endl);
+  //maybe FIXME?: Might risk a GC collect between env-fp
+  //in the window between now and when we assign _env to the next closure.
+  _fp = env + num_params + local_storage_size - 1;
+  DBG("env new _fp: " << _fp << endl);
 }
 
 void Process::restore_fp(oop fp, number params, number env_offset) {
-  DBG(fp << " " << params << " " << env_offset << endl);
+  DBG("fp: " << fp << " num_params: " << params << " env_offset: " << env_offset << endl);
 
   for (int i = 0; i < params; i++) {
-    DBG("fp[" << env_offset + i << "] = " << * (oop*)(_fp + i) << endl);
-    ((oop*)fp)[env_offset + i] = * (oop*)(_fp + i);
+    DBG("fp[" << (env_offset + i) << "] (" << (fp - (env_offset + i)) << ") = " << get_arg(i) << endl); //* (oop*)(_fp + i) << endl);
+    *(oop*)(fp - (env_offset + i)) = get_arg(i);
   }
   _fp = fp;
 }
@@ -443,7 +461,7 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   push_frame(recv, drecv, arity, local_storage_size);
 
 
-  DBG("storage: " << local_storage << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl);
+  DBG("storage: " << local_storage_size << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl);
 
   // DBG("line mapping: " << " " << _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(fun)) << endl);
   // oop mapping = _mmobj->mm_function_get_line_mapping(fun);
@@ -786,8 +804,8 @@ void Process::fetch_cycle(void* stop_at_bp) {
     switch(opcode) {
       case PUSH_LOCAL:
         // _PUSH_LOCAL++;
-        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
-        stack_push(*(_fp + arg));
+        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp - arg) << endl);
+        stack_push(*(_fp - arg));
         break;
       case PUSH_LITERAL:
         // _PUSH_LITERAL++;
@@ -805,7 +823,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
         stack_push(*(dp() + arg + 2));
         break;
       case NEW_CONTEXT:
-        stack_push(_mmobj->mm_context_new(this, _mp, _fp - _argc, _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true)));
+        stack_push(_mmobj->mm_context_new(this, _mp, _fp, _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true)));
         break;
       case PUSH_THIS:
         // _PUSH_THIS++;
@@ -852,9 +870,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case POP_LOCAL:
         // _POP_LOCAL++;
         val = stack_pop();
-        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
-            << (oop) *(_fp + arg) << " = " << val << endl);
-        *(_fp + arg) = (word) val;
+        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp - arg) << " -- "
+            << (oop) *(_fp - arg) << " = " << val << endl);
+        *(_fp - arg) = (word) val;
         break;
       case POP_FIELD:
         // _POP_FIELD++;

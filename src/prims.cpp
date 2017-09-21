@@ -717,6 +717,7 @@ static int prim_string_is_upper(Process* proc) {
 static int prim_numeric_sum(Process* proc) {
   SPECIALIZE_BYTECODE(EX_SUM);
   oop self =  proc->dp();
+  DBG("summing " << self << endl);
   oop other = proc->get_arg(0);
 
   number n_self = extract_number(proc, self);

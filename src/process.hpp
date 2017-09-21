@@ -59,15 +59,15 @@ public:
   inline oop bp() { return _bp; }
   inline bytecode* ip() { return _ip; }
 
-  inline oop rp() { return * (oop*) (_fp + _ss ); }
-  inline oop dp() { return * (oop*) (_fp + _ss + 1); }
+  inline oop rp() { return * (oop*) (_fp + 1 ); }
+  inline oop dp() { return * (oop*) (_fp + 2); }
 
   oop rp_vt();
 
   oop set_rp(oop);
   oop set_dp(oop);
 
-  inline oop get_arg(number idx) { std::cerr << _cp << " " << _fp << " GET ARG " << idx << " -- " << (* ((oop*)_fp + idx)) << std::endl; return * ((oop*)_fp + idx); }
+  inline oop get_arg(number idx) { return * ((oop*)_fp - (idx+_ss)); }
   inline number argc() { return _argc; }
 
   oop cp_from_base(oop bp);
@@ -221,6 +221,7 @@ private:
   bool _unwinding_exception;
   ProcessControl* _control;
   std::pair<Process*, oop> _dbg_handler;
+
 
   //this order is important: it reflects the order of registers
   //in the stack, and is used by bp_at()

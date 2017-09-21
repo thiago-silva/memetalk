@@ -178,6 +178,6 @@ cfunliteral :fnobj =  !(self.input.head()[0]):ast
                       [expr(fnobj)*] -> fnobj
 
 args :fnobj =  ['args' []] -> 0
-            |  ['args' arglist(fnobj):arity] -> arity
+            |  ['args' :a !(list(reversed(a))):b apply('arglist' fnobj b):arity] -> arity
 
 arglist :fnobj = [expr(fnobj)+]:x -> len(x)

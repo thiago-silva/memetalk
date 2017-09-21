@@ -321,7 +321,9 @@ class VariableStorage(object):
         self.parent_storage = storage
         if storage:
             self.variables = storage.variables
+            self.top_level_params = storage.top_level_params
         else:
+            self.top_level_params = []
             self.variables = OrderedDict()
         self.variables[cfun] = []
 
@@ -340,11 +342,14 @@ class VariableStorage(object):
 
     def is_visible(self, cfun, name):
         idx = self.variables.keys().index(cfun)
-        return name in self._flat(self.variables.values()[:idx+1])
+        return name in self._flat(self.variables.values()[:idx+1]) or name in self.top_level_params
 
-    def add_names(self, cfun, names):
-        for name in names:
-            self.add(cfun, name)
+    def set_params(self, cfun, names):
+        if cfun.is_top_level:
+            self.top_level_params = names
+        else:
+            for name in names:
+                self.add(cfun, name)
 
     def add(self, cfun, name):
         if name in self.variables[cfun]:
@@ -356,7 +361,9 @@ class VariableStorage(object):
         return self._index(cfun, name)
 
     def _index(self, cfun, name):
-        if name not in self.variables[cfun]:
+        if name in self.top_level_params:
+            return lambda: self.total() + self.top_level_params.index(name)
+        elif name not in self.variables[cfun]:
             if self.parent_storage is None:
                 raise Exception("Undeclared " + name)
             else:
@@ -410,7 +417,7 @@ class CompiledFunction(Entry):
         else:
             self.has_env = False
             self.var_declarations = VariableStorage(self)
-        self.var_declarations.add_names(self, params)
+        self.var_declarations.set_params(self, params)
 
         self.literal_frame = []
         self.bytecodes = opcode.Bytecodes()
@@ -434,7 +441,7 @@ class CompiledFunction(Entry):
 
     def set_params(self, params):
         self.params = params
-        self.var_declarations.add_names(self, params)
+        self.var_declarations.set_params(self, params)
 
     def set_vararg(self):
         self.var_arg = True
@@ -577,9 +584,9 @@ class CompiledFunction(Entry):
         flags = (int(self.is_top_level) << 4) + (int(self.var_arg) << 3) + (int(self.has_env) << 2) + \
                 (int(self.is_prim) << 1) + int(self.is_ctor)
 
-        print self.name
-        import pdb;pdb.set_trace()
-        header = (self.var_declarations.env_offset(self) << 15) + (len(self.params) << 10) + ((self.var_declarations.total()-len(self.params)) << 5) + flags
+        # print self.name, "offset: ", self.var_declarations.env_offset(self), " local storage: ", self.var_declarations.total()
+        # import pdb;pdb.set_trace()
+        header = (self.var_declarations.env_offset(self) << 15) + (len(self.params) << 10) + (self.var_declarations.total() << 5) + flags
         return header
 
     def fill(self, vmem):
