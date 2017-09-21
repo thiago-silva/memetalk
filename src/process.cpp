@@ -200,6 +200,7 @@ std::string Process::dump_stack_top(bool enabled) {
       s <<  sp << " [BP] " << *(oop*)sp << "\n";
       number argc = *(number*)(sp-1);
       s << (sp-1) << " [ARGC] " << argc << "\n";
+      number new_ss = *(number*)(sp-2);
       s << (sp-2) << " [SS] " << *(number*)(sp-2) << "\n";
       s << (sp-3) << " [IP] " << *(bytecode*)(sp-3) << "\n";
       s << (sp-4) << " [CP] " << *(oop*)(sp-4);
@@ -222,7 +223,7 @@ std::string Process::dump_stack_top(bool enabled) {
         }
         sp--;
       }
-      ss = *(number*)(sp-2);
+      ss = new_ss;
     } else {
       if (sp == fp) {
         s << "[DATA] " << sp << " " << *(oop*)sp << "       -- [FP]\n";
@@ -327,7 +328,6 @@ void Process::push_frame(oop recv, oop drecv, number num_args, number local_stor
 
   _argc = num_args;
   _ss = local_storage_size;
-
   LOG_ENTER_FRAME();
 }
 
