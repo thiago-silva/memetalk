@@ -563,7 +563,7 @@ oop Process::send_1(oop recv, oop selector, oop arg, int* exc) {
 
 oop Process::send(oop recv, oop selector, oop args, int* exc) {
   number num_args = _mmobj->mm_list_size(this, args);
-  for (int i = 0; i < num_args; i++) {
+  for (int i = num_args-1; i >= 0; i--) {
     stack_push(_mmobj->mm_list_entry(this, args, i));
   }
   return do_send(recv, selector, num_args, exc);
@@ -714,7 +714,7 @@ oop Process::call(oop fun, oop args, int* exc) {
     return ex;
   }
 
-  for (int i = 0; i < num_args; i++) {
+  for (int i = num_args-1; i >= 0; i--) {
     stack_push(_mmobj->mm_list_entry(this, args, i));
   }
   return do_call(fun, exc);
@@ -758,8 +758,8 @@ oop Process::call_2(oop fun, oop arg0, oop arg1, int* exc) {
     return ex;
   }
 
-  stack_push(arg0);
   stack_push(arg1);
+  stack_push(arg0);
   return do_call(fun, exc);
 }
 

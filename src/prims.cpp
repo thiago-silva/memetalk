@@ -965,7 +965,7 @@ static int prim_list_new_from_stack(Process* proc) {
   // number length = proc->mmobj(length_oo);
 
   DBG("appending " << proc->argc() << " values" << endl);
-  for (number i = 0; i < proc->argc(); i++) {
+  for (number i = proc->argc()-1; i >= 0; i--) {
     oop element = proc->get_arg(i);
     DBG("appending " << element << endl);
     proc->mmobj()->mm_list_append(proc, self, element);
