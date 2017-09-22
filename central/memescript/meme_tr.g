@@ -45,7 +45,7 @@ definition :modobj =  function_definition(modobj)
                    ;
 
 function_definition :modobj =  !{this.input.head()}:ast
-                               [:fun _:name  !{modobj.new_function(name)}:fnobj fparams(fobj):p !{fnobj.set_params(p)}
+                               [:fun _:name  !{modobj.new_function(name)}:fnobj fparams(fnobj):p !{fnobj.set_params(p)}
                                      !{fnobj.set_line(ast)}
                                      _:uses_env !{fnobj.uses_env(uses_env)}
                                      !{fnobj.body_processor}:bproc
@@ -198,7 +198,7 @@ catch_decl = [:catch [:id _:type] _:id]  => [type, id]
 dict_pairs :fnobj = {[:pair expr(fnobj) expr(fnobj)]}*:e => e;
 
 
-funliteral :fnobj = !{this.input.head()}:ast [:fun-literal !{fnobj.new_closure(p)}:fn fparams(fn):p !{fn.set_params(p)}
+funliteral :fnobj = !{this.input.head()}:ast [:fun-literal !{fnobj.new_closure()}:fn fparams(fn):p !{fn.set_params(p)}
                        !{fn.set_line(ast)}
                        [:body [expr(fn)*]]]:ast
                      !{fn.set_text(ast.text)}

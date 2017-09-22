@@ -145,7 +145,7 @@ instance_method function_definition: fun() {
     this._apply_with_args(:exactly, [:fun]);
     name = this._apply(:anything);
     fnobj = modobj.new_function(name);
-    p = this._apply_with_args(:fparams, [fobj]);
+    p = this._apply_with_args(:fparams, [fnobj]);
     fnobj.set_params(p);
     fnobj.set_line(ast);
     uses_env = this._apply(:anything);
@@ -795,7 +795,7 @@ instance_method funliteral: fun() {
   ast = this.input.head();
   ast = this._form(fun() {
     this._apply_with_args(:exactly, [:fun-literal]);
-    fn = fnobj.new_closure(p);
+    fn = fnobj.new_closure();
     p = this._apply_with_args(:fparams, [fn]);
     fn.set_params(p);
     fn.set_line(ast);
