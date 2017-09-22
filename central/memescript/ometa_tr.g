@@ -88,13 +88,13 @@ instance_method _local_vars: fun() {
   expression = [:apply symbol:s]
                => [@indent, "this._apply(", s.toSource, ");"].join("")
              | [:apply_with_args [prod_arg+:args] _:r]
-               => [@indent, "this._apply_with_args(", r.toSource, ", [", args.join(","),"]);"].join("")
+               => [@indent, "this._apply_with_args(", r.toSource, ", ", args.join(","),");"].join("")
              | [:apply_super string:s]
                => [@indent, "this._apply_super(:", s, ");"].join("")
              | [:seq string:s]
-               => [@indent, "this._apply_with_args(:seq, [", s.toSource, "]);"].join("")
+               => [@indent, "this._apply_with_args(:seq, ", s.toSource, ");"].join("")
              | [:token_string string:s]
-               => [@indent, "this._apply_with_args(:token, [", s.toSource, "]);"].join("")
+               => [@indent, "this._apply_with_args(:token, ", s.toSource, ");"].join("")
              | [:many !{this.incr_indent()} expr:b !{this.decr_indent()}]
                => [@indent, "this._many(fun() {\n", b, "}, null);"].join("")
              | [:many1 !{this.incr_indent()} expr:b !{this.decr_indent()}]
@@ -106,15 +106,15 @@ instance_method _local_vars: fun() {
              | [:form !{this.incr_indent()} expr:x !{this.decr_indent()}]
                => [@indent, "this._form(fun() {\n", x, "});"].join("")
              | [:symbol string:x]
-               => [@indent, "this._apply_with_args(:exactly, [:",x,"]);"].join("")
+               => [@indent, "this._apply_with_args(:exactly, :",x,");"].join("")
              | [:string_object string:x]
-               => [@indent, "this._apply_with_args(:exactly, [",x.toSource,"]);"].join("")
+               => [@indent, "this._apply_with_args(:exactly, ",x.toSource,");"].join("")
              | [:sem_pred string:s] => [@indent, "this._pred(",s, ");"].join("")
              | [:sem_action string:s] => [@indent, s, ";"].join("")
              | [:lookahead !{this.incr_indent()} expr:x !{this.decr_indent()}]
                => [@indent, "this._lookahead(fun() {\n",la,"});"].join("")
              | [:keyword_string string:s]
-               => [@indent, "this._apply_with_args(:keyword,[",s.toSource,"]);"].join("")
+               => [@indent, "this._apply_with_args(:keyword, ",s.toSource,");"].join("")
              | [:ometa-position] => [@indent, "this._apply(:spaces);\n", @indent, "var _pos = this.input.idx();"].join("")
              | [:ometa-ns-position] => [@indent, @indent, "var _pos = this.input.idx();"].join("")
              ;

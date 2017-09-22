@@ -231,14 +231,17 @@ instance_method _apply: fun(rule) {
   @input = memo[rule][:input];
   return memo[rule][:ans];
 }
-instance_method _apply_with_args: fun(rule, args) {
-  args.reverse.each(fun(_, arg) {
-    this.prepend_input(arg);
-  });
+instance_method _apply_with_args: fun(rule, *) {
+  for (var i = *# - 1; i > 0 ; i = i - 1) {
+    this.prepend_input(*i);
+  }
+  // args.reverse.each(fun(_, arg) {
+  //   this.prepend_input(arg);
+  // });
   try {
     return this._apply(rule);
   } catch(OMetaException e) {
-      this.set_error(rule.toString + "(" + args.toString + ")", @input);
+      this.set_error(rule.toString, @input);
       e.throw();
   }
 }
@@ -463,7 +466,7 @@ instance_method first_and_rest: fun() {
 instance_method seq: fun() {
   var xs = this._apply(:anything);
   xs.each(fun(_, x) {
-    this._apply_with_args(:exactly, [x]);
+    this._apply_with_args(:exactly, x);
   });
   return xs;
 }
@@ -471,28 +474,28 @@ instance_method seq: fun() {
 instance_method token: fun() {
   var tk = this._apply(:anything);
   this._apply(:spaces);
-  return this._apply_with_args(:seq, [tk]);
+  return this._apply_with_args(:seq, tk);
 }
 
 instance_method identifier_first: fun() {
-  return this._or([fun() { this._apply_with_args(:exactly, ["_"]) },
+  return this._or([fun() { this._apply_with_args(:exactly, "_") },
                    fun() { this._apply(:letter) }]);
 }
 
 instance_method identifier_rest: fun() {
-  return this._or([fun() { this._apply_with_args(:exactly, ["_"]) },
+  return this._or([fun() { this._apply_with_args(:exactly, "_") },
                    fun() { this._apply(:letter_or_digit) }]);
 }
 
 instance_method identifier: fun() {
   this._apply(:spaces);
-  var ident = this._apply_with_args(:first_and_rest, [:identifier_first, :identifier_rest]);
+  var ident = this._apply_with_args(:first_and_rest, :identifier_first, :identifier_rest);
   return ident.join("");
 }
 
 instance_method keyword: fun() {
   var xs = this._apply(:anything);
-  this._apply_with_args(:token, [xs]);
+  this._apply_with_args(:token, xs);
   this._not(fun() {
     this._apply(:identifier_rest);});
   return xs;
@@ -530,8 +533,11 @@ parse: fun(data, cls, rule) {
 parse_with_args: fun(data, cls, rule, args) {
   var input = OMetaStream.with_data(data);
   var parser = cls.new(input);
+  for (var i = *# - 1; i > 2 ; i = i - 1) {
+    parser.prepend_input(*i);
+  }
   try {
-    return [null, parser._apply_with_args(rule, args)];
+    return [null, parser._apply(rule)];
   } catch(OMetaException e) {
     return [input.format_error, null];
   }
