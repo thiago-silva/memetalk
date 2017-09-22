@@ -59,15 +59,15 @@ public:
   inline oop bp() { return _bp; }
   inline bytecode* ip() { return _ip; }
 
-  inline oop rp() { return * (oop*) (_fp + 1 ); }
-  inline oop dp() { return * (oop*) (_fp + 2); }
+  inline oop rp() { return * (oop*)(_fp - 1); }
+  inline oop dp() { return * (oop*)_fp; }
 
   oop rp_vt();
 
   oop set_rp(oop);
   oop set_dp(oop);
 
-  inline oop get_arg(number idx) { return * ((oop*)_fp - (idx+_ss)); }
+  inline oop get_arg(number idx) { return * ((oop*)_fp - (2+idx+_ss)); }
   inline number argc() { return _argc; }
 
   oop cp_from_base(oop bp);
@@ -246,7 +246,6 @@ private:
   oop _last_retval;
   bool _breaking_on_return;
   bool _online;
-
 //profiling
   boost::unordered_map<std::string, long> _call_count; //map<fun, count>
   boost::unordered_map<std::pair<std::string, std::string>, long> _call_site_count; //map< [caller,callee], count>

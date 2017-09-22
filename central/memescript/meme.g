@@ -195,11 +195,12 @@ class_method_decl = !{@has_fun_literal = false}
 params = "(" idlist:xs ")" => xs;
 
 fparams = "(" ")" => []
-        | "("  "*" id:x ")" => [[:var-arg, x]]
+        | "("  "*" ")" => [[:var-arg]]
         | "("  id:x { "," id }*:xs ")" => [x] + xs
         | "("  id:x { "," id }*:xs pvar:y ")" => [x] + xs + [y];
 
-pvar = "," "*" id:x => [:var-arg, x];
+
+pvar = "," "*"  => [:var-arg];
 
 idlist = id:x {"," id}*:xs => [x] + xs
           | => [];
@@ -308,10 +309,11 @@ expr_mul =  #! expr_mul:a "*" spaces expr_unary:b => #[:*, a, b]
          |  #! expr_mul:a "/" spaces expr_unary:b => #[:/, a, b]
          | expr_unary;
 
-expr_unary =  # "+" spaces spaces prim_expr:a  => #[:positive, a]
-            | # "-" spaces spaces prim_expr:a  => #[:negative, a]
-            | # "!" spaces spaces expr_unary:a => #[:not, a]
-            | # "~" spaces spaces expr_unary:a => #[:bit-neg, a]
+expr_unary =  # "+" spaces prim_expr:a  => #[:positive, a]
+            | # "-" spaces prim_expr:a  => #[:negative, a]
+            | # "!" spaces expr_unary:a => #[:not, a]
+            | # "*" spaces expr_unary:a => #[:get-var-arg, a]
+            | # "~" spaces expr_unary:a => #[:bit-neg, a]
             | suffix_expr;
 
 suffix_expr = # ``super`` "." alpha_name:sel args:p
@@ -358,6 +360,7 @@ literal = lit_number
         | # ``null``   => #[:literal, :null]
         | # ``true``   => #[:literal, :true]
         | # ``false``  => #[:literal, :false]
+        | # "*#"       => #[:literal, :argc]
         | funliteral:x !{@has_fun_literal = true} => x;
 
 funliteral = # ``fun`` params:p "{"

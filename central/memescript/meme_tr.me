@@ -135,8 +135,8 @@ instance_method definition: fun() {
 instance_method function_definition: fun() {
   var ast = null;
   var name = null;
-  var p = null;
   var fnobj = null;
+  var p = null;
   var uses_env = null;
   var bproc = null;
   var modobj = this._apply(:anything);
@@ -144,8 +144,9 @@ instance_method function_definition: fun() {
   this._form(fun() {
     this._apply_with_args(:exactly, [:fun]);
     name = this._apply(:anything);
-    p = this._apply(:params);
-    fnobj = modobj.new_function(name, p);
+    fnobj = modobj.new_function(name);
+    p = this._apply_with_args(:fparams, [fobj]);
+    fnobj.set_params(p);
     fnobj.set_line(ast);
     uses_env = this._apply(:anything);
     fnobj.uses_env(uses_env);
@@ -276,34 +277,12 @@ instance_method fparams: fun() {
   return x;
 }
 instance_method fparam: fun() {
-  var x = null;
   var obj = this._apply(:anything);
   return this._or([fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:var-arg]);
-      x = this._apply(:anything);
-      obj.set_vararg(x);});
-    return x;
-  }, fun() {
-    this._apply(:anything);
-  }]);
-}
-instance_method params: fun() {
-  var x = null;
-  this._form(fun() {
-    this._apply_with_args(:exactly, [:params]);
-    this._form(fun() {
-      x = this._many(fun() {
-        this._apply(:param);}, null);});});
-  return x;
-}
-instance_method param: fun() {
-  var x = null;
-  return this._or([fun() {
-    this._form(fun() {
-      this._apply_with_args(:exactly, [:var-arg]);
-      x = this._apply(:anything);});
-    return x;
+      obj.set_vararg();});
+    return "*";
   }, fun() {
     this._apply(:anything);
   }]);
@@ -522,6 +501,10 @@ instance_method stm: fun() {
     this._apply_with_args(:expr, [fnobj]);
     return fnobj.emit_unary(ast,"neg");
   }, fun() {
+    this._apply_with_args(:exactly, [:get-var-arg]);
+    this._apply_with_args(:expr, [fnobj]);
+    return fnobj.emit_push_var_arg(ast);
+  }, fun() {
     this._apply_with_args(:exactly, [:bit-neg]);
     this._apply_with_args(:expr, [fnobj]);
     return fnobj.emit_unary(ast,"~");
@@ -686,8 +669,9 @@ instance_method stm: fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:index]);
       lhs = this._apply(:anything);
-      this._apply_with_args(:expr, [fnobj]);});
+      this._apply_with_args(:exactly, [:idx]);});
     this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:expr, [fnobj,idx]);
     this._apply_with_args(:expr, [fnobj,lhs]);
     return fnobj.emit_index_assignment(ast);
   }, fun() {
@@ -733,6 +717,10 @@ instance_method stm: fun() {
     this._apply_with_args(:exactly, [:literal]);
     this._apply_with_args(:exactly, [:context]);
     return fnobj.emit_push_context(ast);
+  }, fun() {
+    this._apply_with_args(:exactly, [:literal]);
+    this._apply_with_args(:exactly, [:argc]);
+    return fnobj.emit_push_argc(ast);
   }, fun() {
     this._apply_with_args(:exactly, [:id]);
     name = this._apply(:anything);
@@ -801,14 +789,15 @@ instance_method dict_pairs: fun() {
 }
 instance_method funliteral: fun() {
   var ast = null;
-  var p = null;
   var fn = null;
+  var p = null;
   var fnobj = this._apply(:anything);
   ast = this.input.head();
   ast = this._form(fun() {
     this._apply_with_args(:exactly, [:fun-literal]);
-    p = this._apply(:params);
     fn = fnobj.new_closure(p);
+    p = this._apply_with_args(:fparams, [fn]);
+    fn.set_params(p);
     fn.set_line(ast);
     this._form(fun() {
       this._apply_with_args(:exactly, [:body]);
@@ -829,6 +818,8 @@ instance_method cfunliteral: fun() {
   return fnobj;
 }
 instance_method args: fun() {
+  var a = null;
+  var b = null;
   var arity = null;
   var fnobj = this._apply(:anything);
   return this._or([fun() {
@@ -840,7 +831,9 @@ instance_method args: fun() {
   }, fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:args]);
-      arity = this._apply_with_args(:arglist, [fnobj]);});
+      a = this._apply(:anything);
+      b = a.reverse;
+      arity = this._apply_with_args(:arglist, [fnobj,b]);});
     return arity;
   }]);
 }

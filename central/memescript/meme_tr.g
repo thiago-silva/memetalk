@@ -85,15 +85,9 @@ class_method :klass = !{this.input.head()}:ast
 
 fparams :obj = [:params [fparam(obj)*:x]] => x;
 
-fparam :obj  = [:var-arg _:x !{obj.set_vararg(x)}] => x
+fparam :obj  = [:var-arg !{obj.set_vararg()}] => "*"
                | _
                ;
-
-params = [:params [param*:x]] => x;
-
-param = [:var-arg _:x] => x
-        | _
-        ;
 
 object_definition :modobj = [:object _:name !{modobj.new_object(name)}:obj
                             [obj_slot(obj)+] [obj_function(obj)*]];
@@ -137,6 +131,7 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                | :expression expr(fnobj) => fnobj.emit_pop(ast)
                | :not expr(fnobj) => fnobj.emit_unary(ast, "!")
                | :negative expr(fnobj) => fnobj.emit_unary(ast, "neg")
+               | :get-var-arg expr(fnobj) => fnobj.emit_push_var_arg(ast)
                | :bit-neg expr(fnobj) => fnobj.emit_unary(ast, "~")
                | :and _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "and")
                | :or _:e expr(fnobj) expr(fnobj, e) => fnobj.emit_binary(ast, "or")
@@ -172,7 +167,7 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                   !{fnobj.bind_catch_var(cp[1])}
                     [expr(fnobj)*] => fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0])
                | := [:id _:v] expr(fnobj)    => fnobj.emit_local_assignment(ast, v)
-               | := [:index _:lhs expr(fnobj)] expr(fnobj) expr(fnobj, lhs)  => fnobj.emit_index_assignment(ast)
+               | := [:index _:lhs :idx] expr(fnobj) expr(fnobj, idx) expr(fnobj, lhs)  => fnobj.emit_index_assignment(ast)
                | := [:field _:f] expr(fnobj) => fnobj.emit_field_assignment(ast, f)
                | :literal-number _:x => fnobj.emit_push_num_literal(ast, x)
                | :literal :this => fnobj.emit_push_this(ast)
@@ -183,6 +178,7 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                | :literal :false      => fnobj.emit_push_false(ast)
                | :literal :module     => fnobj.emit_push_module(ast)
                | :literal :context    => fnobj.emit_push_context(ast)
+               | :literal :argc       => fnobj.emit_push_argc(ast)
                | :id _:name             => fnobj.emit_push_var(ast, name)
                | :field _:name          => fnobj.emit_push_field(ast, name)
                | :literal-array  _:e exprs(fnobj, e)      => fnobj.emit_push_list(ast, e.size)
@@ -201,8 +197,8 @@ catch_decl = [:catch [:id _:type] _:id]  => [type, id]
 
 dict_pairs :fnobj = {[:pair expr(fnobj) expr(fnobj)]}*:e => e;
 
-funliteral :fnobj = !{this.input.head()}:ast [:fun-literal  params:p
-                       !{fnobj.new_closure(p)}:fn
+
+funliteral :fnobj = !{this.input.head()}:ast [:fun-literal !{fnobj.new_closure(p)}:fn fparams(fn):p !{fn.set_params(p)}
                        !{fn.set_line(ast)}
                        [:body [expr(fn)*]]]:ast
                      !{fn.set_text(ast.text)}
@@ -213,7 +209,7 @@ cfunliteral :fnobj =  !{this.input.head()}:ast
                       [expr(fnobj)*] => fnobj;
 
 args :fnobj =  [:args []] => 0
-            |  [:args arglist(fnobj):arity] => arity
+            |  [:args _:a !{a.reverse}:b arglist(fnobj, b):arity] => arity
             ;
 
 arglist :fnobj = [expr(fnobj)+]:x => x.size;

@@ -355,28 +355,37 @@ class VariableStorage
     //          for it.
     // -size/env_offset:  requires accumulated scopes
 
-fields: outer_cfun, parent_storage, variables;
+fields: outer_cfun, parent_storage, variables, top_level_params;
 init new: fun(cfun, outer_cfun, storage) { //outer_cfun/storage defaults to null
   @outer_cfun = outer_cfun;
   @parent_storage = storage;
   if (storage) {
+    @top_level_params = storage.top_level_params;
     @variables = storage.variables;
   } else {
+    @top_level_params = [];
     @variables = OrderedDict.new; //env needs vars ordered by insert order.
   }
   @variables[cfun] = [];
+}
+instance_method top_level_params: fun() {
+  return @top_level_params;
 }
 instance_method variables: fun() {
   return @variables;
 }
 instance_method is_visible: fun(cfun, name) {
   var idx = @variables.keys.pos(cfun);
-  return this._flat(@variables.values().range(0, idx + 1)).has(name);
+  return this._flat(@variables.values().range(0, idx + 1)).has(name) or @top_level_params.has(name);
 }
-instance_method add_names: fun(cfun, names) {
-  names.each(fun(_, name) {
-    this.add(cfun, name);
-  });
+instance_method set_params: fun(cfun, names) {
+  if (cfun.is_top_level) {
+    @top_level_params = names;
+  } else {
+    names.each(fun(_, name) {
+      this.add(cfun, name);
+    });
+  }
 }
 instance_method add: fun(cfun, name) {
   if (@variables[cfun].has(name)) {
@@ -389,7 +398,9 @@ instance_method pos: fun(cfun, name) {
   return this._pos(cfun, name);
 }
 instance_method _pos: fun(cfun, name) {
-  if (!@variables[cfun].has(name)) {
+  if (@top_level_params.has(name)) {
+    return fun() { this.total() + @top_level_params.pos(name) };
+  } elif (!@variables[cfun].has(name)) {
     if (@parent_storage == null) {
       Exception.throw("Undeclared " + name);
     } else {
@@ -453,7 +464,7 @@ init new: fun(cmod, owner, name, params, is_ctor, env_storage, is_top_level, out
     @has_env = false;
     @var_declarations = VariableStorage.new(this, null, null);
   }
-  @var_declarations.add_names(this, params);
+  @var_declarations.set_params(this, params);
 
   @literal_frame = [];
   @bytecodes = opcode.Bytecodes.new;
@@ -476,10 +487,14 @@ instance_method set_line: fun(head) {
   @start_line = head.start_line;
 }
 instance_method set_params: fun(params) {
-  @params = params;
-  @var_declarations.add_names(this, params);
+  if (params.size > 0 and params.last == "*") {
+    @params = params.range(0, -1);
+  } else {
+    @params = params;
+  }
+  @var_declarations.set_params(this, params);
 }
-instance_method set_vararg: fun(name) {
+instance_method set_vararg: fun() {
   @var_arg = true;
 }
 instance_method declare_var: fun(name) {
@@ -505,7 +520,9 @@ instance_method set_primitive: fun(prim_name) {
 instance_method top_level_cfun: fun() {
   return @top_level_cfun;
 }
-
+instance_method is_top_level: fun() {
+  return @is_top_level;
+}
 instance_method label: fun() {
   if (@label == null) {
     @label = mec.cfun_label(@owner.label_counter, @owner.label, @name, CompiledClass == Mirror.vtFor(@owner));
@@ -722,7 +739,7 @@ instance_method fill: fun(vmem) {
   //vmem.append_int(@var_arg, null);
   return this.set_oop(oop);
 }
-instance_method new_closure: fun(params) {
+instance_method new_closure: fun() {
   @has_env = true;
   var top_level_cfun = null;
   if (@is_top_level) {
@@ -731,7 +748,7 @@ instance_method new_closure: fun(params) {
     top_level_cfun = @top_level_cfun;
   }
 
-  var cfun = CompiledFunction.new(@cmod, @owner, mec.closure_name(@owner.label_counter), params,
+  var cfun = CompiledFunction.new(@cmod, @owner, mec.closure_name(@owner.label_counter), [],
                                   false, @var_declarations, false, this, top_level_cfun);
 
   if (@is_top_level) {
@@ -839,6 +856,18 @@ instance_method emit_push_var: fun(ast, name) {
 //     @bytecodes.append(:send, 0);
 //   }
 // }
+instance_method emit_push_argc: fun(ast) {
+  var bpos = this.current_bytecode_pos();
+  @bytecodes.append(:push_argc, 0);
+  this.update_line_mapping(bpos, ast);
+}
+
+instance_method emit_push_var_arg: fun(ast) {
+  var bpos = this.current_bytecode_pos();
+  @bytecodes.append(:load_argv, 0);
+  this.update_line_mapping(bpos, ast);
+}
+
 instance_method emit_local_assignment: fun(ast, name) {
   var bpos = this.current_bytecode_pos();
 
@@ -1172,8 +1201,8 @@ init new: fun(imod, cfun) {
   @imod = imod;
   @cfun = cfun;
 }
-instance_method set_vararg: fun(name) {
-  @cfun.set_vararg(name);
+instance_method set_vararg: fun() {
+  @cfun.set_vararg();
 }
 instance_method set_params: fun(params) {
   @cfun.set_params(params);

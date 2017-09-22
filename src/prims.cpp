@@ -1569,9 +1569,9 @@ static int prim_dictionary_new_from_stack(Process* proc) {
   // number length = proc->mmobj(length_oo);
 
   DBG("appending " << proc->argc() << " values" << endl);
-  for (number i = 0; i < proc->argc(); i+=2) {
+  for (number i = proc->argc()-1; i >=0 ; i-=2) {
     oop key = proc->get_arg(i);
-    oop val = proc->get_arg(i+1);
+    oop val = proc->get_arg(i-1);
     DBG("set " << key << " " << val << endl);
     proc->mmobj()->mm_dictionary_set(proc, self, key, val);
   }

@@ -191,7 +191,6 @@ std::string Process::dump_stack_top(bool enabled) {
   word* sp = _sp;
   oop bp = _bp;
   oop fp = _fp;
-  oop new_fp = _fp;
   number ss = _ss;
 
   while (sp >= _stack) {
@@ -209,28 +208,22 @@ std::string Process::dump_stack_top(bool enabled) {
       } else {
         s << "\n";
       }
-      new_fp = *(oop*)(sp-5);
       s << (sp-5) << " [FP] " << *(oop*)(sp-5) << "\n";
-      s << (sp-6) << " [DP] " << *(oop*)(sp-6) << "\n";
+      if (fp == (sp-6)) {
+        s << (sp-6) << " [DP] " << *(oop*)(sp-6) << "   -- [FP]\n";
+      } else {
+        s << (sp-6) << " [DP] " << *(oop*)(sp-6) << "\n";
+      }
+      fp = *(oop*)(sp-5);
       s << (sp-7) << " [RP] " << *(oop*)(sp-7) << "\n";
       sp -= 8;
       for(int i = 0; i < ss; i++) {
-        if (sp == fp) {
-          s << sp << " [LOCAL " << i << "] " << *(oop*)sp << "    --- [FP]\n";
-          fp = new_fp;
-        } else {
-          s << sp << " [LOCAL " << i << "] " << *(oop*)sp << "\n";
-        }
+        s << sp << " [LOCAL " << i << "] " << *(oop*)sp << "\n";
         sp--;
       }
       ss = new_ss;
     } else {
-      if (sp == fp) {
-        s << "[DATA] " << sp << " " << *(oop*)sp << "       -- [FP]\n";
-        fp = new_fp;
-      } else {
-        s << "[DATA] " << sp << " " << *(oop*)sp << "\n";
-      }
+      s << "[DATA] " << sp << " " << *(oop*)sp << "\n";
       sp--;
     }
   }
@@ -267,11 +260,11 @@ void Process::init() {
 // };
 
 oop Process::set_rp(oop rp) {
-  return * (oop*) (_fp + 1) = rp;
+  return * (oop*) (_fp - 1) = rp;
 }
 
 oop Process::set_dp(oop dp) {
-  return * (oop*) (_fp + 2) = dp;
+  return * (oop*) _fp = dp;
 }
 
 // oop Process::rp() {
@@ -301,6 +294,7 @@ oop Process::rp_vt() {
 void Process::push_frame(oop recv, oop drecv, number num_args, number local_storage_size) {
   DBG(" recv: " << recv << ", drecv: " << drecv << ", num_args: " << num_args << ", storage_size: " << local_storage_size << endl);
 
+  // std::cerr << " recv: " << recv << ", drecv: " << drecv << ", num_args: " << num_args << ", storage_size: " << local_storage_size << endl;
 
   //BEGIN stack frame layout
   //---- if you change this, change pop_frame() and the frame accessor methods
@@ -310,13 +304,14 @@ void Process::push_frame(oop recv, oop drecv, number num_args, number local_stor
     stack_push(MM_NULL);
   }
 
+  stack_push(recv);
+  stack_push(drecv);
+
   oop fp = _fp;
   _fp = _sp;
 
   DBG("before -- sp: " << _sp << " old fp: " << fp << " new fp:" << _fp << endl);
 
-  stack_push(recv);
-  stack_push(drecv);
   stack_push(fp);
   stack_push(_cp);
   stack_push(_ip);
@@ -335,7 +330,7 @@ void Process::pop_frame() {
   DBG("pop_frame begin SP: " << _sp << endl);
 
 
-  oop fp = _fp;
+  // oop fp = _fp;
   number argc = _argc;
   number ss = _ss;
 
@@ -348,7 +343,7 @@ void Process::pop_frame() {
   _cp = stack_pop();
   _fp = stack_pop();
 
-  _sp -= 2 + ss + argc; // 2: rp, dp
+  _sp -= 2 + ss + argc; //2: rp + dp
 
   if (_cp) {// first frame has _cp = null
     _mp = _mmobj->mm_function_get_module(this, _cp, true);
@@ -407,8 +402,19 @@ void Process::setup_fp(number num_params, number local_storage_size) {
   DBG("allocated env: " << env << " - " << " local_storage: " << local_storage_size
       << " num_params (top level): " << num_params << " total: " << (local_storage_size + num_params + 2) << endl);
 
+  //<other registers>
+  //drecv    -- _fp
+  //recv
+  //L1a
+  //L0a
+  //L1b
+  //L0b
+  //a0
+  //a1
+  //a2       -- base
+
   oop it = env;
-  oop base = _fp - _ss - num_params + 1;
+  oop base = _fp - 1 - _ss - num_params; //base: pointing to last argument on stack
   for (int i = 0; i < num_params; i++, it++) { //copy arguments
     //DBG("new_fp[" << i << " - " << (oop*)base << "]  " << (oop*)base[i] << endl);
     DBG("env " << it << " = " << (oop*)base[i] << endl);
@@ -419,11 +425,14 @@ void Process::setup_fp(number num_params, number local_storage_size) {
   it += local_storage_size;
   *(oop*)it = rp();
   DBG("env rp: " << it << " = " << rp() << endl);
-  *(oop*)(it+1) = dp();
-  DBG("env dp: " << (it+1) << " = " << dp() << endl);
-  //maybe FIXME?: Might risk a GC collect between env-fp
-  //in the window between now and when we assign _env to the next closure.
-  _fp = env + num_params + local_storage_size - 1;
+  it++;
+  *(oop*)it = dp();
+  DBG("env dp: " << it << " = " << dp() << endl);
+
+
+  //maybe FIXME?: This might not play well with certain GCs since we are
+  //effectivelly losing the references to all `env` content but the last cell
+  _fp = it;
   DBG("env new _fp: " << _fp << endl);
 }
 
@@ -431,8 +440,8 @@ void Process::restore_fp(oop fp, number params, number env_offset) {
   DBG("fp: " << fp << " num_params: " << params << " env_offset: " << env_offset << endl);
 
   for (int i = 0; i < params; i++) {
-    DBG("fp[" << (env_offset + i) << "] (" << (fp - (env_offset + i)) << ") = " << get_arg(i) << endl); //* (oop*)(_fp + i) << endl);
-    *(oop*)(fp - (env_offset + i)) = get_arg(i);
+    DBG("fp[" << (env_offset + i + 2) << "] (" << (fp - (env_offset + i + 2)) << ") = " << get_arg(i) << endl); //* (oop*)(_fp + i) << endl);
+    *(oop*)(fp - (env_offset + i + 2)) = get_arg(i);
   }
   _fp = fp;
 }
@@ -442,6 +451,25 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
     WARNING() << "Will raise TypeError: Expecting function or context" << endl;
     raise("TypeError", "Expecting function or context");
   }
+
+  // std::string _name = CTXNAME(fun);
+  // int _found = 0;
+  // std::cerr << _name << std::endl;
+  //if (_name.find("51") != std::string::npos) {
+  // if (_name.find("where_section") != std::string::npos) {
+  //   _found = 1;
+  // }
+
+  // if(_found) {
+  //   std::cerr << "============= before push frame ===================" << endl;
+  //   std::cerr << "LOAD_FUN recv: " << recv << " drecv: " << drecv
+  //           << " fun: " << fun << " " << CTXNAME(fun) << " should_all: " << should_allocate
+  //           << " num_args: " << num_args << " -- " << _found << endl;
+  //   std::cerr << "LOAD_FUN before push_frame, rp " << rp() << " dp: " << dp() << endl;
+  //   std::cerr << _log_registers.yellow << dump_stack_top(true) << _log_registers.normal;
+  //   std::cerr << dump_stack_trace(true) << endl;
+  //   std::cerr << "============= / before push frame ===================" << endl;
+  // }
 
   DBG(fun << endl);
   long header = _mmobj->mm_function_get_header(this, fun, true);
@@ -459,6 +487,17 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   number arity =  num_args != -1 ? num_args : num_params;
   number local_storage_size = CFUN_STORAGE_SIZE(header);
   push_frame(recv, drecv, arity, local_storage_size);
+
+  // if (_found) {
+  //   std::cerr << "============= after push frame ===================" << endl;
+  //   std::cerr << "LOAD_FUN recv: " << recv << " drecv: " << drecv
+  //           << " fun: " << fun << " " << CTXNAME(fun) << " should_all: " << should_allocate
+  //           << " num_args: " << num_args << " -- " << _found << endl;
+  //   std::cerr << "LOAD_FUN before push_frame, rp " << rp() << " dp: " << dp() << endl;
+  //   std::cerr << _log_registers.yellow << dump_stack_top(true) << _log_registers.normal;
+  //   std::cerr << dump_stack_trace(true) << endl;
+  //   std::cerr << "============= / after push frame ===================" << endl;
+  // }
 
 
   DBG("storage: " << local_storage_size << " " << _mmobj->mm_string_cstr(this, _mmobj->mm_function_get_name(this, fun, true), true) << endl);
@@ -489,6 +528,20 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
       setup_fp(arity, local_storage_size);
     }
   }
+  // if (_found) {
+  //   std::cerr << "============= after setup fp ===================" << endl;
+  //   std::cerr << "LOAD_FUN recv: " << recv << " drecv: " << drecv
+  //           << " fun: " << fun << " " << CTXNAME(fun) << " should_all: " << should_allocate
+  //           << " num_args: " << num_args << " -- fp " << _fp << endl;
+  //   std::cerr << "LOAD_FUN before push_frame, rp " << rp() << " dp: " << dp() << endl;
+  //   std::cerr << _log_registers.yellow << dump_stack_top(true) << _log_registers.normal;
+  //   std::cerr << dump_stack_trace(true) << endl;
+  //   std::cerr << "============= / after setup fp ===================" << endl;
+  // }
+  // if (recv == 0) {
+  //   std::cerr << "LOAD_FUN after push_frame, rp " << rp() << " dp: " << dp() << endl;
+  //   std::cerr << _log_registers.yellow << dump_stack_top(true) << _log_registers.normal;
+  // }
 
   _cp = fun;
   _mp = _mmobj->mm_function_get_module(this, _cp, true);
@@ -713,7 +766,7 @@ oop Process::call(oop fun, oop args, int* exc) {
     *exc = 1;
     return ex;
   }
-
+  // std::cerr << "calling " << fun << endl;
   for (int i = num_args-1; i >= 0; i--) {
     stack_push(_mmobj->mm_list_entry(this, args, i));
   }
@@ -804,8 +857,8 @@ void Process::fetch_cycle(void* stop_at_bp) {
     switch(opcode) {
       case PUSH_LOCAL:
         // _PUSH_LOCAL++;
-        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp - arg) << endl);
-        stack_push(*(_fp - arg));
+        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp - 2 - arg) << endl);
+        stack_push(*(_fp - 2 - arg));
         break;
       case PUSH_LITERAL:
         // _PUSH_LITERAL++;
@@ -870,9 +923,9 @@ void Process::fetch_cycle(void* stop_at_bp) {
       case POP_LOCAL:
         // _POP_LOCAL++;
         val = stack_pop();
-        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp - arg) << " -- "
-            << (oop) *(_fp - arg) << " = " << val << endl);
-        *(_fp - arg) = (word) val;
+        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp - 2 - arg) << " -- "
+            << (oop) *(_fp - 2 - arg) << " = " << val << endl);
+        *(_fp - 2 - arg) = (word) val;
         break;
       case POP_FIELD:
         // _POP_FIELD++;
@@ -1141,15 +1194,15 @@ void Process::handle_ex_set(number num_args) {
   if (vt == Dictionary) {
     stack_pop(); //:set
     stack_pop(); //recv
-    oop val = stack_pop();
     oop key = stack_pop();
+    oop val = stack_pop();
     _mmobj->mm_dictionary_set(this, recv, key, val);
     stack_push(recv);
   } else if (vt == List) {
     stack_pop(); //:set
     stack_pop(); //recv
-    oop val = stack_pop();
     oop index_oop = stack_pop();
+    oop val = stack_pop();
 
     number index = untag_small_int(index_oop);
 

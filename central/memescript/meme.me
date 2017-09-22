@@ -520,9 +520,8 @@ instance_method fparams: fun() {
   }, fun() {
     this._apply_with_args(:token, ["("]);
     this._apply_with_args(:token, ["*"]);
-    x = this._apply(:id);
     this._apply_with_args(:token, [")"]);
-    return [[:var-arg, x]];
+    return [[:var-arg]];
   }, fun() {
     this._apply_with_args(:token, ["("]);
     x = this._apply(:id);
@@ -547,11 +546,9 @@ instance_method fparams: fun() {
   }]);
 }
 instance_method pvar: fun() {
-  var x = null;
   this._apply_with_args(:token, [","]);
   this._apply_with_args(:token, ["*"]);
-  x = this._apply(:id);
-  return [:var-arg, x];
+  return [:var-arg];
 }
 instance_method idlist: fun() {
   var x = null;
@@ -1000,14 +997,12 @@ instance_method expr_unary: fun() {
     var _pos = this.input.idx();
     this._apply_with_args(:token, ["+"]);
     this._apply(:spaces);
-    this._apply(:spaces);
     a = this._apply(:prim_expr);
     return [:positive, a].at(this, _pos);
   }, fun() {
     this._apply(:spaces);
     var _pos = this.input.idx();
     this._apply_with_args(:token, ["-"]);
-    this._apply(:spaces);
     this._apply(:spaces);
     a = this._apply(:prim_expr);
     return [:negative, a].at(this, _pos);
@@ -1016,14 +1011,19 @@ instance_method expr_unary: fun() {
     var _pos = this.input.idx();
     this._apply_with_args(:token, ["!"]);
     this._apply(:spaces);
-    this._apply(:spaces);
     a = this._apply(:expr_unary);
     return [:not, a].at(this, _pos);
   }, fun() {
     this._apply(:spaces);
     var _pos = this.input.idx();
-    this._apply_with_args(:token, ["~"]);
+    this._apply_with_args(:token, ["*"]);
     this._apply(:spaces);
+    a = this._apply(:expr_unary);
+    return [:get-var-arg, a].at(this, _pos);
+  }, fun() {
+    this._apply(:spaces);
+    var _pos = this.input.idx();
+    this._apply_with_args(:token, ["~"]);
     this._apply(:spaces);
     a = this._apply(:expr_unary);
     return [:bit-neg, a].at(this, _pos);
@@ -1218,6 +1218,11 @@ instance_method literal: fun() {
     var _pos = this.input.idx();
     this._apply_with_args(:keyword,["false"]);
     return [:literal, :false].at(this, _pos);
+  }, fun() {
+    this._apply(:spaces);
+    var _pos = this.input.idx();
+    this._apply_with_args(:token, ["*#"]);
+    return [:literal, :argc].at(this, _pos);
   }, fun() {
     x = this._apply(:funliteral);
     @has_fun_literal = true;
