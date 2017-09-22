@@ -644,7 +644,7 @@ instance_method encode_header: fun() {
 
   var flags = bits.encode_bits([@is_top_level, @var_arg, @has_env, @is_prim, @is_ctor]);
 
-  return (@var_declarations.env_offset(this) << 15) + (@params.size << 10) + ((@var_declarations.total - @params.size) << 5) + flags;
+  return (@var_declarations.env_offset(this) << 15) + (@params.size << 10) + ((@var_declarations.total) << 5) + flags;
   //vmem.append_int(@is_ctor, null);
   //vmem.append_int(@is_prim, null);
   //vmem.append_int(@has_env, null);
@@ -1178,7 +1178,7 @@ instance_method emit_push_dict: fun(ast, length) {
   @bytecodes.append(:send, 0);
 
   @bytecodes.append(:push_literal, idx_new_from_stack);
-  @bytecodes.append(:send, length);
+  @bytecodes.append(:send, length * 2);
 
   // [0].times(length).each(fun(_,__) { //we need better loops :)
   //   @bytecodes.append(:push_literal, idx_set);

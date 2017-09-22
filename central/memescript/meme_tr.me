@@ -416,6 +416,7 @@ instance_method stm: fun() {
   var label_begin_catch = null;
   var cp = null;
   var lhs = null;
+  var idx = null;
   var f = null;
   var x = null;
   var p = null;
@@ -669,7 +670,7 @@ instance_method stm: fun() {
     this._form(fun() {
       this._apply_with_args(:exactly, [:index]);
       lhs = this._apply(:anything);
-      this._apply_with_args(:exactly, [:idx]);});
+      idx = this._apply(:anything);});
     this._apply_with_args(:expr, [fnobj]);
     this._apply_with_args(:expr, [fnobj,idx]);
     this._apply_with_args(:expr, [fnobj,lhs]);

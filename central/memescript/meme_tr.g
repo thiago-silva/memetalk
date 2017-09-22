@@ -167,7 +167,7 @@ stm :fnobj :ast = :var-def _:id expr(fnobj) =>  fnobj.emit_var_decl(ast, id)
                   !{fnobj.bind_catch_var(cp[1])}
                     [expr(fnobj)*] => fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0])
                | := [:id _:v] expr(fnobj)    => fnobj.emit_local_assignment(ast, v)
-               | := [:index _:lhs :idx] expr(fnobj) expr(fnobj, idx) expr(fnobj, lhs)  => fnobj.emit_index_assignment(ast)
+               | := [:index _:lhs _:idx] expr(fnobj) expr(fnobj, idx) expr(fnobj, lhs)  => fnobj.emit_index_assignment(ast)
                | := [:field _:f] expr(fnobj) => fnobj.emit_field_assignment(ast, f)
                | :literal-number _:x => fnobj.emit_push_num_literal(ast, x)
                | :literal :this => fnobj.emit_push_this(ast)
