@@ -14,20 +14,20 @@ init new: fun(proc, input) {
 instance_method start: fun() {
   var modobj = null;
   this._form(fun() {
-    this._apply_with_args(:exactly, [:module]);
+    this._apply_with_args(:exactly, :module);
     this._apply(:anything);
     modobj = @proc.new_module();
-    this._apply_with_args(:meta_section, [modobj]);
-    this._apply_with_args(:requirements_section, [modobj]);
-    this._apply_with_args(:code_section, [modobj]);});
+    this._apply_with_args(:meta_section, modobj);
+    this._apply_with_args(:requirements_section, modobj);
+    this._apply_with_args(:code_section, modobj);});
 }
 instance_method meta_section: fun() {
   var modobj = this._apply(:anything);
   this._form(fun() {
-    this._apply_with_args(:exactly, [:meta]);
+    this._apply_with_args(:exactly, :meta);
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:meta_var, [modobj]);}, null);});});
+        this._apply_with_args(:meta_var, modobj);}, null);});});
 }
 instance_method meta_var: fun() {
   var key = null;
@@ -42,19 +42,19 @@ instance_method requirements_section: fun() {
   var params = null;
   var modobj = this._apply(:anything);
   this._form(fun() {
-    this._apply_with_args(:exactly, [:requirements]);
+    this._apply_with_args(:exactly, :requirements);
     params = this._apply(:module_params);
     modobj.set_params(params);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:default-locations]);
+      this._apply_with_args(:exactly, :default-locations);
       this._form(fun() {
         this._many(fun() {
-          this._apply_with_args(:default_location, [modobj]);}, null);});});
+          this._apply_with_args(:default_location, modobj);}, null);});});
     this._form(fun() {
-      this._apply_with_args(:exactly, [:imports]);
+      this._apply_with_args(:exactly, :imports);
       this._form(fun() {
         this._many(fun() {
-          this._apply_with_args(:module_import, [modobj]);}, null);});});});
+          this._apply_with_args(:module_import, modobj);}, null);});});});
 }
 instance_method module_params: fun() {
   var xs = null;
@@ -84,22 +84,22 @@ instance_method module_import: fun() {
 instance_method code_section: fun() {
   var modobj = this._apply(:anything);
   this._form(fun() {
-    this._apply_with_args(:exactly, [:code]);
+    this._apply_with_args(:exactly, :code);
     this._not(fun() {
       this._not(fun() {
         this._form(fun() {
           this._many(fun() {
-            this._apply_with_args(:load_top_level_name, [modobj]);}, null);});});});
+            this._apply_with_args(:load_top_level_name, modobj);}, null);});});});
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:definition, [modobj]);}, null);});});
+        this._apply_with_args(:definition, modobj);}, null);});});
 }
 instance_method load_top_level_name: fun() {
   var name = null;
   var modobj = this._apply(:anything);
   return this._or([fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:class]);
+      this._apply_with_args(:exactly, :class);
       this._form(fun() {
         name = this._apply(:anything);
         this._apply(:anything);});
@@ -108,14 +108,14 @@ instance_method load_top_level_name: fun() {
     return modobj.add_top_level_name(name);
   }, fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:object]);
+      this._apply_with_args(:exactly, :object);
       name = this._apply(:anything);
       this._many(fun() {
         this._apply(:anything);}, null);});
     return modobj.add_top_level_name(name);
   }, fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:fun]);
+      this._apply_with_args(:exactly, :fun);
       name = this._apply(:anything);
       this._many(fun() {
         this._apply(:anything);}, null);});
@@ -125,11 +125,11 @@ instance_method load_top_level_name: fun() {
 instance_method definition: fun() {
   var modobj = this._apply(:anything);
   return this._or([fun() {
-    this._apply_with_args(:function_definition, [modobj]);
+    this._apply_with_args(:function_definition, modobj);
   }, fun() {
-    this._apply_with_args(:class_definition, [modobj]);
+    this._apply_with_args(:class_definition, modobj);
   }, fun() {
-    this._apply_with_args(:object_definition, [modobj]);
+    this._apply_with_args(:object_definition, modobj);
   }]);
 }
 instance_method function_definition: fun() {
@@ -142,18 +142,18 @@ instance_method function_definition: fun() {
   var modobj = this._apply(:anything);
   ast = this.input.head();
   this._form(fun() {
-    this._apply_with_args(:exactly, [:fun]);
+    this._apply_with_args(:exactly, :fun);
     name = this._apply(:anything);
     fnobj = modobj.new_function(name);
-    p = this._apply_with_args(:fparams, [fnobj]);
+    p = this._apply_with_args(:fparams, fnobj);
     fnobj.set_params(p);
     fnobj.set_line(ast);
     uses_env = this._apply(:anything);
     fnobj.uses_env(uses_env);
     bproc = fnobj.body_processor;
     this._form(fun() {
-      this._apply_with_args(:exactly, [:body]);
-      this._apply_with_args(:body, [bproc]);});});
+      this._apply_with_args(:exactly, :body);
+      this._apply_with_args(:body, bproc);});});
   fnobj.set_text(ast.text);
 }
 instance_method class_definition: fun() {
@@ -163,21 +163,21 @@ instance_method class_definition: fun() {
   var klass = null;
   var modobj = this._apply(:anything);
   this._form(fun() {
-    this._apply_with_args(:exactly, [:class]);
+    this._apply_with_args(:exactly, :class);
     this._form(fun() {
       name = this._apply(:anything);
       parent = this._apply(:anything);});
     this._form(fun() {
-      this._apply_with_args(:exactly, [:fields]);
+      this._apply_with_args(:exactly, :fields);
       fields_list = this._apply(:anything);});
     klass = modobj.new_class(name, parent, fields_list);
-    this._apply_with_args(:constructors, [klass]);
+    this._apply_with_args(:constructors, klass);
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:instance_method, [klass]);}, null);});
+        this._apply_with_args(:instance_method, klass);}, null);});
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:class_method, [klass]);}, null);});});
+        this._apply_with_args(:class_method, klass);}, null);});});
 }
 instance_method constructor: fun() {
   var ast = null;
@@ -189,31 +189,31 @@ instance_method constructor: fun() {
   var klass = this._apply(:anything);
   ast = this.input.head();
   this._form(fun() {
-    this._apply_with_args(:exactly, [:ctor]);
+    this._apply_with_args(:exactly, :ctor);
     name = this._apply(:anything);
     fnobj = klass.new_ctor(name);
-    p = this._apply_with_args(:fparams, [fnobj]);
+    p = this._apply_with_args(:fparams, fnobj);
     fnobj.set_params(p);
     fnobj.set_line(ast);
     uses_env = this._apply(:anything);
     fnobj.uses_env(uses_env);
     bproc = fnobj.body_processor;
     this._form(fun() {
-      this._apply_with_args(:exactly, [:body]);
-      this._apply_with_args(:body, [bproc]);});});
+      this._apply_with_args(:exactly, :body);
+      this._apply_with_args(:body, bproc);});});
   fnobj.set_text(ast.text);
 }
 instance_method constructors: fun() {
   var klass = this._apply(:anything);
   return this._or([fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:ctors]);
+      this._apply_with_args(:exactly, :ctors);
       this._form(fun() {
         this._many(fun() {
-          this._apply_with_args(:constructor, [klass]);}, null);});});
+          this._apply_with_args(:constructor, klass);}, null);});});
   }, fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:ctors]);
+      this._apply_with_args(:exactly, :ctors);
       this._form(fun() {
 });});
   }]);
@@ -228,18 +228,18 @@ instance_method instance_method: fun() {
   var klass = this._apply(:anything);
   ast = this.input.head();
   this._form(fun() {
-    this._apply_with_args(:exactly, [:fun]);
+    this._apply_with_args(:exactly, :fun);
     name = this._apply(:anything);
     fnobj = klass.new_instance_method(name);
-    p = this._apply_with_args(:fparams, [fnobj]);
+    p = this._apply_with_args(:fparams, fnobj);
     fnobj.set_params(p);
     fnobj.set_line(ast);
     uses_env = this._apply(:anything);
     fnobj.uses_env(uses_env);
     bproc = fnobj.body_processor;
     this._form(fun() {
-      this._apply_with_args(:exactly, [:body]);
-      this._apply_with_args(:body, [bproc]);});});
+      this._apply_with_args(:exactly, :body);
+      this._apply_with_args(:body, bproc);});});
   fnobj.set_text(ast.text);
 }
 instance_method class_method: fun() {
@@ -252,35 +252,35 @@ instance_method class_method: fun() {
   var klass = this._apply(:anything);
   ast = this.input.head();
   this._form(fun() {
-    this._apply_with_args(:exactly, [:fun]);
+    this._apply_with_args(:exactly, :fun);
     name = this._apply(:anything);
     fnobj = klass.new_class_method(name);
-    p = this._apply_with_args(:fparams, [fnobj]);
+    p = this._apply_with_args(:fparams, fnobj);
     fnobj.set_params(p);
     fnobj.set_line(ast);
     uses_env = this._apply(:anything);
     fnobj.uses_env(uses_env);
     bproc = fnobj.body_processor;
     this._form(fun() {
-      this._apply_with_args(:exactly, [:body]);
-      this._apply_with_args(:body, [bproc]);});});
+      this._apply_with_args(:exactly, :body);
+      this._apply_with_args(:body, bproc);});});
   fnobj.set_text(ast.text);
 }
 instance_method fparams: fun() {
   var x = null;
   var obj = this._apply(:anything);
   this._form(fun() {
-    this._apply_with_args(:exactly, [:params]);
+    this._apply_with_args(:exactly, :params);
     this._form(fun() {
       x = this._many(fun() {
-        this._apply_with_args(:fparam, [obj]);}, null);});});
+        this._apply_with_args(:fparam, obj);}, null);});});
   return x;
 }
 instance_method fparam: fun() {
   var obj = this._apply(:anything);
   return this._or([fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:var-arg]);
+      this._apply_with_args(:exactly, :var-arg);
       obj.set_vararg();});
     return "*";
   }, fun() {
@@ -292,21 +292,21 @@ instance_method object_definition: fun() {
   var obj = null;
   var modobj = this._apply(:anything);
   this._form(fun() {
-    this._apply_with_args(:exactly, [:object]);
+    this._apply_with_args(:exactly, :object);
     name = this._apply(:anything);
     obj = modobj.new_object(name);
     this._form(fun() {
       this._many1(fun() {
-        this._apply_with_args(:obj_slot, [obj]);});});
+        this._apply_with_args(:obj_slot, obj);});});
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:obj_function, [obj]);}, null);});});
+        this._apply_with_args(:obj_function, obj);}, null);});});
 }
 instance_method obj_slot: fun() {
   var obj = this._apply(:anything);
   this._form(fun() {
-    this._apply_with_args(:exactly, [:slot]);
-    this._apply_with_args(:obj_slot_value, [obj]);});
+    this._apply_with_args(:exactly, :slot);
+    this._apply_with_args(:obj_slot_value, obj);});
 }
 instance_method obj_slot_value: fun() {
   var name = null;
@@ -315,25 +315,25 @@ instance_method obj_slot_value: fun() {
   return this._or([fun() {
     name = this._apply(:anything);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:literal-number]);
+      this._apply_with_args(:exactly, :literal-number);
       x = this._apply(:anything);});
     return obj.add_slot_literal_num(name,x);
   }, fun() {
     name = this._apply(:anything);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:literal-string]);
+      this._apply_with_args(:exactly, :literal-string);
       x = this._apply(:anything);});
     return obj.add_slot_literal_string(name,x);
   }, fun() {
     name = this._apply(:anything);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:literal]);
-      this._apply_with_args(:exactly, [:null]);});
+      this._apply_with_args(:exactly, :literal);
+      this._apply_with_args(:exactly, :null);});
     return obj.add_slot_literal_null(name);
   }, fun() {
     name = this._apply(:anything);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:literal-array]);
+      this._apply_with_args(:exactly, :literal-array);
       x = this._form(fun() {
         this._many(fun() {
           this._apply(:anything);}, null);});});
@@ -341,7 +341,7 @@ instance_method obj_slot_value: fun() {
   }, fun() {
     name = this._apply(:anything);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:literal-dict]);
+      this._apply_with_args(:exactly, :literal-dict);
       x = this._many(fun() {
         this._apply(:anything);}, null);});
     return obj.add_slot_literal_dict(name, x);
@@ -354,9 +354,9 @@ instance_method obj_slot_value: fun() {
 instance_method obj_function: fun() {
   var obj = this._apply(:anything);
   return this._or([fun() {
-    this._apply_with_args(:constructor, [obj]);
+    this._apply_with_args(:constructor, obj);
   }, fun() {
-    this._apply_with_args(:function_definition, [obj]);
+    this._apply_with_args(:function_definition, obj);
   }]);
 }
 instance_method body: fun() {
@@ -365,13 +365,13 @@ instance_method body: fun() {
   return this._or([fun() {
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);});
+        this._apply_with_args(:expr, fnobj);}, null);});
   }, fun() {
     this._form(fun() {
       this._form(fun() {
-        this._apply_with_args(:exactly, [:primitive]);
+        this._apply_with_args(:exactly, :primitive);
         this._form(fun() {
-          this._apply_with_args(:exactly, [:literal-string]);
+          this._apply_with_args(:exactly, :literal-string);
           name = this._apply(:anything);});});
       this._many(fun() {
         this._apply(:anything);}, null);});
@@ -382,19 +382,19 @@ instance_method exprs: fun() {
   var fnobj = this._apply(:anything);
   this._form(fun() {
     this._many(fun() {
-      this._apply_with_args(:expr, [fnobj]);}, null);});
+      this._apply_with_args(:expr, fnobj);}, null);});
 }
 instance_method expr_elif: fun() {
   var lb_next = null;
   var lb_jmp = null;
   var fnobj = this._apply(:anything);
   this._form(fun() {
-    this._apply_with_args(:exactly, [:elif]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :elif);
+    this._apply_with_args(:expr, fnobj);
     lb_next = fnobj.emit_jz(null);
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);
+        this._apply_with_args(:expr, fnobj);}, null);
       lb_jmp = fnobj.emit_jmp(null);});});
   lb_next.as_current();
   return lb_jmp;
@@ -423,327 +423,327 @@ instance_method stm: fun() {
   var fnobj = this._apply(:anything);
   var ast = this._apply(:anything);
   return this._or([fun() {
-    this._apply_with_args(:exactly, [:var-def]);
+    this._apply_with_args(:exactly, :var-def);
     id = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_var_decl(ast, id);
   }, fun() {
-    this._apply_with_args(:exactly, [:end-body]);
+    this._apply_with_args(:exactly, :end-body);
     return fnobj.emit_end_body(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:return]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :return);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_return_top(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:return-null]);
+    this._apply_with_args(:exactly, :return-null);
     return fnobj.emit_return_null(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:return-top]);
+    this._apply_with_args(:exactly, :return-top);
     return fnobj.emit_return_top(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:non-local-return]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :non-local-return);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_non_local_return(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:super-ctor-send]);
+    this._apply_with_args(:exactly, :super-ctor-send);
     s = this._apply(:anything);
-    arity = this._apply_with_args(:args, [fnobj]);
+    arity = this._apply_with_args(:args, fnobj);
     return fnobj.emit_super_ctor_send(ast, s, arity);
   }, fun() {
-    this._apply_with_args(:exactly, [:send-or-local-call]);
+    this._apply_with_args(:exactly, :send-or-local-call);
     name = this._apply(:anything);
-    arity = this._apply_with_args(:args, [fnobj]);
+    arity = this._apply_with_args(:args, fnobj);
     return fnobj.emit_send_or_local_call(ast, name, arity);
   }, fun() {
-    this._apply_with_args(:exactly, [:super-send]);
-    arity = this._apply_with_args(:args, [fnobj]);
+    this._apply_with_args(:exactly, :super-send);
+    arity = this._apply_with_args(:args, fnobj);
     return fnobj.emit_super_send(ast, arity);
   }, fun() {
-    this._apply_with_args(:exactly, [:send]);
+    this._apply_with_args(:exactly, :send);
     e = this._apply(:anything);
-    this._apply_with_args(:exactly, ["send"]);
+    this._apply_with_args(:exactly, "send");
     this._form(fun() {
-      this._apply_with_args(:exactly, [:args]);
+      this._apply_with_args(:exactly, :args);
       this._form(fun() {
         v = this._form(fun() {
-          this._apply_with_args(:exactly, [:id]);
+          this._apply_with_args(:exactly, :id);
           this._apply(:anything);});
         this._form(fun() {
-          this._apply_with_args(:exactly, [:literal-array]);
+          this._apply_with_args(:exactly, :literal-array);
           this._form(fun() {
             arity = this._many(fun() {
-              this._apply_with_args(:expr, [fnobj]);}, null);});});});});
-    this._apply_with_args(:expr, [fnobj,e]);
-    this._apply_with_args(:expr, [fnobj,v]);
+              this._apply_with_args(:expr, fnobj);}, null);});});});});
+    this._apply_with_args(:expr, fnobj,e);
+    this._apply_with_args(:expr, fnobj,v);
     return fnobj.emit_opt_send(ast, arity.size);
   }, fun() {
-    this._apply_with_args(:exactly, [:send]);
+    this._apply_with_args(:exactly, :send);
     e = this._apply(:anything);
     s = this._apply(:anything);
-    arity = this._apply_with_args(:args, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    arity = this._apply_with_args(:args, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_send(ast, s, arity);
   }, fun() {
-    this._apply_with_args(:exactly, [:call]);
+    this._apply_with_args(:exactly, :call);
     e = this._apply(:anything);
-    arity = this._apply_with_args(:args, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    arity = this._apply_with_args(:args, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_call(ast, arity);
   }, fun() {
-    this._apply_with_args(:exactly, [:expression]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :expression);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_pop(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:not]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :not);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_unary(ast,"!");
   }, fun() {
-    this._apply_with_args(:exactly, [:negative]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :negative);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_unary(ast,"neg");
   }, fun() {
-    this._apply_with_args(:exactly, [:get-var-arg]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :get-var-arg);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_push_var_arg(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:bit-neg]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :bit-neg);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_unary(ast,"~");
   }, fun() {
-    this._apply_with_args(:exactly, [:and]);
+    this._apply_with_args(:exactly, :and);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"and");
   }, fun() {
-    this._apply_with_args(:exactly, [:or]);
+    this._apply_with_args(:exactly, :or);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"or");
   }, fun() {
-    this._apply_with_args(:exactly, [:+]);
+    this._apply_with_args(:exactly, :+);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"+");
   }, fun() {
-    this._apply_with_args(:exactly, [:-]);
+    this._apply_with_args(:exactly, :-);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"-");
   }, fun() {
-    this._apply_with_args(:exactly, [:*]);
+    this._apply_with_args(:exactly, :*);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"*");
   }, fun() {
-    this._apply_with_args(:exactly, [:/]);
+    this._apply_with_args(:exactly, :/);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"/");
   }, fun() {
-    this._apply_with_args(:exactly, [:&]);
+    this._apply_with_args(:exactly, :&);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"&");
   }, fun() {
-    this._apply_with_args(:exactly, [:|]);
+    this._apply_with_args(:exactly, :|);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"|");
   }, fun() {
-    this._apply_with_args(:exactly, [:<]);
+    this._apply_with_args(:exactly, :<);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"<");
   }, fun() {
-    this._apply_with_args(:exactly, [:<<]);
+    this._apply_with_args(:exactly, :<<);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"<<");
   }, fun() {
-    this._apply_with_args(:exactly, [:>>]);
+    this._apply_with_args(:exactly, :>>);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,">>");
   }, fun() {
-    this._apply_with_args(:exactly, [:<=]);
+    this._apply_with_args(:exactly, :<=);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"<=");
   }, fun() {
-    this._apply_with_args(:exactly, [:>]);
+    this._apply_with_args(:exactly, :>);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,">");
   }, fun() {
-    this._apply_with_args(:exactly, [:>=]);
+    this._apply_with_args(:exactly, :>=);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,">=");
   }, fun() {
-    this._apply_with_args(:exactly, [:==]);
+    this._apply_with_args(:exactly, :==);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"==");
   }, fun() {
-    this._apply_with_args(:exactly, [:!=]);
+    this._apply_with_args(:exactly, :!=);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_binary(ast,"!=");
   }, fun() {
-    this._apply_with_args(:exactly, [:if]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :if);
+    this._apply_with_args(:expr, fnobj);
     lb_next = fnobj.emit_jz(null);
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);
+        this._apply_with_args(:expr, fnobj);}, null);
       lb_end = fnobj.emit_jmp(null);});
     lb_next.as_current();
     this._form(fun() {
       lbs_end = this._many(fun() {
-        this._apply_with_args(:expr_elif, [fnobj]);}, null);});
+        this._apply_with_args(:expr_elif, fnobj);}, null);});
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);});
+        this._apply_with_args(:expr, fnobj);}, null);});
     lb_end.as_current();
     lbs_end.map(fun(x) { x.as_current()});
   }, fun() {
-    this._apply_with_args(:exactly, [:while]);
+    this._apply_with_args(:exactly, :while);
     lbcond = fnobj.current_label(false);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:expr, fnobj);
     lbend = fnobj.emit_jz(null);
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);});
+        this._apply_with_args(:expr, fnobj);}, null);});
     fnobj.emit_jmp_back(lbcond.as_current());
     return lbend.as_current();
   }, fun() {
-    this._apply_with_args(:exactly, [:for]);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:exactly, :for);
+    this._apply_with_args(:expr, fnobj);
     lbcond = fnobj.current_label(false);
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:expr, fnobj);
     lbend = fnobj.emit_jz(null);
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);});
-    this._apply_with_args(:expr, [fnobj]);
+        this._apply_with_args(:expr, fnobj);}, null);});
+    this._apply_with_args(:expr, fnobj);
     fnobj.emit_jmp_back(lbcond.as_current());
     return lbend.as_current();
   }, fun() {
-    this._apply_with_args(:exactly, [:try]);
+    this._apply_with_args(:exactly, :try);
     label_begin_try = fnobj.current_label(true);
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);});
+        this._apply_with_args(:expr, fnobj);}, null);});
     end_pos = fnobj.emit_catch_jump();
     label_begin_catch = fnobj.current_label(true);
     cp = this._apply(:catch_decl);
     fnobj.bind_catch_var(cp[1]);
     this._form(fun() {
       this._many(fun() {
-        this._apply_with_args(:expr, [fnobj]);}, null);});
+        this._apply_with_args(:expr, fnobj);}, null);});
     return fnobj.emit_try_catch(label_begin_try, label_begin_catch, end_pos, cp[0]);
   }, fun() {
-    this._apply_with_args(:exactly, [:=]);
+    this._apply_with_args(:exactly, :=);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:id]);
+      this._apply_with_args(:exactly, :id);
       v = this._apply(:anything);});
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_local_assignment(ast, v);
   }, fun() {
-    this._apply_with_args(:exactly, [:=]);
+    this._apply_with_args(:exactly, :=);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:index]);
+      this._apply_with_args(:exactly, :index);
       lhs = this._apply(:anything);
       idx = this._apply(:anything);});
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,idx]);
-    this._apply_with_args(:expr, [fnobj,lhs]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,idx);
+    this._apply_with_args(:expr, fnobj,lhs);
     return fnobj.emit_index_assignment(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:=]);
+    this._apply_with_args(:exactly, :=);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:field]);
+      this._apply_with_args(:exactly, :field);
       f = this._apply(:anything);});
-    this._apply_with_args(:expr, [fnobj]);
+    this._apply_with_args(:expr, fnobj);
     return fnobj.emit_field_assignment(ast, f);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal-number]);
+    this._apply_with_args(:exactly, :literal-number);
     x = this._apply(:anything);
     return fnobj.emit_push_num_literal(ast, x);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal]);
-    this._apply_with_args(:exactly, [:this]);
+    this._apply_with_args(:exactly, :literal);
+    this._apply_with_args(:exactly, :this);
     return fnobj.emit_push_this(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal-string]);
+    this._apply_with_args(:exactly, :literal-string);
     x = this._apply(:anything);
     return fnobj.emit_push_str_literal(ast, x);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal-symbol]);
+    this._apply_with_args(:exactly, :literal-symbol);
     x = this._apply(:anything);
     return fnobj.emit_push_sym_literal(ast, x);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal]);
-    this._apply_with_args(:exactly, [:null]);
+    this._apply_with_args(:exactly, :literal);
+    this._apply_with_args(:exactly, :null);
     return fnobj.emit_push_null(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal]);
-    this._apply_with_args(:exactly, [:true]);
+    this._apply_with_args(:exactly, :literal);
+    this._apply_with_args(:exactly, :true);
     return fnobj.emit_push_true(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal]);
-    this._apply_with_args(:exactly, [:false]);
+    this._apply_with_args(:exactly, :literal);
+    this._apply_with_args(:exactly, :false);
     return fnobj.emit_push_false(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal]);
-    this._apply_with_args(:exactly, [:module]);
+    this._apply_with_args(:exactly, :literal);
+    this._apply_with_args(:exactly, :module);
     return fnobj.emit_push_module(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal]);
-    this._apply_with_args(:exactly, [:context]);
+    this._apply_with_args(:exactly, :literal);
+    this._apply_with_args(:exactly, :context);
     return fnobj.emit_push_context(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal]);
-    this._apply_with_args(:exactly, [:argc]);
+    this._apply_with_args(:exactly, :literal);
+    this._apply_with_args(:exactly, :argc);
     return fnobj.emit_push_argc(ast);
   }, fun() {
-    this._apply_with_args(:exactly, [:id]);
+    this._apply_with_args(:exactly, :id);
     name = this._apply(:anything);
     return fnobj.emit_push_var(ast, name);
   }, fun() {
-    this._apply_with_args(:exactly, [:field]);
+    this._apply_with_args(:exactly, :field);
     name = this._apply(:anything);
     return fnobj.emit_push_field(ast, name);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal-array]);
+    this._apply_with_args(:exactly, :literal-array);
     e = this._apply(:anything);
-    this._apply_with_args(:exprs, [fnobj,e]);
+    this._apply_with_args(:exprs, fnobj,e);
     return fnobj.emit_push_list(ast, e.size);
   }, fun() {
-    this._apply_with_args(:exactly, [:literal-dict]);
-    p = this._apply_with_args(:dict_pairs, [fnobj]);
+    this._apply_with_args(:exactly, :literal-dict);
+    p = this._apply_with_args(:dict_pairs, fnobj);
     return fnobj.emit_push_dict(ast, p.size);
   }, fun() {
-    this._apply_with_args(:exactly, [:index]);
+    this._apply_with_args(:exactly, :index);
     e = this._apply(:anything);
-    this._apply_with_args(:expr, [fnobj]);
-    this._apply_with_args(:expr, [fnobj,e]);
+    this._apply_with_args(:expr, fnobj);
+    this._apply_with_args(:expr, fnobj,e);
     return fnobj.emit_push_index(ast);
   }]);
 }
@@ -753,9 +753,9 @@ instance_method expr: fun() {
   return this._or([fun() {
     ast = this.input.head();
     this._form(fun() {
-      this._apply_with_args(:stm, [fnobj,ast]);});
+      this._apply_with_args(:stm, fnobj,ast);});
   }, fun() {
-    this._apply_with_args(:funliteral, [fnobj]);
+    this._apply_with_args(:funliteral, fnobj);
   }]);
 }
 instance_method catch_decl: fun() {
@@ -763,15 +763,15 @@ instance_method catch_decl: fun() {
   var id = null;
   return this._or([fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:catch]);
+      this._apply_with_args(:exactly, :catch);
       this._form(fun() {
-        this._apply_with_args(:exactly, [:id]);
+        this._apply_with_args(:exactly, :id);
         type = this._apply(:anything);});
       id = this._apply(:anything);});
     return [type, id];
   }, fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:catch]);
+      this._apply_with_args(:exactly, :catch);
       id = this._apply(:anything);});
     return [null, id];
   }]);
@@ -782,9 +782,9 @@ instance_method dict_pairs: fun() {
   e = this._many(fun() {
     this._or([fun() {
       this._form(fun() {
-        this._apply_with_args(:exactly, [:pair]);
-        this._apply_with_args(:expr, [fnobj]);
-        this._apply_with_args(:expr, [fnobj]);});
+        this._apply_with_args(:exactly, :pair);
+        this._apply_with_args(:expr, fnobj);
+        this._apply_with_args(:expr, fnobj);});
     }]);}, null);
   return e;
 }
@@ -795,16 +795,16 @@ instance_method funliteral: fun() {
   var fnobj = this._apply(:anything);
   ast = this.input.head();
   ast = this._form(fun() {
-    this._apply_with_args(:exactly, [:fun-literal]);
+    this._apply_with_args(:exactly, :fun-literal);
     fn = fnobj.new_closure();
-    p = this._apply_with_args(:fparams, [fn]);
+    p = this._apply_with_args(:fparams, fn);
     fn.set_params(p);
     fn.set_line(ast);
     this._form(fun() {
-      this._apply_with_args(:exactly, [:body]);
+      this._apply_with_args(:exactly, :body);
       this._form(fun() {
         this._many(fun() {
-          this._apply_with_args(:expr, [fn]);}, null);});});});
+          this._apply_with_args(:expr, fn);}, null);});});});
   fn.set_text(ast.text);
   return fnobj.emit_push_closure(ast, fn);
 }
@@ -815,7 +815,7 @@ instance_method cfunliteral: fun() {
   fnobj.set_line(ast);
   this._form(fun() {
     this._many(fun() {
-      this._apply_with_args(:expr, [fnobj]);}, null);});
+      this._apply_with_args(:expr, fnobj);}, null);});
   return fnobj;
 }
 instance_method args: fun() {
@@ -825,16 +825,16 @@ instance_method args: fun() {
   var fnobj = this._apply(:anything);
   return this._or([fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:args]);
+      this._apply_with_args(:exactly, :args);
       this._form(fun() {
 });});
     return 0;
   }, fun() {
     this._form(fun() {
-      this._apply_with_args(:exactly, [:args]);
+      this._apply_with_args(:exactly, :args);
       a = this._apply(:anything);
       b = a.reverse;
-      arity = this._apply_with_args(:arglist, [fnobj,b]);});
+      arity = this._apply_with_args(:arglist, fnobj,b);});
     return arity;
   }]);
 }
@@ -843,7 +843,7 @@ instance_method arglist: fun() {
   var fnobj = this._apply(:anything);
   x = this._form(fun() {
     this._many1(fun() {
-      this._apply_with_args(:expr, [fnobj]);});});
+      this._apply_with_args(:expr, fnobj);});});
   return x.size;
 }
 
