@@ -16,7 +16,7 @@ typedef int bytecode;
 class Process;
 typedef int (*prim_function_t) (Process*);
 
-#define DEFAULT_STACK_SIZE sizeof(word) * 1024 * 1024
+#define DEFAULT_STACK_SIZE 10 * 1024 * 1024
 
 #define EXCEPTION_FRAME_SIZE 3
 
