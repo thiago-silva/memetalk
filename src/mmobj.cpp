@@ -596,10 +596,22 @@ oop MMObj::mm_function_from_cfunction(Process* p, oop cfun, oop imod, bool shoul
   * (oop*) &fun[1] = mm_object_new();
   * (oop*) &fun[2] = cfun;
   * (oop*) &fun[3] = imod;
+  * (oop*) &fun[4] = MM_NULL;
   return fun;
 }
 
 //function
+oop MMObj::mm_function_get_env(Process* p, oop fun, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function")),
+             "TypeError","Expected Function or Context")
+  return ((oop*)fun)[4];
+}
+void MMObj::mm_function_set_env(Process* p, oop fun, oop env, bool should_assert) {
+  TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function")),
+             "TypeError","Expected Function or Context")
+  ((oop*)fun)[4] = env;
+}
+
 long MMObj::mm_function_get_header(Process* p, oop fun, bool should_assert) {
   TYPE_CHECK(!( mm_object_vt(fun) == _core_image->get_prime("Function") ||
                 mm_object_vt(fun) == _core_image->get_prime("Context")),

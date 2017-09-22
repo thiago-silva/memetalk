@@ -179,7 +179,7 @@ private:
 
   oop ctor_rdp_for(oop rp, oop cp);
 
-  void setup_fp(number, number);
+  oop setup_fp(number, number);
   void copy_params_to_env(oop, number, number);
   void restore_fp(oop, number, number);
 

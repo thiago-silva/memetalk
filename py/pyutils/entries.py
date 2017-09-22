@@ -1133,13 +1133,13 @@ class Function(Entry):
         delegate = vmem.append_object_instance()
 
         vmem.append_int(FRAME_TYPE_OBJECT)
-        vmem.append_int(4 * bits.WSIZE)
+        vmem.append_int(5 * bits.WSIZE)
 
         oop = vmem.append_label_ref('Function', self.label())   # vt
         vmem.append_pointer_to(delegate)                        # delegate
         vmem.append_label_ref(self.cfun.label())                # compiled_function
         vmem.append_label_ref(self.imod.label())                # module
-        # 4: env
+        vmem.append_null()                                      # env
         self.oop = oop
         return oop
 

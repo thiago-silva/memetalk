@@ -1229,14 +1229,13 @@ instance_method fill: fun(vmem) {
   var delegate = vmem.append_object_instance();
 
   vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
-  vmem.append_int(4 * bits.WSIZE, null);
+  vmem.append_int(5 * bits.WSIZE, null);
 
   var oop = vmem.append_label_ref("Function", this.label); //vt
   vmem.append_pointer_to(delegate, null);                  //delegate
   vmem.append_label_ref(@cfun.label, null);                //compiled_function
-
   vmem.append_label_ref(@imod.label, null);                //module
-  //4: env
+  vmem.append_null(null);                                  //env
   return this.set_oop(oop);
 }
 end

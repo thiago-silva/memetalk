@@ -396,7 +396,7 @@ void Process::basic_new_and_load(oop klass) {
   set_dp(dp);
 }
 
-void Process::setup_fp(number num_params, number local_storage_size) {
+oop Process::setup_fp(number num_params, number local_storage_size) {
   //TODO? this could be a calloc followed by memcpy
   oop env = (oop) GC_MALLOC(sizeof(oop) * (local_storage_size + num_params + 2)); //+2: space for rp, dp
   DBG("allocated env: " << env << " - " << " local_storage: " << local_storage_size
@@ -434,6 +434,7 @@ void Process::setup_fp(number num_params, number local_storage_size) {
   //effectivelly losing the references to all `env` content but the last cell
   _fp = it;
   DBG("env new _fp: " << _fp << endl);
+  return env;
 }
 
 void Process::restore_fp(oop fp, number params, number env_offset) {
@@ -523,10 +524,8 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
 
   if (_mmobj->mm_is_context(fun)) {
     restore_fp(_mmobj->mm_context_get_env(this, fun, true), num_params, CFUN_ENV_OFFSET(header));
-  } else {
-    if (CFUN_HAS_ENV(header)) { //create new frame for function containing closures
-      setup_fp(arity, local_storage_size);
-    }
+  } else if (CFUN_HAS_ENV(header)) { //create new frame for function containing closures
+    _mmobj->mm_function_set_env(this, fun, setup_fp(arity, local_storage_size), true);
   }
   // if (_found) {
   //   std::cerr << "============= after setup fp ===================" << endl;
@@ -1532,7 +1531,7 @@ void Process::handle_send(number num_args) {
 
   if (!fun) {
     std::stringstream s;
-    s << _mmobj->mm_symbol_cstr(this, selector) << " not found in object " << recv;
+    s << _mmobj->mm_symbol_cstr(this, selector) << " (" << selector << ") not found in object " << recv;
     //we rely on compiler generating a pop instruction to bind ex_oop to the catch var
     WARNING() << "will raise DoesNotUnderstand: " << s.str() << endl;
     oop oo_ex = mm_exception("DoesNotUnderstand", s.str().c_str());

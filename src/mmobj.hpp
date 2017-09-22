@@ -180,6 +180,8 @@ public:
   oop mm_function_from_cfunction(Process*, oop cfun, oop imod, bool should_assert = false);
 
 
+  oop mm_function_get_env(Process*, oop fun, bool should_assert = false);
+  void mm_function_set_env(Process*, oop fun, oop env, bool should_assert = false);
   long mm_function_get_header(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_name(Process*, oop fun, bool should_assert = false);
   oop mm_function_get_prim_name(Process*, oop fun, bool should_assert = false);
