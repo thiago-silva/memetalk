@@ -146,7 +146,7 @@ instance_method new_module: fun() {
 instance_method parse: fun() {
   var ast = ometa_base.parse(io.read_file(@filepath), meme.MemeScriptParser, :start);
   if (ast[0]) {
-    //io.print(ast[0]);
+    io.print(ast[0]);
     exit(1); //FIXME: we probably want to raise as this might be used as a library
   } else {
     return ast[1];
