@@ -864,7 +864,7 @@ instance_method emit_push_argc: fun(ast) {
 
 instance_method emit_push_var_arg: fun(ast) {
   var bpos = this.current_bytecode_pos();
-  @bytecodes.append(:load_argv, 0);
+  @bytecodes.append(:push_argv, 0);
   this.update_line_mapping(bpos, ast);
 }
 

@@ -784,7 +784,7 @@ class CompiledFunction(Entry):
 
     @emitter
     def emit_push_var_arg(self, _):
-        self.bytecodes.append("load_argv", 0)
+        self.bytecodes.append("push_argv", 0)
 
     @emitter
     def emit_local_assignment(self, _, name):
