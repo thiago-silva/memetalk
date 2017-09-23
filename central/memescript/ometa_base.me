@@ -269,6 +269,15 @@ instance_method _pred: fun(x) {
   }
 }
 
+instance_method _when: fun(p, x) {
+// x if p
+  if (p) {
+     return x;
+  } else {
+    OMetaException.throw();
+  }
+}
+
 instance_method _not: fun(fn) {
 // returns true if fn() fails. Fails otherwise
   var input = @input;
@@ -371,7 +380,7 @@ instance_method anything: fun() {
 }
 
 instance_method end: fun() {
-  return this._not(fun() { this._apply(:anything) });
+  return this._not(fun() { this.anything() });
 }
 
 instance_method apply: fun() {
@@ -380,8 +389,8 @@ instance_method apply: fun() {
 }
 
 instance_method exactly: fun() {
-  var wanted = this._apply(:anything);
-  if (wanted == this._apply(:anything)) {
+  var wanted = this.anything;
+  if (wanted == this.anything) {
      return wanted;
   } else {
     OMetaException.throw();
@@ -390,130 +399,134 @@ instance_method exactly: fun() {
 
 
 instance_method number: fun() {
-  var r = this._apply(:anything);
+  var r = this.anything;
   var vt = Mirror.vtFor(r);
   this._pred(Integer == vt or LongNum == vt);
   return r;
 }
 
 instance_method string: fun() {
-  var r = this._apply(:anything);
+  var r = this.anything;
   this._pred(String == Mirror.vtFor(r));
   return r;
 }
 
 instance_method symbol: fun() {
-  var r = this._apply(:anything);
+  var r = this.anything;
   this._pred(Symbol == Mirror.vtFor(r));
   return r;
 }
 
 instance_method char: fun() {
-  var r = this._apply(:anything);
+  var r = this.anything;
   this._pred(String == Mirror.vtFor(r) and r.size() == 1);
   return r;
 }
 
 instance_method space: fun() {
-  var r = this._apply(:char);
+  var r = this.char;
   this._pred(r.onlySpaces());
   return r;
 }
 
 instance_method spaces: fun() {
-  return this._many(fun() { this._apply(:space) }, null).join("");
+  return this._many(fun() { this.space }, null).join("");
 }
 
 instance_method digit: fun() {
-  var r = this._apply(:char);
+  var r = this.char;
   this._pred(r.onlyDigits());
   return r;
 }
 
 instance_method digits: fun() {
-  var ds = this._many1(fun() { this._apply(:digit) });
+  var ds = this._many1(fun() { this.digit });
   return ds.join("");
 }
 
 instance_method lower: fun() {
-  var r = this._apply(:char);
+  var r = this.char;
   this._pred(r.isLower());
   return r;
 }
 
 instance_method upper: fun() {
-  var r = this._apply(:char);
+  var r = this.char;
   this._pred(r.isUpper());
   return r;
 }
 
 instance_method letter: fun() {
-  return this._or([fun() { this._apply(:lower) },
-                   fun() { this._apply(:upper) }]);
+  return this._or([fun() { this.lower },
+                   fun() { this.upper }]);
 }
 
 instance_method letter_or_digit: fun() {
-  return this._or([fun() { this._apply(:letter) },
-                   fun() { this._apply(:digit) }]);
+  return this._or([fun() { this.letter },
+                   fun() { this.digit }]);
 }
 
 instance_method first_and_rest: fun() {
-  var first = this._apply(:anything);
-  var rest = this._apply(:anything);
-  return this._many(fun() { this._apply(rest) }, this._apply(first));
+  var first = this.anything;
+  var rest = this.anything;
+  return this._many(fun() { this.send(rest, []) }, this.send(first, []));
 }
 
 instance_method seq: fun() {
-  var xs = this._apply(:anything);
+  var xs = this.anything;
   xs.each(fun(_, x) {
-    this._apply_with_args(:exactly, x);
+    this._pred(x == this.anything);
   });
   return xs;
 }
 
 instance_method token: fun() {
-  var tk = this._apply(:anything);
-  this._apply(:spaces);
-  return this._apply_with_args(:seq, tk);
+  var tk = this.anything;
+  this.spaces;
+  //return this._apply_with_args(:seq, tk);
+  tk.each(fun(_, x) {
+    this._pred(x == this.anything);
+  });
+  return tk;
 }
 
 instance_method identifier_first: fun() {
-  return this._or([fun() { this._apply_with_args(:exactly, "_") },
-                   fun() { this._apply(:letter) }]);
+  return this._or([fun() { this._when(this.anything == "_", "_") },
+                   fun() { this.letter }]);
 }
 
 instance_method identifier_rest: fun() {
-  return this._or([fun() { this._apply_with_args(:exactly, "_") },
-                   fun() { this._apply(:letter_or_digit) }]);
+  return this._or([fun() { this._when(this.anything == "_", "_") },
+                   fun() { this.letter_or_digit }]);
 }
 
 instance_method identifier: fun() {
-  this._apply(:spaces);
+  this.spaces;
   var ident = this._apply_with_args(:first_and_rest, :identifier_first, :identifier_rest);
   return ident.join("");
 }
 
 instance_method keyword: fun() {
-  var xs = this._apply(:anything);
+  var xs = this.anything;
   this._apply_with_args(:token, xs);
   this._not(fun() {
-    this._apply(:identifier_rest);});
+    this.identifier_rest;});
   return xs;
 }
 
 
 
 instance_method until: fun() {
-  var brks = this._apply(:anything);
+  var brks = this.anything;
   var r = null;
   var acc = [];
   while (true) {
-    r = this._lookahead(fun() { this._apply(:anything) });
+    r = this._lookahead(fun() { this.anything });
     if (brks.find(r) >= 0) {
       return acc;
     }
     acc.append(r);
-    this._apply(:anything);
+    this.anything;
   }
 }
 
