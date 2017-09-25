@@ -169,6 +169,8 @@ private:
 
   bool load_fun(oop, oop, oop, bool, number = -1);
 
+  void** create_threaded_code(void** table, bytecode* ip, number size);
+
 
   oop stack_pop();
   int execute_primitive(oop);
@@ -188,7 +190,7 @@ private:
   void handle_super_send(number num_arg);
   void handle_super_ctor_send(number);
   void handle_call(number);
-  void handle_return(oop);
+  void** handle_return(oop, void*);
   void basic_new_and_load(oop);
 
   void handle_ex_equal(number num_args);
@@ -227,6 +229,7 @@ private:
   oop _fp;
   oop _cp;
   bytecode* _ip;
+  void** _tcode;
   number _ss;
   oop _bp;
   //
@@ -241,6 +244,7 @@ private:
   oop _step_bp;
   oop _unwind_to_bp;
   oop _current_exception;
+  void ** _dispatch_table;
   oop _last_retval;
   bool _breaking_on_return;
   bool _online;

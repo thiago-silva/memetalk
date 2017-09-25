@@ -659,7 +659,7 @@ instance_method fill: fun(vmem) {
   var oop_closures = vmem.append_list_of_oops_for_labels(@closures.map(fun(x) { x.label }));
 
   vmem.append_int(mec.FRAME_TYPE_OBJECT, null);
-  vmem.append_int(21 * bits.WSIZE, null);
+  vmem.append_int(22 * bits.WSIZE, null);
 
   var oop = vmem.append_external_ref("CompiledFunction", this.label); // ComppiledFunction vt
   vmem.append_pointer_to(oop_delegate, null);
@@ -719,7 +719,7 @@ instance_method fill: fun(vmem) {
   vmem.append_pointer_to(oop_line_mappings, null);
   vmem.append_pointer_to(oop_loc_mappings, null);
   vmem.append_pointer_to(oop_closures, null);
-  //vmem.append_int(@var_arg, null);
+  vmem.append_null(null);
   return this.set_oop(oop);
 }
 instance_method new_closure: fun(params) {

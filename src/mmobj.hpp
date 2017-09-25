@@ -277,6 +277,11 @@ public:
 
   CoreImage* core() { return _core_image; };
 
+  void** mm_function_get_thread_code(Process*, oop fun, bool should_assert = false);
+  void mm_function_set_thread_code(Process*, oop fun, void*, bool should_assert = false);
+  void** mm_compiled_function_get_thread_code(Process*, oop cfun, bool should_assert = false);
+  void mm_compiled_function_set_thread_code(Process*, oop cfun, void*, bool should_assert = false);
+
 private:
   MMLog _log;
   // VM* _vm;

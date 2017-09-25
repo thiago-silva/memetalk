@@ -34,12 +34,13 @@ namespace fs = ::boost::filesystem;
 //This is trivial if the receiver is of constant type. However, some prims
 //have polimorphic receivers (e.g. Behavior.==, numeric.+). So the ex_opcode
 //handler has to be aware of all possible types, just as the prim would.
-#define SPECIALIZE_BYTECODE(code)                                       \
-  bytecode* _b_send = proc->ip()-1;                                     \
-  if (decode_opcode(*_b_send) == SEND && !proc->caller_is_prim()) {     \
-    int _args = decode_args(*_b_send);                                  \
-    *_b_send = (code << 24) + _args;                                    \
-  }
+#define SPECIALIZE_BYTECODE(code)
+// #define SPECIALIZE_BYTECODE(code)                                       \
+//   bytecode* _b_send = proc->ip()-1;                                     \
+//   if (decode_opcode(*_b_send) == SEND && !proc->caller_is_prim()) {     \
+//     int _args = decode_args(*_b_send);                                  \
+//     *_b_send = (code << 24) + _args;                                    \
+//   }
 
 
 
