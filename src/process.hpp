@@ -161,6 +161,7 @@ public:
   bool running_online() { return _online; }
 
   bool caller_is_prim();
+  long load_count;
 private:
   std::string log_label();
   const char* meme_curr_fname();
@@ -175,6 +176,7 @@ private:
   oop stack_pop();
   int execute_primitive(oop);
   void fetch_cycle(void*);
+  void i_fetch_cycle(void* stop_at_bp);
 
   void push_frame(oop,oop,number, number);
   void pop_frame();
@@ -248,6 +250,7 @@ private:
   oop _last_retval;
   bool _breaking_on_return;
   bool _online;
+  number tcount;
 
 //profiling
   boost::unordered_map<std::string, long> _call_count; //map<fun, count>

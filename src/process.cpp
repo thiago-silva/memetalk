@@ -109,6 +109,8 @@ Process::Process(VM* vm, int debugger_id, bool online)
   _break_only_on_this_module = MM_NULL;
   _breaking_on_return = false;
   _dispatch_table = NULL;
+  tcount = 0;
+  load_count = 0;
 }
 
 std::string Process::dump_stack_trace(bool enabled) {
@@ -535,9 +537,17 @@ bool Process::load_fun(oop recv, oop drecv, oop fun, bool should_allocate, numbe
   _tcode = _mmobj->mm_function_get_thread_code(this, fun, true);
   // DBG("first instruction " << decode_opcode(*_ip) << endl);
   //_code_size = _mmobj->mm_function_get_code_size(this, fun, true);
-  if (!_tcode && _dispatch_table) {
-     _tcode = create_threaded_code(_dispatch_table, _ip, _mmobj->mm_function_get_code_size(this, _cp));
-     _mmobj->mm_function_set_thread_code(this, _cp, _tcode);
+  //std::cerr << "count: " << tcount << endl;
+  load_count++;
+  if (std::string("f") == CTXNAME(_cp)) {
+    std::cerr << "load: " << load_count << endl;
+  }
+  if (!_tcode) {
+    if (_dispatch_table && load_count > INSTALL_THREAD) {
+      std::cerr << "----------------- ** install table " << CTXNAME(_cp) << "\n";
+      _tcode = create_threaded_code(_dispatch_table, _ip, _mmobj->mm_function_get_code_size(this, _cp));
+      _mmobj->mm_function_set_thread_code(this, _cp, _tcode);
+    }
   }
   maybe_break_on_call();
   return true;
@@ -754,6 +764,218 @@ oop Process::call_2(oop fun, oop arg0, oop arg1, int* exc) {
   return do_call(fun, exc);
 }
 
+void Process::i_fetch_cycle(void* stop_at_bp) {
+  DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
+      << " ip: " << _ip << endl);
+  std::cerr << " @@ interpret " << endl;
+  //at least one instructionn should be executed.  stop_at_bp is usually the
+  //top mark of the stack when a function is loaded (_bp). So starting a fetch
+  //cycle when this value is smaller than _bp likely means the bytecodes
+  //executed more POPs than it should. Since the frame has been compromised,
+  //unloading the current function will further mess things up and so on.
+  //Thus, let's just do a hard crash if this happens or if _ip -- which
+  //we use below -- is 0.
+
+  assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
+
+  while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
+
+    //at tick we may pause for debugging interactions.
+    //Because debugger may interfere with _ip,
+    //we must take the code from _ip, decode and dispatch
+    //*after* the tick()
+    if (running_online()) tick();
+
+    bytecode code = *_ip;
+
+
+    int opcode = decode_opcode(code);
+    int arg = decode_args(code);
+
+    DBG("IP: " << _ip << " with code: " << code << " decoded as opcode " << opcode << ", arg: " << arg << endl);
+
+    _ip++; //this can't be done after dispatch, where an ip for a different fun may be set
+
+    // if (_state != RUN_STATE) {
+    //   char* name = _mmobj->mm_string_cstr(_mmobj->mm_function_get_name(_cp));
+    //   DBG(" [dispatching] " << name << " " << (_ip-1) << " " << opcode << endl);
+    // }
+    //dispatch(opcode, arg);
+    oop val;
+    oop recv;
+    switch(opcode) {
+      case PUSH_LOCAL:
+        // _PUSH_LOCAL++;
+        DBG("PUSH_LOCAL " << arg << " " << (oop) *(_fp + arg) << endl);
+        stack_push(*(_fp + arg));
+        break;
+      case PUSH_LITERAL:
+        // _PUSH_LITERAL++;
+        DBG("PUSH_LITERAL " << arg << " " << _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true) << endl);
+        stack_push(_mmobj->mm_function_get_literal_by_index(this, _cp, arg, true));
+        break;
+      case PUSH_MODULE:
+        // _PUSH_MODULE++;
+        DBG("PUSH_MODULE " << arg << " " << _mp << endl);
+        stack_push(_mp);
+        break;
+      case PUSH_FIELD:
+        // _PUSH_FIELD++;
+        DBG("PUSH_FIELD " << arg << " " << (oop) *(dp() + arg + 2) <<  " dp: " << dp() << endl);
+        stack_push(*(dp() + arg + 2));
+        break;
+      case NEW_CONTEXT:
+        stack_push(_mmobj->mm_context_new(this, _mp, _fp, _mmobj->mm_function_get_literal_by_index(this, _cp, arg, true)));
+        break;
+      case PUSH_THIS:
+        // _PUSH_THIS++;
+        DBG("PUSH_THIS " << rp() << endl);
+        stack_push(rp());
+        break;
+      case PUSH_FP:
+        // _PUSH_FP++;
+        DBG("PUSH_FP " << arg << " -- " << _fp << endl);
+        stack_push(_fp);
+        break;
+      case PUSH_CONTEXT:
+        // _PUSH_CONTEXT++;
+        DBG("PUSH_CONTEXT " << arg << endl);
+        stack_push(_cp);
+        break;
+      case PUSH_BIN:
+        // _PUSH_BIN++;
+        DBG("PUSH_BIN " << arg << endl);
+        stack_push(arg);
+        break;
+      case RETURN_TOP:
+        // _RETURN_TOP++;
+        val = stack_pop();
+        DBG("RETURN_TOP " << arg << " " << val << endl);
+        unload_fun_and_return(val);
+        maybe_break_on_return();
+        break;
+      case RETURN_THIS:
+        // _RETURN_THIS++;
+        DBG("RETURN_THIS " << rp() << endl);
+        unload_fun_and_return(rp());
+        maybe_break_on_return();
+        break;
+      case POP:
+        // _POP++;
+        val =stack_pop();
+        DBG("POP " << arg << " = " << val << endl);
+        break;
+      case POP_LOCAL:
+        // _POP_LOCAL++;
+        val = stack_pop();
+        DBG("POP_LOCAL " << arg << " on " << (oop) (_fp + arg) << " -- "
+            << (oop) *(_fp + arg) << " = " << val << endl);
+        *(_fp + arg) = (word) val;
+        break;
+      case POP_FIELD:
+        // _POP_FIELD++;
+        val = stack_pop();
+        DBG("POP_FIELD " << arg << " on " << (oop) (dp() + arg + 2) << " dp: " << dp() << " -- "
+            << (oop) *(dp() + arg + 2) << " = " << val << endl); //2: vt, delegate
+        *(dp() + arg + 2) = (word) val;
+        break;
+      case SEND:
+        // _SEND++;
+        DBG("SEND " << arg << endl);
+        handle_send(arg);
+        break;
+      case SUPER_CTOR_SEND:
+        // _SUPER_CTOR_SEND++;
+        handle_super_ctor_send(arg);
+        break;
+      case CALL:
+        // _CALL++;
+        DBG("CALL " << arg << endl);
+        handle_call(arg);
+        break;
+      case JMP:
+        // _JMP++;
+        DBG("JMP " << arg << " " << endl);
+        _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        break;
+      case JMPB:
+        // _JMPB++;
+        DBG("JMPB " << arg << " " << endl);
+        _ip -= (arg+1); //_ip already suffered a ++ in dispatch
+        break;
+      case EX_SUM:
+      recv = stack_top(1);
+      if (is_small_int(recv)) { //counter.vt == _mmobj->mm_object_vt(recv)) {
+        stack_pop(); //:+
+        stack_pop(); //recv
+        oop other = stack_pop();
+
+        unsigned long n_self = untag_small_int(recv);
+        number n_other = untag_small_int(other);
+        number n_res;
+
+        if (__builtin_add_overflow(n_self, n_other, &n_res)) {
+          raise("Overflow", "result of + overflows");
+        } else {
+          stack_push(tag_small_int(n_res));//_mmobj->mm_integer_or_longnum_new(this, n_res));
+        }
+      }
+        break;
+      case EX_LT:
+      recv = stack_top(1);
+      if (is_small_int(recv)) {
+        //std::cerr << "YAY <<<!!!" << endl;
+        stack_pop(); //:<
+        stack_pop(); //recv
+        oop other = stack_pop();
+
+        //TODO: make it work with Integer/LongNum subclasses
+        unsigned long n_self = untag_small_int(recv);
+        number n_other = untag_small_int(other);
+
+        oop res =  n_self < n_other ? MM_TRUE : MM_FALSE;
+        stack_push(res);
+      }
+        break;
+      case EX_EQUAL:
+        handle_ex_equal(arg);
+        break;
+      case EX_INDEX:
+        handle_ex_index(arg);
+        break;
+      case EX_SET:
+        handle_ex_set(arg);
+        break;
+      // case EX_NOT:
+      //   handle_ex_not(arg);
+      //   break;
+      case EX_HAS:
+        handle_ex_has(arg);
+        break;
+      case JZ:
+        // _JZ++;
+        val = stack_pop();
+        DBG("JZ " << arg << " " << val << endl);
+        if ((val == MM_FALSE) || (val == MM_NULL)) {
+          _ip += (arg -1); //_ip already suffered a ++ in dispatch
+        }
+        break;
+      case SUPER_SEND:
+        // _SUPER_SEND++;
+        handle_super_send(arg);
+        break;
+      // case RETURN_THIS:
+      //   break;
+      default:
+        ERROR() << "Unknown opcode " << opcode << endl;
+        _vm->bail("opcode not implemented");
+    }
+    // DBG(" [end of dispatch] " << opcode << endl);
+  }
+  DBG("end" << endl);
+}
+
+
 void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);
@@ -805,10 +1027,14 @@ void Process::fetch_cycle(void* stop_at_bp) {
   DBG("tcode: " << _tcode << endl);
   //_tcode = (void**) _mmobj->mm_function_get_thread_code(this, _cp);
   if (!_tcode) {
-    //first instruction of _cp
-    _tcode = create_threaded_code(dispatch_table, _ip, _mmobj->mm_function_get_code_size(this, _cp));
-    _mmobj->mm_function_set_thread_code(this, _cp, _tcode);
+    // std::cerr << "     xxx interpret" << endl;
+    return i_fetch_cycle(stop_at_bp);
   }
+  std::cerr << " %% thread " << endl;
+  // std::cerr <<"     %%% threaded\n";
+  // else {
+  //   //std::cerr <<"+Dfetch\n";
+  // }
   //at least one instructionn should be executed.  stop_at_bp is usually the
   //top mark of the stack when a function is loaded (_bp). So starting a fetch
   //cycle when this value is smaller than _bp likely means the bytecodes
@@ -1008,7 +1234,22 @@ void Process::fetch_cycle(void* stop_at_bp) {
       arg = decode_args(*_ip);
       _ip++;
       _tcode++;
-      handle_ex_sum(arg);
+      oop recv = stack_top(1);
+      if (is_small_int(recv)) { //counter.vt == _mmobj->mm_object_vt(recv)) {
+        stack_pop(); //:+
+        stack_pop(); //recv
+        oop other = stack_pop();
+
+        unsigned long n_self = untag_small_int(recv);
+        number n_other = untag_small_int(other);
+        number n_res;
+
+        if (__builtin_add_overflow(n_self, n_other, &n_res)) {
+          raise("Overflow", "result of + overflows");
+        } else {
+          stack_push(tag_small_int(n_res));//_mmobj->mm_integer_or_longnum_new(this, n_res));
+        }
+      }
       goto_ptr = *_tcode;
       goto *goto_ptr;
   LB_EX_LT:
@@ -1016,7 +1257,20 @@ void Process::fetch_cycle(void* stop_at_bp) {
       arg = decode_args(*_ip);
       _ip++;
       _tcode++;
-      handle_ex_lt(arg);
+      recv = stack_top(1);
+      if (is_small_int(recv)) {
+        //std::cerr << "YAY <<<!!!" << endl;
+        stack_pop(); //:<
+        stack_pop(); //recv
+        oop other = stack_pop();
+
+        //TODO: make it work with Integer/LongNum subclasses
+        unsigned long n_self = untag_small_int(recv);
+        number n_other = untag_small_int(other);
+
+        oop res =  n_self < n_other ? MM_TRUE : MM_FALSE;
+        stack_push(res);
+      }
       goto_ptr = *_tcode;
       goto *goto_ptr;
   LB_EX_EQUAL:

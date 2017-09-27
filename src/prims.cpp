@@ -34,15 +34,13 @@ namespace fs = ::boost::filesystem;
 //This is trivial if the receiver is of constant type. However, some prims
 //have polimorphic receivers (e.g. Behavior.==, numeric.+). So the ex_opcode
 //handler has to be aware of all possible types, just as the prim would.
-#define SPECIALIZE_BYTECODE(code)
-// #define SPECIALIZE_BYTECODE(code)                                       \
-//   bytecode* _b_send = proc->ip()-1;                                     \
-//   if (decode_opcode(*_b_send) == SEND && !proc->caller_is_prim()) {     \
-//     int _args = decode_args(*_b_send);                                  \
-//     *_b_send = (code << 24) + _args;                                    \
-//   }
-
-
+//#define SPECIALIZE_BYTECODE(code)
+#define SPECIALIZE_BYTECODE(code)                                       \
+  bytecode* _b_send = proc->ip()-1;                                     \
+  if (decode_opcode(*_b_send) == SEND && !proc->caller_is_prim()) {     \
+    int _args = decode_args(*_b_send);                                  \
+    *_b_send = (code << 24) + _args;                                    \
+  }
 
 static MMLog _log(LOG_PRIMS);
 
@@ -716,7 +714,11 @@ static int prim_string_is_upper(Process* proc) {
 
 
 static int prim_numeric_sum(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_SUM);
+  static long count = 0;
+  if (proc->load_count > INSTALL_PRIMS) {
+    std::cerr << "INSTALLING EX SUM\n";
+    SPECIALIZE_BYTECODE(EX_SUM);
+  }
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 
@@ -803,7 +805,11 @@ static int prim_numeric_bit_or(Process* proc) {
 }
 
 static int prim_numeric_lt(Process* proc) {
-  SPECIALIZE_BYTECODE(EX_LT);
+  static long count = 0;
+  if (proc->load_count > INSTALL_PRIMS) {
+    std::cerr << "INSTALLING EX LT\n";
+    SPECIALIZE_BYTECODE(EX_LT);
+  }
   oop self =  proc->dp();
   oop other = proc->get_arg(0);
 

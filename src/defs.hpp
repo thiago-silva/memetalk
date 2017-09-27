@@ -80,3 +80,12 @@ typedef int (*prim_function_t) (Process*);
 #define OO_CLASS_LEN 5
 #define OO_CFUN_LEN 28
 #define OO_SYMBOL_LEN 3
+
+
+// bench 1
+// #define INSTALL_THREAD 13
+// #define INSTALL_PRIMS 7
+
+// // bench 2
+#define INSTALL_THREAD 21000017
+#define INSTALL_PRIMS 6000007
