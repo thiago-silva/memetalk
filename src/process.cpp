@@ -1784,24 +1784,4 @@ std::string Process::log_label() {
 
 
 void Process::report_profile() {
-  std::cerr << "_PUSH_LOCAL: " << _PUSH_LOCAL << endl;
-  std::cerr << "_PUSH_LITERAL: " << _PUSH_LITERAL << endl;
-  std::cerr << "_PUSH_MODULE: " << _PUSH_MODULE << endl;
-  std::cerr << "_PUSH_FIELD: " << _PUSH_FIELD << endl;
-  std::cerr << "_PUSH_THIS: " << _PUSH_THIS << endl;
-  std::cerr << "_PUSH_FP: " << _PUSH_FP << endl;
-  std::cerr << "_PUSH_CONTEXT: " << _PUSH_CONTEXT << endl;
-  std::cerr << "_PUSH_BIN: " << _PUSH_BIN << endl;
-  std::cerr << "_RETURN_TOP: " << _RETURN_TOP << endl;
-  std::cerr << "_RETURN_THIS: " << _RETURN_THIS << endl;
-  std::cerr << "_POP: " << _POP << endl;
-  std::cerr << "_POP_LOCAL: " << _POP_LOCAL << endl;
-  std::cerr << "_POP_FIELD: " << _POP_FIELD << endl;
-  std::cerr << "_SEND: " << _SEND << endl;
-  std::cerr << "_SUPER_CTOR_SEND: " << _SUPER_CTOR_SEND << endl;
-  std::cerr << "_CALL: " << _CALL << endl;
-  std::cerr << "_JMP: " << _JMP << endl;
-  std::cerr << "_JMPB: " << _JMPB << endl;
-  std::cerr << "_JZ: " << _JZ << endl;
-  std::cerr << "_SUPER_SEND: " << _SUPER_SEND << endl;
 }
