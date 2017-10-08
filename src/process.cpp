@@ -101,6 +101,10 @@ Process::Process(VM* vm, int debugger_id, bool online)
   _last_retval = MM_NULL;
   _break_only_on_this_module = MM_NULL;
   _breaking_on_return = false;
+
+  hit = 0;
+  miss = 0;
+
 }
 
 std::string Process::dump_stack_trace(bool enabled) {
@@ -727,6 +731,14 @@ void Process::fetch_cycle(void* stop_at_bp) {
   DBG("begin fp:" << _fp <<  " stop_fp:" <<  stop_at_bp
       << " ip: " << _ip << endl);
 
+  oop recv;
+  oop other;
+  oop vt;
+  static oop String = _vm->get_prime("String");
+  static oop LongNum = _vm->get_prime("LongNum");
+  static oop List = _vm->get_prime("List");
+  static oop Dictionary = _vm->get_prime("Dictionary");
+
   //at least one instructionn should be executed.  stop_at_bp is usually the
   //top mark of the stack when a function is loaded (_bp). So starting a fetch
   //cycle when this value is smaller than _bp likely means the bytecodes
@@ -737,6 +749,7 @@ void Process::fetch_cycle(void* stop_at_bp) {
 
   assert(((_bp >= stop_at_bp) && _ip)); //"base pointer and stop_at_bp are wrong"
 
+  // std::cerr << CTXNAME(_cp) << endl;
   while ((_bp >= stop_at_bp) && _ip) { // && ((_ip - start_ip) * sizeof(bytecode))  < _code_size) {
 
     //at tick we may pause for debugging interactions.
@@ -865,6 +878,137 @@ void Process::fetch_cycle(void* stop_at_bp) {
           _ip += (arg -1); //_ip already suffered a ++ in dispatch
         }
         break;
+      case EX_PLUS:
+        //0: selector
+        recv = stack_top(1);
+        other = stack_top(2);
+        vt = _mmobj->mm_object_vt(recv);
+        if (is_small_int(recv) and is_small_int(other)) {
+          stack_dec(3);
+          unsigned long n_self = untag_small_int(recv);
+          number n_other = untag_small_int(other);
+          number n_res;
+          if (__builtin_add_overflow(n_self, n_other, &n_res)) {
+            raise("Overflow", "result of + overflows");
+          } else {
+            stack_push(tag_small_int(n_res));
+          }
+        } else {
+          handle_send(arg);
+        }
+        break;
+      case EX_LT:
+        //0: selector
+        recv = stack_top(1);
+        other = stack_top(2);
+        vt = _mmobj->mm_object_vt(recv);
+        if (is_small_int(recv) and is_small_int(other)) {
+          stack_dec(3);
+          stack_push(untag_small_int(recv) < untag_small_int(other) ? MM_TRUE : MM_FALSE);
+        } else {
+          handle_send(arg);
+        }
+        break;
+      case EX_EQUAL:
+        //0: selector
+        recv = stack_top(1);
+        other = stack_top(2);
+        vt = _mmobj->mm_object_vt(recv);
+        if (recv == other) {
+          stack_dec(3);
+          // hit++;
+          stack_push(MM_TRUE);
+        } else if (vt == String) {
+          if (_mmobj->mm_is_string(other)) {
+            // hit++;
+            stack_dec(3);
+            std::string str_1 = _mmobj->mm_string_stl_str(this, recv);
+            std::string str_2 = _mmobj->mm_string_stl_str(this, other);
+            if (str_1 == str_2) {
+              stack_push(MM_TRUE);
+            } else {
+              stack_push(MM_FALSE);
+            }
+            break;
+          } else {
+            // miss++;
+            handle_send(arg);
+          }
+        } else if (is_small_int(recv)) {
+          if (is_small_int(other)) {
+            // hit++;
+            stack_dec(3);
+            stack_push(recv == other ? MM_TRUE : MM_FALSE);
+          } else if (is_numeric(this, other)) {
+            // hit++;
+            stack_dec(3);
+            number n_self = untag_small_int(recv);
+            number n_other = extract_number(this, other);
+            stack_push(n_self == n_other ? MM_TRUE : MM_FALSE);
+          } else {
+            // miss++;
+            handle_send(arg);
+          }
+        } else if (vt == LongNum) {
+          if (is_numeric(this, other)) {
+            // hit++;
+            stack_dec(3);
+            number n_self = extract_number(this, recv);
+            number n_other = extract_number(this, other);
+            stack_push(n_self == n_other ? MM_TRUE : MM_FALSE);
+          } else {
+            // miss++;
+            handle_send(arg);
+          }
+        } else if (vt == List) {
+          if (_mmobj->mm_object_vt(other) != List) { //could be List subclass
+            // miss++;
+            handle_send(arg);
+            break;
+          } else if (recv == other) {
+            stack_dec(3);
+            // hit++;
+            stack_push(MM_TRUE);
+            break;
+          } else {
+            number this_size = _mmobj->mm_list_size(this, recv);
+            number other_size = _mmobj->mm_list_size(this, other);
+            if (this_size != other_size) {
+              stack_dec(3);
+              // hit++;
+              stack_push(MM_FALSE);
+            } else {
+              // miss++;
+              handle_send(arg);
+            }
+          }
+        } else if (vt == Dictionary) {
+          if (_mmobj->mm_object_vt(other) != Dictionary) {
+            // miss++;
+            handle_send(arg);
+            break;
+          } else if (recv == other) {
+            stack_dec(3);
+            // hit++;
+            stack_push(MM_TRUE);
+            break;
+          } else {
+            number this_size = _mmobj->mm_dictionary_size(this, recv);
+            number other_size = _mmobj->mm_dictionary_size(this, other);
+            if (this_size != other_size) {
+              stack_dec(3);
+              // hit++;
+              stack_push(MM_FALSE);
+            } else {
+              // miss++;
+              handle_send(arg);
+            }
+          }
+        } else {
+          // miss++;
+          handle_send(arg);
+        }
+        break;
       case SUPER_SEND:
         // _SUPER_SEND++;
         handle_super_send(arg);
@@ -880,6 +1024,131 @@ void Process::fetch_cycle(void* stop_at_bp) {
   DBG("end" << endl);
 }
 
+void Process::handle_ex_equal(number num_args) {
+
+  oop recv = stack_top(1);
+  oop other = stack_top(2);
+
+  DBG("recv: " << recv << " vt: " << _mmobj->mm_object_vt(recv) << endl);
+  oop vt = _mmobj->mm_object_vt(recv);
+
+  static oop String = _vm->get_prime("String");
+  static oop LongNum = _vm->get_prime("LongNum");
+  static oop List = _vm->get_prime("List");
+  static oop Dictionary = _vm->get_prime("Dictionary");
+
+  if (recv == other) {
+    stack_dec(3);
+    hit++;
+    stack_push(MM_TRUE);
+    return;
+  } else if (vt == String) {
+    if (_mmobj->mm_is_string(other)) {
+      hit++;
+      stack_dec(3);
+
+      std::string str_1 = _mmobj->mm_string_stl_str(this, recv);
+      std::string str_2 = _mmobj->mm_string_stl_str(this, other);
+      if (str_1 == str_2) {
+        stack_push(MM_TRUE);
+      } else {
+        stack_push(MM_FALSE);
+      }
+    } else {
+      miss++;
+      handle_send(num_args);
+    }
+  } else if (is_small_int(recv)) {
+    if (is_small_int(other)) {
+      hit++;
+      stack_dec(3);
+      stack_push(recv == other ? MM_TRUE : MM_FALSE);
+    } else if (is_numeric(this, other)) {
+      hit++;
+      stack_dec(3);
+      number n_self = untag_small_int(recv);
+      number n_other = extract_number(this, other);
+      stack_push(n_self == n_other ? MM_TRUE : MM_FALSE);
+    } else {
+      miss++;
+      handle_send(num_args);
+    }
+  } else if (vt == LongNum) {
+    if (is_numeric(this, other)) {
+      hit++;
+      stack_dec(3);
+      number n_self = extract_number(this, recv);
+      number n_other = extract_number(this, other);
+      stack_push(n_self == n_other ? MM_TRUE : MM_FALSE);
+    } else {
+      miss++;
+      handle_send(num_args);
+    }
+  } else if (vt == List) {
+    if (_mmobj->mm_object_vt(other) != List) { //could be List subclass
+      miss++;
+      handle_send(num_args);
+      return;
+    } else if (recv == other) {
+      stack_dec(3);
+      hit++;
+      stack_push(MM_TRUE);
+      return;
+    }
+    number this_size = _mmobj->mm_list_size(this, recv);
+    number other_size = _mmobj->mm_list_size(this, other);
+    if (this_size != other_size) {
+      stack_dec(3);
+      hit++;
+      stack_push(MM_FALSE);
+    } else {
+      miss++;
+      handle_send(num_args);
+    }
+    //now we check the most generic objects lacking a ==() method
+    // } else if (_mmobj->delegates_to(vt, Object) ||  //recv is an instance of some subclass of Object
+    //     _mmobj->delegates_to(vt, Object_Behavior)) { //recv is a class whose vt delegates to Object_Behavior
+    //   //hit++;
+
+    //   stack_pop(); //:==
+    //   stack_pop(); //recv
+    //   oop other = stack_pop();
+    //   stack_push(recv == other ? MM_TRUE : MM_FALSE);
+    // // } else if (recv == MM_NULL) { //Argh: delegates_to(null, Object) is returning false.
+    // //   hit++;
+    // //   stack_pop(); //:==
+    // //   stack_pop(); //recv
+    // //   oop other = stack_pop();
+    // //   stack_push(other == MM_NULL);
+  } else if (vt == Dictionary) {
+    if (_mmobj->mm_object_vt(other) != Dictionary) {
+      miss++;
+      handle_send(num_args);
+      return;
+    } else if (recv == other) {
+      stack_dec(3);
+      hit++;
+      stack_push(MM_TRUE);
+      return;
+    }
+    number this_size = _mmobj->mm_dictionary_size(this, recv);
+    number other_size = _mmobj->mm_dictionary_size(this, other);
+    if (this_size != other_size) {
+      stack_dec(3);
+      hit++;
+      stack_push(MM_FALSE);
+    } else {
+      miss++;
+      handle_send(num_args);
+    }
+
+  } else {
+    // std::cerr << "FALLBACK " << endl;
+    miss++;
+    // std::cerr << TO_C_STR(_mmobj->mm_class_name(this, vt)) << endl;
+    handle_send(num_args);
+  }
+}
 void Process::maybe_break_on_return() {
   if (_state == STEP_INTO_STATE &&
       (_break_only_on_this_module == MM_NULL || _break_only_on_this_module == _mp)) {
@@ -1350,13 +1619,6 @@ std::pair<oop, oop> Process::lookup(oop drecv, oop vt, oop selector) {
   }
 }
 
-oop Process::stack_pop() {
-  oop val = * (oop*)_sp;
-  _sp--;
-  DBG("POP " << val << " >> " << _sp << endl);
-  return val;
-}
-
 // void Process::stack_push(oop data) {
 //   _sp++;
 //   DBG("PUSH " << data << " -> " << _sp << endl);
@@ -1784,4 +2046,16 @@ std::string Process::log_label() {
 
 
 void Process::report_profile() {
+  std::cerr << " hit:" << hit << endl;
+  std::cerr << " miss:" << miss << endl;
+}
+
+
+bool Process::caller_is_prim() {
+  oop cp = cp_from_base(_bp);
+  if (!cp) {
+    return false;
+  }
+  long header = _mmobj->mm_function_get_header(this, cp);
+  return CFUN_IS_PRIM(header);
 }

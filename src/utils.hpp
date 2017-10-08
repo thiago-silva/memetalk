@@ -62,4 +62,7 @@ inline oop tag_small_int(number num) {
 
 bool check_and_print_exception(Process* proc, int exc, oop ex);
 
+bool is_numeric(Process* proc, oop o);
+number extract_number(Process* proc, oop o);
+
 #endif

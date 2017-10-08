@@ -16,6 +16,21 @@ using namespace std;
 
 static MMLog _log(LOG_UTILS);
 
+bool is_numeric(Process* proc, oop o) {
+  return is_small_int(o) || proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum");
+}
+
+number extract_number(Process* proc, oop o) {
+  if (is_small_int(o)) {
+    return untag_small_int(o);
+  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("LongNum")) {
+    return proc->mmobj()->mm_longnum_get(proc, o);
+  } else {
+    proc->raise("TypeError", "Expecting numeric value");
+  }
+  return 0; // unreachable
+}
+
 void create_cache_dir(std::string& path) {
   boost::filesystem::path dir(path);
   if (boost::filesystem::create_directories(dir)) {

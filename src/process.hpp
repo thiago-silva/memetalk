@@ -90,7 +90,20 @@ public:
   * (word*) _sp = (word) data;
   }
 
+  inline oop stack_top(int x) {
+    return * (((oop*)_sp)-x);
+  }
+  inline oop stack_pop() {
+    oop val = * (oop*)_sp;
+    _sp--;
+    return val;
+  }
+  inline void stack_dec(int i) {
+    _sp-= i;
+  }
+
   oop current_exception() { return _current_exception; }
+  bool caller_is_prim();
 
   oop unwind_with_exception(oop);
 
@@ -160,7 +173,6 @@ private:
   bool load_fun(oop, oop, oop, bool, number = -1);
 
 
-  oop stack_pop();
   int execute_primitive(oop);
   void fetch_cycle(void*);
 
@@ -180,6 +192,8 @@ private:
   void handle_call(number);
   void handle_return(oop);
   void basic_new_and_load(oop);
+
+  void handle_ex_equal(number num_args);
 
   bool exception_has_handler(oop e, oop cp, bytecode* ip, oop bp);
 
@@ -227,6 +241,8 @@ private:
   bool _breaking_on_return;
   bool _online;
 //profiling
+  long hit;
+  long miss;
 };
 
 #endif
