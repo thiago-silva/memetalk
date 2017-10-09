@@ -1,0 +1,16 @@
+//sys #include <curl/curl.h>
+//sys typedef struct _ CURL
+//sys typedef int CURLcode
+//sys typedef int CURLoption
+//sys typedef size_t (*curl_write_callback)(char *buffer, size_t size, size_t nitems, void *outstream)
+
+//sys void curl_global_cleanup(void)
+//sys CURLcode curl_global_init(long flags)
+
+//sys CURL *curl_easy_init()
+//sys void curl_easy_cleanup(CURL *handle)
+//sys CURL *curl_easy_duphandle(CURL *handle)
+//sys char *curl_easy_escape(CURL *curl, const char *string, int length)
+//sys CURLcode curl_easy_perform(CURL *handle)
+//sys const char *curl_easy_strerror(CURLcode code)
+//sys CURLcode curl_easy_setopt(CURL* handle, CURLoption tag, void *arg)

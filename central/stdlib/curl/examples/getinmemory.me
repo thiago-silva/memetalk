@@ -1,0 +1,59 @@
+meme central:memescript/compiler;
+
+requires io, c
+where
+  io = central:stdlib/io
+  c  = central:stdlib/curl/curl_prim
+end
+
+main: fun() {
+  c.curl_global_init(c.CURL_GLOBAL_DEFAULT);
+
+  // init the curl session
+  var curl_handle = c.curl_easy_init();
+
+  // specify URL to get
+  var opt1 = c.curl_easy_setopt(curl_handle, c.CURLOPT_URL, "http://guinho");
+  if (opt1 != c.CURLE_OK) {
+    io.print("curl_easy_setopt() failed: " + c.curl_easy_strerror(opt1));
+    return 0;
+  }
+
+  var opt2 = c.curl_easy_setopt(curl_handle, c.CURLOPT_PORT, 8000);
+  if (opt2 != c.CURLE_OK) {
+    io.print("curl_easy_setopt() failed: " + c.curl_easy_strerror(opt2));
+    return 0;
+  }
+
+  // TODO: See bindgen.hpp:meme_obj_c_void
+  // send all data to this function
+  // c.curl_easy_setopt(curl_handle, c.CURLOPT_WRITEFUNCTION, fun (contents, size, nmemb, userdata) {
+  //   io.print(size);
+  //   // userdata = userdata + contents;
+  // });
+ 
+  // we pass our 'chunk' struct to the callback function
+  // var chunk = "";
+  //c.curl_easy_setopt(curl_handle, c.CURLOPT_WRITEDATA, chunk);
+ 
+  // some servers don't like requests that are made without a
+  // user-agent field, so we provide one
+  c.curl_easy_setopt(curl_handle, c.CURLOPT_USERAGENT, "libcurl-agent/1.0");
+
+  // get it!
+  var res = c.curl_easy_perform(curl_handle);
+
+  // check for errors
+  if (res != c.CURLE_OK) {
+    io.print("curl_easy_perform() failed: " + c.curl_easy_strerror(res));
+  } else {
+    // Now, our chunk.memory points to a memory block that is
+    // chunk.size bytes big and contains the remote file.
+    //
+    // Do something nice with it!
+    // io.print("%lu bytes retrieved\n", chunk);
+    io.print("foo");
+  }
+
+  c.curl_global_cleanup();
+}
