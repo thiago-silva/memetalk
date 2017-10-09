@@ -56,6 +56,8 @@ static void* meme_obj_c_void(Process* proc, oop o) {
     return ptr;
   } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("String")) {
     return proc->mmobj()->mm_string_cstr(proc, o);
+  } else if (proc->mmobj()->mm_object_vt(o) == proc->vm()->core()->get_prime("Context")) {
+    proc->raise("TypeError", "Functions not supported yet!!");
   } else {
     proc->raise("TypeError", "Couldn't guess meme type");
   }

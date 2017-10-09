@@ -7,6 +7,7 @@
 #include "mec_image.hpp"
 #include "qt_prims.hpp"
 #include "re2_prims.hpp"
+#include "../central/stdlib/curl/curl_prim.hpp"
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -3269,4 +3270,5 @@ void init_primitives(VM* vm) {
 
   qt_init_primitives(vm);
   re2_init_primitives(vm);
+  init_primitives_curl(vm);
 }

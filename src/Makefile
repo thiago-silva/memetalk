@@ -12,7 +12,7 @@ QT_CXXFLAGS = $(shell pkg-config --cflags $(QT_PKGLIBS)) -I$(INC_QSCI)
 QT_LIBS = $(shell pkg-config --libs $(QT_PKGLIBS)) -lqscintilla2
 
 CXXFLAGS = --std=c++11 -Wall $(QT_CXXFLAGS)
-LIBS = -lboost_system -lboost_iostreams -lboost_filesystem -lgc -lre2 $(QT_LIBS)
+LIBS = -lboost_system -lboost_iostreams -lboost_filesystem -lgc -lre2 -lcurl $(QT_LIBS)
 
 CPP_FILES = log.cpp mec_image.cpp core_image.cpp vm.cpp utils.cpp	\
 	mmobj.cpp main.cpp process.cpp prims.cpp mec_fun.cpp
@@ -25,8 +25,8 @@ HPP_FILES += qt_prims.hpp qsc.hpp ctrl.hpp
 CPP_FILES += re2_prims.cpp
 HPP_FILES += re2_prims.hpp
 
-
-OBJS = $(CPP_FILES:%.cpp=%.o)
+#OBJS = $(CPP_FILES:%.cpp=%.o)
+OBJS = $(CPP_FILES:%.cpp=%.o) ../central/stdlib/curl/curl_prim.o
 
 # Main targets
 all: release
